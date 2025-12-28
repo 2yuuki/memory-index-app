@@ -1,0 +1,728 @@
+// cmyk-ascii-effect.js - UNIVERSAL ASCII GENERATOR (Instance Mode)
+
+const cmykSketch = (p) => {
+  let blobImg = null, gfxFrame;
+  let showImage = false;
+  let isAnimated = false;
+  let isJittering = false; // Trạng thái animation jitter
+
+  // --- UNIVERSAL ASCII SETTINGS ---
+  let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
+  let colorMode = "cmyk"; // Default to CMYK
+  
+  // Colors
+  let cMono, cDark, cLight, bgColor;
+  let stabiloPalette, cmykPalette;
+  
+  // CMYK Stroke Settings
+  let cmykSettings = {
+    weight: 2.5,
+    threshold: 50,
+    gamma: 1.3,
+    jitter: 1.5,
+    probPow: 1.3
+  };
+
+  // Dynamics
+  let sizeMin = 0.85, sizeMax = 1.25;
+  let speed = 1.0; // ASCII animation smoothing speed
+  let _lumPrev = [], _rPrev = [], _gPrev = [], _bPrev = [];
+
+  // Mask & Track
+  let maskThreshold = 55;
+  let maskSoftness = 25;
+  let trackThresh = 48;
+  let sampleStep = 4;
+  let centroid = { x: 0, y: 0, ok: false }, fade = 0;
+
+  // ASCII settings
+  let grid = 5; // Tương ứng với density 1.5 (8/1.5)
+  let baseFont = 14;
+  let asciiOpacity = 240;
+  let rampReplica = " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@";
+  const rampDense = " .:-=+*#%@";
+  let invertRamp = true;
+
+  // Presets
+  const rampPresets = {
+    "Default": " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@",
+    "Minimal": " .:-=+*#%@",
+    "Classic": " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+    "Blocks": " ▁▂▃▄▅▆▇█░▒▓█▀▄█",
+    "Numbers": " 1234567890",
+    "Letters": " iIlLqQW",
+    "Symbols": " .,:;!oO@#",
+    "Chunky": " `-~+=*%@"
+  };
+
+  // Image handling
+  let imgOpacity = 255;
+  let imgScale = 1.0; 
+  let imgSpeed = 1.0; 
+  
+  // Buffers
+  let imgBuffer; 
+  let lastSampleTime = 0; 
+  let baseFPS = 15; 
+  let minSamplePeriod = 1000 / 60; 
+
+  p.setup = function() {
+    let cnv = p.createCanvas(800, 800);
+    // FIX: Target the correct container ID from index.html
+    let container = p.select('#input-canvas-holder');
+    if (container) {
+      cnv.parent(container);
+      // Responsive Canvas Styles
+      cnv.style('max-width', '100%');
+      cnv.style('max-height', '100%');
+      cnv.style('display', 'block');
+      cnv.style('margin', '0 auto');
+      cnv.style('mix-blend-mode', 'multiply');
+    }
+
+    p.frameRate(60);
+    p.pixelDensity(1);
+    p.textFont("'ocr-a-std', monospace");
+    p.textAlign(p.CENTER, p.CENTER);
+    p.noStroke();
+    
+    gfxFrame = p.createGraphics(p.width, p.height);
+    gfxFrame.pixelDensity(1);
+    gfxFrame.elt.getContext('2d', { willReadFrequently: true });
+
+    imgBuffer = p.createGraphics(p.width, p.height);
+    imgBuffer.pixelDensity(1);
+    imgBuffer.elt.getContext('2d', { willReadFrequently: true }); // Fix Canvas2D warning
+    imgBuffer.clear();
+
+    // Default Colors
+    cMono  = p.color(255);
+    cDark  = p.color(180, 200, 255);
+    cLight = p.color(255, 255, 255);
+    bgColor = p.color("#ffffff");
+    
+    // Color Presets
+    stabiloPalette = [
+      p.color(60, 190, 185),   // Turquoise
+      p.color(240, 130, 150),  // Pink Blush
+      p.color(245, 225, 80),   // Milky Yellow
+      p.color(160, 130, 190)   // Lilac Haze
+    ];
+    cmykPalette = [
+      p.color(0, 174, 239),    // Cyan
+      p.color(236, 0, 140),    // Magenta
+      p.color(245, 230, 0),    // Yellow
+      p.color(0, 166, 81)      // Green
+    ];
+
+    bindExistingUI(); // Bind to HTML controls instead of creating new ones
+
+    // --- OBSERVER TO STYLE P5.JS DEFAULT PROGRESS BAR ---
+    // p5.saveGif creates a status div at bottom-left. We force it to bottom-right and style it.
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        // 1. Detect when p5 adds the progress bar
+        for (const node of m.addedNodes) {
+          if (node.tagName === 'DIV') {
+             const txt = node.innerText || "";
+             // Check keywords: Saving, Frame, Save
+             if (txt.includes('Saving') || txt.includes('Frame') || txt.includes('Save')) {
+               // A. Hide the original p5 bar completely
+               node.style.display = 'none';
+               
+               // B. Mirror the text to OUR custom status bar (which is correctly positioned)
+               showStatus(txt);
+               
+               // C. Watch for text updates (e.g. "Frame 10/120") and update our bar
+               const innerObs = new MutationObserver(() => {
+                 showStatus(node.innerText);
+               });
+               innerObs.observe(node, { characterData: true, childList: true, subtree: true });
+             }
+          }
+        }
+        
+        // 2. Detect when p5 removes the progress bar (Saving done)
+        for (const node of m.removedNodes) {
+          if (node.tagName === 'DIV') {
+             const txt = node.innerText || "";
+             if (txt.includes('Saving') || txt.includes('Frame') || txt.includes('Save')) {
+               showStatus(""); // Clear our custom status
+             }
+          }
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true });
+  };
+
+  p.draw = function() {
+    p.background(255);
+
+    // FIX: Ngăn không cho vẽ hiệu ứng (gây nhiễu màu) khi chưa có ảnh
+    if (!blobImg) return;
+
+    if (blobImg) {
+      let shouldUpdateBuffer = true;
+
+      if (isAnimated) {
+        const now = p.millis();
+        const desiredPeriod = p.max(minSamplePeriod, (1000 / baseFPS) / p.max(0.1, imgSpeed));
+        if (now - lastSampleTime < desiredPeriod) {
+           shouldUpdateBuffer = false;
+        } else {
+           lastSampleTime = now;
+        }
+      }
+
+      if (shouldUpdateBuffer) {
+        imgBuffer.clear();
+        imgBuffer.push();
+        imgBuffer.imageMode(p.CENTER);
+        
+        // FIX: Giữ nguyên tỉ lệ khung hình (Aspect Ratio) của ảnh gốc
+        let aspect = blobImg.width / blobImg.height;
+        let canvasAspect = p.width / p.height;
+        let drawW, drawH;
+        
+        if (aspect > canvasAspect) { drawW = p.width * imgScale; drawH = drawW / aspect; } 
+        else { drawH = p.height * imgScale; drawW = drawH * aspect; }
+
+        imgBuffer.image(blobImg, p.width/2, p.height/2, drawW, drawH);
+        imgBuffer.pop();
+      }
+
+      if (showImage) {
+        p.tint(255, imgOpacity);
+        p.imageMode(p.CENTER);
+        p.image(imgBuffer, p.width/2, p.height/2); 
+        p.noTint();
+      }
+    }
+
+    // Copy frame for sampling
+    gfxFrame.clear();
+    gfxFrame.image(imgBuffer, 0, 0);
+
+    // --- DITHER MODE ---
+    if (colorMode === 'dither') {
+      drawDither();
+      return; // Skip ASCII rendering
+    }
+
+    if ((mode === "track") && blobImg) centroid = estimateCentroidFromBuffer();
+
+    if (mode === "replica" || mode === "replicaSolid" || mode === "mask" || mode === "maskSolid") {
+      drawAsciiReplicaOrMask();
+    } else {
+      drawAsciiTrack();
+    }
+  };
+
+  /* ---------------- Replica / Mask ---------------- */
+  function drawAsciiReplicaOrMask() {
+    gfxFrame.loadPixels();
+    
+    const cell = grid;
+    const cols = p.floor(p.width / cell);
+    const rows = p.floor(p.height / cell);
+    const n = cols * rows;
+
+    if (_lumPrev.length !== n) {
+      _lumPrev = new Array(n).fill(255); _rPrev = new Array(n).fill(255);
+      _gPrev = new Array(n).fill(255); _bPrev = new Array(n).fill(255);
+    }
+
+    // Animation smoothing
+    const alphaT = p.constrain(p.map(speed, 0.2, 2.0, 0.18, 0.95), 0.08, 0.98);
+    const sizeBuckets = 6;
+
+    const useGradient = colorMode === "gradient";
+    const useMono     = colorMode === "mono";
+    const mono = cMono.levels;
+    const dark = cDark.levels;
+    const light = cLight.levels;
+    
+    const ramp = invertRamp ? rampReplica.split("").reverse().join("") : rampReplica;
+    const rampLen = p.max(1, ramp.length - 1);
+    const haveImg = !!blobImg;
+
+    p.blendMode(p.MULTIPLY);
+    p.noFill();
+    p.strokeWeight(cmykSettings.weight);
+    p.textSize(baseFont);
+    
+    // Jitter Animation Logic
+    let seed = 12345;
+    if (isJittering) {
+      seed += p.floor(p.frameCount / 6); // Thay đổi seed mỗi 6 frame (10fps jitter)
+    }
+    p.randomSeed(seed);
+
+    p.textAlign(p.CENTER, p.CENTER);
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const idxCell = y * cols + x;
+        const cx = (x * cell + cell * 0.5) | 0;
+        const cy = (y * cell + cell * 0.5) | 0;
+
+        let r=255,g=255,b=255,a=0; 
+        if (haveImg) {
+          const i = 4 * (cy * p.width + cx);
+          if (i >= 0 && i < gfxFrame.pixels.length - 3) {
+            r = gfxFrame.pixels[i];
+            g = gfxFrame.pixels[i+1];
+            b = gfxFrame.pixels[i+2];
+            a = gfxFrame.pixels[i+3];
+          }
+        }
+
+        // FIX: Nếu pixel trong suốt (vùng trống quanh ảnh), coi như màu trắng để không vẽ mực
+        if (a < 50) {
+          r = 255; g = 255; b = 255;
+        }
+
+        const lumNow = 0.2126*r + 0.7152*g + 0.0722*b;
+        
+        // FIX: NaN safety for lerp (from new logic)
+        let safeLum = Number.isFinite(_lumPrev[idxCell]) ? _lumPrev[idxCell] : 255;
+        const lum = _lumPrev[idxCell] = p.lerp(safeLum, lumNow, alphaT);
+        
+        let safeR = Number.isFinite(_rPrev[idxCell]) ? _rPrev[idxCell] : 255;
+        let safeG = Number.isFinite(_gPrev[idxCell]) ? _gPrev[idxCell] : 255;
+        let safeB = Number.isFinite(_bPrev[idxCell]) ? _bPrev[idxCell] : 255;
+        const rr  = _rPrev[idxCell]   = p.lerp(safeR, r, alphaT);
+        const gg  = _gPrev[idxCell]   = p.lerp(safeG, g, alphaT);
+        const bb  = _bPrev[idxCell]   = p.lerp(safeB, b, alphaT);
+
+        const t = lum / 255;
+        const rampIdx = (t * rampLen) | 0;
+        const ch = ramp[rampIdx] || " ";
+
+
+        // mask alpha
+        let maskA = 1.0;
+        if ((mode === "mask" || mode === "maskSolid") && haveImg) {
+          const m = (r + g) * 0.5 - b; // less blue → blob
+          maskA = smoothstep(maskThreshold - maskSoftness, maskThreshold + maskSoftness, m);
+        } else if (haveImg) {
+          const blueBias = b - (r + g) * 0.5;
+          if (blueBias > 25) maskA = 0.35; // gentle fade outside blob in replica
+        }
+
+        // opacity per mode
+        let finalAlpha;
+        if (mode === "replicaSolid") {
+          finalAlpha = 255;                 
+        } else if (mode === "maskSolid") {
+          finalAlpha = 255 * maskA;         
+        } else {
+          finalAlpha = asciiOpacity * maskA; 
+        }
+
+        
+        // CMYK Separation Math (Used for density calculation in all modes)
+        let cVal = 255 - rr;
+        let mVal = 255 - gg;
+        let yVal = 255 - bb;
+        let gVal = (255 - gg); // Greenish/Black channel
+        if (mVal > 80) gVal -= mVal * 0.6;
+        gVal = p.constrain(gVal, 0, 255);
+
+        // Gamma
+        let gamma = cmykSettings.gamma;
+        cVal = p.pow(cVal / 255.0, gamma) * 255.0;
+        mVal = p.pow(mVal / 255.0, gamma) * 255.0;
+        yVal = p.pow(yVal / 255.0, gamma) * 255.0;
+        gVal = p.pow(gVal / 255.0, gamma) * 255.0;
+
+        let values = [cVal, mVal, yVal, gVal];
+        
+        // Use Stabilo palette if selected, otherwise default to CMYK angles/colors
+        let palette = (colorMode === 'stabilo') ? stabiloPalette : cmykPalette;
+        
+        // Offsets (Jitter)
+        const offsets = [
+          { x: -cmykSettings.jitter, y: -cmykSettings.jitter },
+          { x: cmykSettings.jitter, y: -cmykSettings.jitter },
+          { x: 0, y: cmykSettings.jitter },
+          { x: 0, y: 0 }
+        ];
+
+
+        for (let layer = 0; layer < 4; layer++) {
+          let val = values[layer];
+          if (val < cmykSettings.threshold) continue;
+
+          let prob = p.map(val, cmykSettings.threshold, 255, 0, 1);
+          prob = p.pow(prob, cmykSettings.probPow) * 1.2;
+
+          if (p.random(1.0) < prob) {
+            // Determine Color based on Mode
+            if (colorMode === 'mono') {
+              p.stroke(0, finalAlpha); // Black ink
+            } else if (colorMode === 'image') {
+              p.stroke(rr, gg, bb, finalAlpha); // Original pixel color
+            } else {
+              p.stroke(palette[layer]); // CMYK/Stabilo ink
+            }
+            
+            p.text(ch, cx + offsets[layer].x, cy + offsets[layer].y);
+          }
+        }
+      }
+    }
+    
+    // Reset blend mode
+    p.blendMode(p.BLEND);
+  }
+
+  /* ---------------- Dither (Floyd-Steinberg) ---------------- */
+  function drawDither() {
+    // 1. Convert to Grayscale -> REMOVED to keep colors
+    // gfxFrame.filter(p.GRAY);
+    
+    // 2. Load Pixels
+    gfxFrame.loadPixels();
+
+    // 2.1 Pre-process: Increase Contrast (Tăng độ tương phản để hạt màu rõ hơn)
+    const contrast = 1.3; // Tăng 30% tương phản
+    const intercept = 128 * (1 - contrast);
+    for (let i = 0; i < gfxFrame.pixels.length; i+=4) {
+      gfxFrame.pixels[i]   = p.constrain(gfxFrame.pixels[i]   * contrast + intercept, 0, 255);
+      gfxFrame.pixels[i+1] = p.constrain(gfxFrame.pixels[i+1] * contrast + intercept, 0, 255);
+      gfxFrame.pixels[i+2] = p.constrain(gfxFrame.pixels[i+2] * contrast + intercept, 0, 255);
+    }
+    
+    const w = gfxFrame.width;
+    const h = gfxFrame.height;
+    
+    // 3. Apply Algorithm
+    for (let y = 0; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (x + y * w) * 4;
+        
+        // Get old pixel value
+        const oldR = gfxFrame.pixels[idx];
+        const oldG = gfxFrame.pixels[idx+1];
+        const oldB = gfxFrame.pixels[idx+2];
+        
+        // Jitter Noise (Thêm nhiễu động)
+        let noise = 0;
+        if (isJittering) noise = p.random(-20, 20);
+
+        // Quantize (Thresholding)
+        const newR = (oldR + noise < 128) ? 0 : 255;
+        const newG = (oldG + noise < 128) ? 0 : 255;
+        const newB = (oldB + noise < 128) ? 0 : 255;
+        
+        // Set new pixel color
+        gfxFrame.pixels[idx] = newR;     // R
+        gfxFrame.pixels[idx+1] = newG;   // G
+        gfxFrame.pixels[idx+2] = newB;   // B
+        // Alpha (idx+3) remains unchanged
+        
+        // Calculate Error
+        const errR = oldR - newR;
+        const errG = oldG - newG;
+        const errB = oldB - newB;
+        
+        // Distribute Error to Neighbors
+        // Helper to add error to a pixel index (updates RGB)
+        const addError = (i, factor) => {
+          gfxFrame.pixels[i]   += errR * factor;
+          gfxFrame.pixels[i+1] += errG * factor;
+          gfxFrame.pixels[i+2] += errB * factor;
+        };
+
+        addError((x + 1 + y * w) * 4,       7 / 16); // Right
+        addError((x - 1 + (y + 1) * w) * 4, 3 / 16); // Bottom Left
+        addError((x + (y + 1) * w) * 4,     5 / 16); // Bottom
+        addError((x + 1 + (y + 1) * w) * 4, 1 / 16); // Bottom Right
+      }
+    }
+    
+    gfxFrame.updatePixels();
+    p.image(gfxFrame, 0, 0);
+  }
+
+  /* ---------------- Track ---------------- */
+  function drawAsciiTrack() {
+    const cell = grid;
+    const cols = p.floor(p.width / cell);
+    const rows = p.floor(p.height / cell);
+
+    if (centroid.ok) fade = (fade + 0.04) % p.TWO_PI;
+
+    p.textSize(baseFont);
+    p.textAlign(p.CENTER, p.CENTER);
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cx = x * cell + cell * 0.5;
+        const cy = y * cell + cell * 0.5;
+
+        let ch = ".";
+        let alpha = asciiOpacity;
+
+        if (centroid.ok) {
+          const dx = centroid.x - cx;
+          const dy = centroid.y - cy;
+          const d = p.sqrt(dx*dx + dy*dy);
+
+          const proximity = p.constrain(p.map(d, 0, p.width*0.6, 1, 0), 0, 1);
+          const pulse = 0.5 + 0.5 * p.sin(fade + d*0.02);
+          const denseIdx = p.floor(p.map(proximity * (0.6 + 0.4*pulse), 0, 1, 0, rampDense.length-1));
+          ch = (d < 160) ? rampDense[denseIdx] : angleToChar(p.atan2(dy, dx));
+
+          alpha = p.map(proximity, 0, 1, asciiOpacity*0.35, asciiOpacity);
+        }
+
+        p.fill(255, alpha);
+        p.stroke(255, alpha);
+        p.strokeWeight(1.5);
+        p.strokeJoin(p.ROUND);
+        p.text(ch, cx, cy);
+      }
+    }
+
+    if (centroid.ok) {
+      p.push();
+      p.noStroke();
+      // Note: drawingContext is on the main canvas, but in instance mode it's p.drawingContext
+      const ctx = p.drawingContext;
+      const g = ctx.createRadialGradient(
+        centroid.x, centroid.y, 4,
+        centroid.x, centroid.y, 120
+      );
+      g.addColorStop(0, "rgba(255,255,255,0.08)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      p.circle(centroid.x, centroid.y, 240);
+      p.pop();
+    }
+  }
+
+  // --- UI BINDING (Connects to index.html controls) ---
+  function bindExistingUI() {
+    // 1. Image Loading
+    const btnLoad = p.select('#btnLoadImage');
+    const fileIn = p.select('#fileIn');
+    
+    if (btnLoad && fileIn) {
+      btnLoad.mousePressed(() => { fileIn.elt.click(); });
+      fileIn.changed((e) => {
+        const file = e.target.files[0];
+        if (file) {
+          // Show Spinner
+          const spinner = document.getElementById('loading-spinner');
+          if(spinner) spinner.style.display = 'block';
+
+          isAnimated = (file.type === 'image/gif');
+          // Toggle Speed Slider
+          const rowSpeed = p.select('#rowSpeed');
+          if(rowSpeed) rowSpeed.style('display', isAnimated ? 'flex' : 'none');
+
+          const url = URL.createObjectURL(file);
+          p.loadImage(url, img => {
+            blobImg = img;
+            
+            // FIX: Resize canvas to match original image dimensions
+            p.resizeCanvas(img.width, img.height);
+            
+            // Recreate buffers with new size
+            gfxFrame = p.createGraphics(img.width, img.height);
+            gfxFrame.pixelDensity(1);
+            gfxFrame.elt.getContext('2d', { willReadFrequently: true });
+            
+            imgBuffer = p.createGraphics(img.width, img.height);
+            imgBuffer.pixelDensity(1);
+            imgBuffer.elt.getContext('2d', { willReadFrequently: true });
+            imgBuffer.clear();
+
+            // Show preview in sidebar
+            const previewBox = p.select('#preview-area');
+            if(previewBox) {
+              previewBox.html('');
+              let domImg = p.createImg(url, 'preview');
+              domImg.parent(previewBox);
+              domImg.style('max-width','100%'); domImg.style('max-height','100%');
+            }
+
+            // Hide Spinner
+            if(spinner) spinner.style.display = 'none';
+          });
+        }
+      });
+    }
+
+    // --- Mapped Controls ---
+    const sColorMode = p.select('#selColorMode');
+    if(sColorMode) sColorMode.changed(() => {
+      colorMode = sColorMode.value();
+    });
+
+    // Map "Pattern" slider to Stroke Weight
+    const sWeight = p.select('#cfgWeight');
+    if(sWeight) sWeight.input(() => cmykSettings.weight = parseFloat(sWeight.value()));
+
+    // Map "Threshold" slider to Grid Density (Inverse logic: higher density = smaller grid)
+    const sDensity = p.select('#cfgDensity');
+    if(sDensity) sDensity.input(() => {
+      grid = p.floor(8 / parseFloat(sDensity.value())); 
+      if(grid < 2) grid = 2;
+    });
+    
+    const sScale = p.select('#sldScale');
+    if(sScale) sScale.input(() => imgScale = parseFloat(sScale.value()));
+
+    const sShowSource = p.select('#chkShowSrc');
+    if(sShowSource) sShowSource.changed(() => showImage = sShowSource.checked());
+
+    const sChars = p.select('#inpChars');
+    if(sChars) sChars.input(() => rampReplica = sChars.value());
+
+    // Map "Invert" checkbox
+    const sInvert = p.select('#chkInvert');
+    if(sInvert) sInvert.changed(() => invertRamp = sInvert.checked());
+
+    // Map "Animate" checkbox
+    const sAnimate = p.select('#chkAnimate');
+    if(sAnimate) sAnimate.changed(() => isJittering = sAnimate.checked());
+
+    // --- NEW: Preset Dropdown ---
+    const sPreset = p.select('#selAsciiPreset');
+    if(sPreset) {
+      // Populate options
+      sPreset.html(''); // Clear existing
+      Object.keys(rampPresets).forEach(key => {
+        sPreset.option(key);
+      });
+      // Bind change event
+      sPreset.changed(() => {
+        rampReplica = rampPresets[sPreset.value()];
+      });
+    }
+
+    // 4. Save Button
+    const btnSave = p.select('#cmykSaveBtn');
+    if(btnSave) {
+      btnSave.mousePressed(() => {
+        if (!blobImg) {
+          alert("No image to save!");
+          return;
+        }
+
+        let res = p.get();
+        let name = "Memory_" + p.millis();
+        if(window.addToLibrary) window.addToLibrary(res, name);
+        
+        // --- RESET STATE TO REDUCE LAG ---
+        blobImg = null; // Quan trọng: Ngắt vòng lặp xử lý ảnh nặng
+        showImage = false;
+        isAnimated = false;
+        
+        // Reset UI (Xóa tên file và ảnh preview)
+        const fileIn = p.select('#fileIn');
+        if(fileIn) fileIn.elt.value = ''; 
+        const previewBox = p.select('#preview-area');
+        if(previewBox) previewBox.html('<span class="muted">EMPTY</span>');
+        p.background(255); // Xóa trắng canvas
+
+        showStatus("SAVED TO LIBRARY");
+        setTimeout(() => showStatus(""), 3000);
+      });
+    }
+
+    // --- NEW: Download PNG Button ---
+    const btnDownload = p.select('#btnSavePNG');
+    if(btnDownload) {
+      btnDownload.mousePressed(() => {
+        if (isJittering) {
+          // Save GIF 120 frames (p5.js shows its own progress bar, styled by Observer in setup)
+          p.saveGif("memory_jitter.gif", 120, { units: 'frames' });
+        } else {
+          p.save("memory_static.png");
+          showStatus("IMAGE SAVED");
+          setTimeout(() => showStatus(""), 2000);
+        }
+      });
+    }
+
+  }
+
+  let statusDiv;
+  function showStatus(msg) {
+    if (!statusDiv) {
+      statusDiv = p.createDiv('');
+      statusDiv.parent(document.body); // Move to body to avoid transform issues
+      statusDiv.style('position', 'fixed');
+      statusDiv.style('bottom', '20px');
+      statusDiv.style('right', '20px');
+      statusDiv.style('left', 'auto'); // Ensure it doesn't stick to the left
+      statusDiv.style('font-family', '"ocr-a-std", monospace');
+      statusDiv.style('font-size', '10pt');
+      statusDiv.style('color', '#000');
+      statusDiv.style('background', '#fff');
+      statusDiv.style('padding', '4px 8px');
+      statusDiv.style('border', '1px solid #000');
+      statusDiv.style('z-index', '9999');
+      statusDiv.style('text-transform', 'uppercase');
+    }
+    if (msg) {
+      statusDiv.html(msg);
+      statusDiv.style('display', 'block');
+    } else {
+      statusDiv.style('display', 'none');
+    }
+  }
+
+  /* ---------------- Helpers ---------------- */
+  function smoothstep(edge0, edge1, x) {
+    const t = p.constrain((x - edge0) / p.max(1e-6, edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  function angleToChar(a) {
+    const dirs = [
+      { a: -p.PI,     c: "<" },
+      { a: -3*p.PI/4, c: "/" },
+      { a: -p.PI/2,   c: "^" },
+      { a: -p.PI/4,   c: "\\" },
+      { a: 0,         c: ">" },
+      { a: p.PI/4,    c: "/" },
+      { a: p.PI/2,    c: "v" },
+      { a: 3*p.PI/4,  c: "\\" },
+      { a: p.PI,      c: "<" },
+    ];
+    let best = dirs[0], md = 1e9;
+    for (const d of dirs) {
+      const diff = p.abs(a - d.a) % p.TWO_PI;
+      const dist = diff > p.PI ? p.TWO_PI - diff : diff;
+      if (dist < md) { md = dist; best = d; }
+    }
+    return best.c;
+  }
+
+  function estimateCentroidFromBuffer() {
+    gfxFrame.loadPixels();
+    let sumX=0, sumY=0, count=0;
+    for (let y = 0; y < p.height; y += sampleStep) {
+      for (let x = 0; x < p.width; x += sampleStep) {
+        const i = 4 * (y * p.width + x);
+        const r = gfxFrame.pixels[i], g = gfxFrame.pixels[i+1], b = gfxFrame.pixels[i+2], a = gfxFrame.pixels[i+3];
+        if (a > 10) {
+          const blueBias = b - (r + g) * 0.5;
+          if (blueBias < -trackThresh) { sumX += x; sumY += y; count++; }
+        }
+      }
+    }
+    gfxFrame.updatePixels();
+    if (count > 200) return { x: sumX / count, y: sumY / count, ok: true };
+    return { x: p.width/2, y: p.height/2, ok: false };
+  }
+};
+
+// Khởi tạo Instance P5 cho CMYK tab
+new p5(cmykSketch);

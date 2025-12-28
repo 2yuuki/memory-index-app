@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HyperCard Memory Index</title>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css">
+</head>
+<body>
+
+<div id="app-container">
+
+  <div class="app-sidebar">
+    <div class="sidebar-bg-rotated"></div>
+    <div class="sidebar-tab active" onclick="switchSidebar('intro')">I. Introduction</div>
+    <div class="sidebar-tab" onclick="switchSidebar('tools')">II. Tool Tab</div>
+  </div>
+
+  <div class="layout-column">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="top-bar-overlay"></div>
+
+      <div class="brand-pill">
+        <img src="assets/UI%20items/logo.svg" class="brand-logo" alt="Index of Remembering">
+      </div>
+
+      <div class="tabs-container">
+        <div class="tab-btn active" data-tab="tab-input">1. Memories Input</div>
+        <div class="tab-btn" data-tab="tab-sketch">2. Memories ASCII Sketch</div>
+        <div class="tab-btn" data-tab="tab-index">3. The Memory Diagram</div>
+        <div class="tab-btn" data-tab="tab-layout">4. The Paper Memory Teller Sheet</div>
+      </div>
+    </div>
+
+  <!-- INTRO VIEW -->
+  <div id="intro-view" class="intro-container">
+    <div class="intro-content">
+      <h1 class="section-title" style="font-size:24px; margin-bottom:16px;">Welcome to Index of Remembering</h1>
+      <p style="line-height:1.6; color:var(--black);">
+        This is a digital memory index inspired by HyperCard aesthetics.
+        <br><br>
+        <strong>How to use:</strong><br>
+        1. <strong>Input:</strong> Write thoughts or upload images.<br>
+        2. <strong>Sketch:</strong> Create ASCII art or pixel drawings.<br>
+        3. <strong>Index:</strong> Organize your memory cards.<br>
+      </p>
+      <button class="btn-retro" style="width:200px; margin-top:24px;" onclick="switchSidebar('tools')">Start Remembering</button>
+    </div>
+  </div>
+
+  <div class="app-body" id="main-app-body" style="display:none;">
+
+  <!-- TAB 1 -->
+  <div class="workspace active" id="tab-input">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="1. Input">
+
+      <div class="section-title">1/ Write down your thoughts here</div>
+      <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
+      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+
+      <div class="divider"></div>
+
+      <div class="section-title">2/ Image Input</div>
+      <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
+      <button class="btn-retro" id="btnLoadImage">+ load image</button>
+      <input type="file" id="fileIn" hidden />
+
+      <div class="divider"></div>
+
+      <div class="section-title">ASCII Options</div>
+      <div class="mini-row">
+        <span>Ink Type</span>
+        <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
+          <option value="cmyk">CMYK Marker</option>
+          <option value="stabilo">Stabilo Marker</option>
+          <option value="mono">Monochrome</option>
+          <option value="dither">Dither</option>
+          <option value="image">Original</option>
+        </select>
+      </div>
+      <div class="mini-row">
+        <span>Pattern</span>
+        <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
+      </div>
+      <div class="mini-row">
+        <span>Preset</span>
+        <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
+      </div>
+      <div class="mini-row">
+        <span>Threshold</span>
+        <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
+      </div>
+      
+      <div class="mini-row">
+        <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
+        <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
+        <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
+      </div>
+
+      <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
+      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
+      <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+    </div>
+
+    <div class="panel-center">
+      <div class="paper-sheet paper-a4">
+        <div id="input-canvas-holder" class="canvas-holder"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2 -->
+  <div class="workspace" id="tab-sketch">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="2. Sketch">
+      <div class="section-title">Tools</div>
+      <button class="btn-retro" id="btnPencil">✏️ Pencil</button>
+      <button class="btn-retro" id="btnEraser">🧼 Eraser</button>
+      <button class="btn-retro" id="btnFill">🪣 Bucket</button>
+      <button class="btn-retro" id="btnClearSketch">🗑️ Clear</button>
+
+      <div class="divider"></div>
+
+      <div class="section-title">Patterns</div>
+      <div id="sketch-palette" class="palette-grid"></div>
+
+      <div class="section-title">Ink</div>
+      <div id="sketch-colors" class="palette-grid palette-ink"></div>
+
+    </div>
+
+    <div style="position:relative; width:100%; height:100%; overflow:auto; background:#d0d0d0;">
+      <div id="sketch-canvas-holder" style="padding: 20px;"></div>
+      <div class="zoom-float" style="position:absolute; right:20px; bottom:20px; top:auto; transform:none;">
+        <button class="btn-zoom" id="btnSketchZoomOut">-</button>
+        <span id="sketch-zoom-val" class="zoom-text">100%</span>
+        <button class="btn-zoom" id="btnSketchZoomIn">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3 -->
+  <div class="workspace" id="tab-index">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
+      <div class="section-title">Library</div>
+      <div id="lib-grid" class="lib-grid"></div>
+      <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
+    </div>
+
+    <div class="panel-center">
+      <div class="paper-sheet paper-a4 fixed-a4">
+        <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4 (placeholder giống ảnh) -->
+  <div class="workspace" id="tab-layout">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="4. Paper">
+      <div class="section-title">Paper Memories</div>
+      <div class="muted">Placeholder tab (you can plug your layout/export here).</div>
+    </div>
+    <div class="panel-center">
+      <div class="paper-sheet paper-a4"></div>
+    </div>
+  </div>
+  
+  </div><!-- end app-body -->
+  </div><!-- end layout-column -->
+
+</div>
+
+<script src="sketch.js"></script>
+<script src="cmyk-ascii-effect.js"></script>
+<script src="ui-binding.js"></script>
+<script>
+  // Tự động sửa lỗi SVG không giãn (stretch) bằng cách thêm preserveAspectRatio="none"
+  async function fixSvgStretch(selector, url) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) return;
+      let svgText = await resp.text();
+      
+      // Thêm thuộc tính preserveAspectRatio="none" để cho phép giãn hình
+      if (svgText.includes('<svg')) {
+        if (svgText.includes('preserveAspectRatio')) {
+          svgText = svgText.replace(/preserveAspectRatio="[^"]*"/, 'preserveAspectRatio="none"');
+        } else {
+          svgText = svgText.replace('<svg', '<svg preserveAspectRatio="none"');
+        }
+        const encoded = encodeURIComponent(svgText).replace(/'/g, '%27').replace(/\(/g, '%28').replace(/\)/g, '%29');
+        document.querySelectorAll(selector).forEach(el => {
+          el.style.backgroundImage = `url("data:image/svg+xml;charset=utf-8,${encoded}")`;
+        });
+      }
+    } catch (e) { console.warn('SVG Fix skipped (needs local server):', e); }
+  }
+  // Áp dụng fix cho top-bar và panel-center
+  //fixSvgStretch('.top-bar', 'assets/UI%20items/top-bar.svg');
+  //fixSvgStretch('.panel-center', 'assets/UI%20items/panel-center.svg');
+  //fixSvgStretch('.panel-left', 'assets/UI%20items/panel-left.svg');
+  //fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
+
+  // Sidebar Switch Logic
+  window.switchSidebar = function(mode) {
+    const introView = document.getElementById('intro-view');
+    const appBody = document.getElementById('main-app-body');
+    const tabs = document.querySelectorAll('.sidebar-tab');
+
+    if (mode === 'intro') {
+      introView.style.display = 'flex';
+      appBody.style.display = 'none';
+      // FIX: Loop qua tabs để active đúng cái cần thiết thay vì hardcode index
+      tabs.forEach(t => {
+        if(t.textContent.includes('Introduction')) t.classList.add('active');
+        else t.classList.remove('active');
+      });
+    } else {
+      introView.style.display = 'none';
+      appBody.style.display = 'flex';
+      tabs.forEach(t => {
+        if(t.textContent.includes('Tool')) t.classList.add('active');
+        else t.classList.remove('active');
+      });
+    }
+
+    // --- Export TXT Function ---
+    document.getElementById('btnSaveTXT').addEventListener('click', () => {
+      let content = "";
+      // 1. Try to get text from DOM (if Show Source is on)
+      const pre = document.querySelector('#input-canvas-holder pre');
+      if(pre) content = pre.innerText;
+      
+      // 2. Fallback: Check global variable (You must set window.currentAsciiText in your JS)
+      if(!content && window.currentAsciiText) content = window.currentAsciiText;
+
+      if(!content) {
+        alert("No ASCII text found. \nTip: Enable 'Show Source' or ensure window.currentAsciiText is set.");
+        return;
+      }
+
+      const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "memory_ascii.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+</script>
+
+</body>
+</html>
