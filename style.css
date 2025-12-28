@@ -201,15 +201,66 @@ body::after {
 
 .intro-content {
   background-color: var(--white);
-  padding: 24px;
+  padding: 40px;
+  border: 2px solid var(--black);
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
+  max-width: 1000px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
-.intro-title {
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin: 30px 0;
+}
+
+.intro-card {
+  background: #f9f9f9;
+  border: 1px solid var(--black);
+  padding: 20px;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.intro-card:hover {
+  transform: translateY(-4px);
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--tab-blue);
+  border-color: var(--tab-blue);
+}
+
+.intro-step-num {
   font-family: 'HP001', monospace;
-  font-size: 32px;
-  line-height: 1.5;
-  text-align: center;
+  font-size: 60px;
+  color: #e0e0e0;
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  font-weight: bold;
+  z-index: 0;
+}
+
+.intro-step-title {
+  font-family: 'HP001', monospace;
   color: var(--black);
+  font-size: 20px;
+  margin: 0 0 10px 0;
+  position: relative;
+  z-index: 1;
+  text-transform: none;
+}
+
+.intro-desc {
+  font-family: 'HypertextMono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #444;
+  position: relative;
+  z-index: 1;
+  text-transform: none;
 }
 
 /* --- TOP BAR --- */
@@ -617,3 +668,10 @@ input[type="range"]::-webkit-slider-thumb{
 /* --- OVERRIDES --- */
 .tab-btn[data-tab="tab-index"]::before{ background:var(--grad-gray) !important; }
 .tab-btn[data-tab="tab-index"].active{ color:var(--text-blue) !important; }
+
+/* --- TAB 1 PAPER PATTERN --- */
+#tab-input .paper-sheet {
+  background-image: url('assets/canvas%20template/paper%20pattern%201.png');
+  background-size: cover;
+  background-position: center;
+}
