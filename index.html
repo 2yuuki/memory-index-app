@@ -95,27 +95,27 @@
 
 <div id="app-container">
 
-  <div class="app-sidebar">
-    <div class="sidebar-bg-rotated"></div>
-    <div class="sidebar-tab active" onclick="switchSidebar('intro')">I. Introduction</div>
-    <div class="sidebar-tab" onclick="switchSidebar('tools')">II. Tool Tab</div>
+  <!-- NEW TOP BAR (Navigation) -->
+  <div class="new-top-bar">
+    <div class="top-nav-btn active" onclick="switchSidebar('intro')">I. Introduction</div>
+    <div class="top-nav-btn" onclick="switchSidebar('tools')">II. Tool Tab</div>
   </div>
 
-  <div class="layout-column">
-    <!-- TOP BAR -->
-    <div class="top-bar">
-      <div class="top-bar-overlay"></div>
+  <div class="content-row" style="display:flex; flex:1; overflow:hidden;">
+    
+    <!-- NEW SIDEBAR (Tabs) -->
+    <div class="new-sidebar disabled">
+      <div class="v-tab-btn active" data-tab="tab-input">1. Memories Input</div>
+      <div class="v-tab-btn" data-tab="tab-sketch">2. Memories ASCII Sketch</div>
+      <div class="v-tab-btn" data-tab="tab-index">3. The Memory Diagram</div>
+      <div class="v-tab-btn" data-tab="tab-layout">4. Paper Memory Teller</div>
+    </div>
 
-      <div class="brand-pill">
-        <img src="assets/UI items/logo.svg" class="brand-logo" alt="Index of Remembering">
-      </div>
-
-      <div class="tabs-container disabled">
-        <div class="tab-btn active" data-tab="tab-input">1. Memories Input</div>
-        <div class="tab-btn" data-tab="tab-sketch">2. Memories ASCII Sketch</div>
-        <div class="tab-btn" data-tab="tab-index">3. The Memory Diagram</div>
-        <div class="tab-btn" data-tab="tab-layout">4. The Paper Memory Teller Sheet</div>
-      </div>
+    <!-- LIBRARY OVERLAY (Pinned) -->
+    <div class="library-overlay" id="libOverlay">
+      <div class="library-toggle" onclick="toggleLibrary()">📚</div>
+      <div class="section-title" style="padding:10px;">Library</div>
+      <div id="lib-grid" class="lib-grid" style="padding:10px; overflow-y:auto;"></div>
     </div>
 
   <!-- INTRO VIEW -->
@@ -171,55 +171,67 @@
   <div class="app-body" id="main-app-body" style="display:none;">
 
   <!-- TAB 1 -->
-  <div class="workspace active" id="tab-input" style="grid-template-columns: 260px 260px 1fr;">
-    <!-- Panel 1: Thoughts -->
-    <div class="panel-left ribbon ribbon-green" data-ribbon="1. Thoughts">
-      <div class="section-title">1/ Write down your thoughts here</div>
-      <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
-      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
-    </div>
-    <!-- Panel 2: Image & ASCII -->
-    <div class="panel-left ribbon ribbon-green" data-ribbon="2. Image" style="border-left:var(--border);">
-      <div class="section-title" style="margin-top:0;">2/ Image Input</div>
-      <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
-      <button class="btn-retro" id="btnLoadImage">+ load image</button>
-      <input type="file" id="fileIn" hidden />
-
-      <div class="divider"></div>
-
-      <div class="section-title">ASCII Options</div>
-      <div class="mini-row">
-        <span>Ink Type</span>
-        <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
-          <option value="cmyk">CMYK Marker</option>
-          <option value="stabilo">Stabilo Marker</option>
-          <option value="mono">Monochrome</option>
-          <option value="dither">Dither</option>
-          <option value="image">Original</option>
-        </select>
-      </div>
-      <div class="mini-row">
-        <span>Pattern</span>
-        <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
-      </div>
-      <div class="mini-row">
-        <span>Preset</span>
-        <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
-      </div>
-      <div class="mini-row">
-        <span>Threshold</span>
-        <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
-      </div>
+  <div class="workspace active" id="tab-input">
+    
+    <!-- Left Panel with Sub-tabs -->
+    <div class="panel-left" style="padding:0; background:transparent;">
       
-      <div class="mini-row">
-        <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
-        <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
-        <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
+      <!-- Sub-tab Navigation -->
+      <div class="sub-tab-header">
+        <div class="sub-tab-btn active" onclick="switchSubTab('thoughts')" style="background:var(--thoughts-bg); color:var(--thoughts-text);">1/ WRITE THOUGHTS</div>
+        <div class="sub-tab-btn" onclick="switchSubTab('processor')" style="background:var(--proc-bg); color:var(--proc-text);">2/ IMAGE PROCESSOR</div>
       </div>
 
-      <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
-      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
-      <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+      <!-- Sub-tab 1: Thoughts -->
+      <div id="sub-thoughts" style="padding:14px; background:var(--thoughts-bg); height:100%; display:flex; flex-direction:column; gap:10px;">
+        <div class="section-title" style="color:var(--thoughts-text);">Write your thoughts here</div>
+        <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..." style="flex:1; border-color:var(--thoughts-text);"></textarea>
+        <button class="btn-retro" id="btnCreateCard" style="background:var(--white); color:var(--thoughts-text); border-color:var(--thoughts-text);">+ ADD THOUGHTS</button>
+      </div>
+
+      <!-- Sub-tab 2: Image Processor -->
+      <div id="sub-processor" style="padding:14px; background:var(--proc-bg); height:100%; display:none; flex-direction:column; gap:10px; overflow-y:auto;">
+        <div class="section-title" style="color:var(--proc-text); margin-top:0;">Image Input</div>
+        <div class="dashed-preview" id="preview-area" style="border-color:var(--proc-text);"><span class="muted">EMPTY</span></div>
+        <button class="btn-retro" id="btnLoadImage" style="background:var(--white); color:var(--proc-text); border-color:var(--proc-text);">+ LOAD IMAGE</button>
+        <input type="file" id="fileIn" hidden />
+
+        <div class="divider" style="background:var(--proc-text); opacity:0.3;"></div>
+
+        <div class="section-title" style="color:var(--proc-text);">ASCII Options</div>
+        <div class="mini-row" style="color:var(--proc-text);">
+          <span>Ink Type</span>
+          <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0; border-color:var(--proc-text);">
+            <option value="cmyk">CMYK Marker</option>
+            <option value="stabilo">Stabilo Marker</option>
+            <option value="mono">Monochrome</option>
+            <option value="dither">Dither</option>
+            <option value="image">Original</option>
+          </select>
+        </div>
+        <div class="mini-row" style="color:var(--proc-text);">
+          <span>Pattern</span>
+          <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
+        </div>
+        <div class="mini-row" style="color:var(--proc-text);">
+          <span>Preset</span>
+          <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0; border-color:var(--proc-text);"></select>
+        </div>
+        <div class="mini-row" style="color:var(--proc-text);">
+          <span>Threshold</span>
+          <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
+        </div>
+        
+        <div class="mini-row" style="color:var(--proc-text);">
+          <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert</label>
+          <label class="chk"><input type="checkbox" id="chkShowSrc"> Source</label>
+          <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
+        </div>
+
+        <button class="btn-retro btn-wide" id="cmykSaveBtn" style="background:var(--white); color:var(--proc-text); border-color:var(--proc-text);">+ ADD TO LIBRARY</button>
+        <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px; background:var(--white); color:var(--proc-text); border-color:var(--proc-text);">DOWNLOAD IMAGE</button>
+        <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px; background:var(--white); color:var(--proc-text); border-color:var(--proc-text);">DOWNLOAD TXT</button>
+      </div>
     </div>
 
     <div class="panel-center">
@@ -261,11 +273,8 @@
   <!-- TAB 3 -->
   <div class="workspace" id="tab-index">
     <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
-      <div class="section-title">Library</div>
-      <div class="mini-row" style="margin-bottom:10px;">
-        <button class="btn-retro" id="btnSelectTool" title="Selection Tool">🖱️ Select</button>
-      </div>
-      <div id="lib-grid" class="lib-grid"></div>
+      <div class="section-title">Tools</div>
+      <button class="btn-retro" id="btnSelectTool" title="Selection Tool">🖱️ Select</button>
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
     </div>
 
@@ -294,7 +303,7 @@
   </div>
   
   </div><!-- end app-body -->
-  </div><!-- end layout-column -->
+  </div><!-- end content-row -->
 
 </div>
 
@@ -336,23 +345,23 @@
   window.switchSidebar = function(mode) {
     const introView = document.getElementById('intro-view');
     const appBody = document.getElementById('main-app-body');
-    const tabs = document.querySelectorAll('.sidebar-tab');
-    const topTabs = document.querySelector('.tabs-container');
+    const topNavBtns = document.querySelectorAll('.top-nav-btn');
+    const sidebar = document.querySelector('.new-sidebar');
 
     if (mode === 'intro') {
       introView.style.display = 'flex';
       appBody.style.display = 'none';
-      if(topTabs) topTabs.classList.add('disabled');
+      if(sidebar) sidebar.classList.add('disabled');
       // FIX: Loop qua tabs để active đúng cái cần thiết thay vì hardcode index
-      tabs.forEach(t => {
+      topNavBtns.forEach(t => {
         if(t.textContent.includes('Introduction')) t.classList.add('active');
         else t.classList.remove('active');
       });
     } else {
       introView.style.display = 'none';
-      appBody.style.display = 'flex';
-      if(topTabs) topTabs.classList.remove('disabled');
-      tabs.forEach(t => {
+      appBody.style.display = 'flex'; // Ensure flex layout
+      if(sidebar) sidebar.classList.remove('disabled');
+      topNavBtns.forEach(t => {
         if(t.textContent.includes('Tool')) t.classList.add('active');
         else t.classList.remove('active');
       });
@@ -507,6 +516,30 @@
       newBtn.textContent = "export A4";
       newBtn.style.cursor = "pointer";
     });
+  }
+
+  // --- Sub-tab Logic for Tab 1 ---
+  window.switchSubTab = function(tabName) {
+    const thoughts = document.getElementById('sub-thoughts');
+    const processor = document.getElementById('sub-processor');
+    const btns = document.querySelectorAll('.sub-tab-btn');
+
+    if(tabName === 'thoughts') {
+      thoughts.style.display = 'flex';
+      processor.style.display = 'none';
+      btns[0].classList.add('active');
+      btns[1].classList.remove('active');
+    } else {
+      thoughts.style.display = 'none';
+      processor.style.display = 'flex';
+      btns[0].classList.remove('active');
+      btns[1].classList.add('active');
+    }
+  }
+
+  // --- Library Toggle ---
+  window.toggleLibrary = function() {
+    document.getElementById('libOverlay').classList.toggle('open');
   }
 </script>
 

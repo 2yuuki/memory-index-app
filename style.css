@@ -40,7 +40,13 @@
   --grad-gray: linear-gradient(to bottom, #f5f5f5, #a5a5a5);
   --grad-btn: linear-gradient(to bottom, #eaf6ff, #c9e6fd);
   --grad-yellow: linear-gradient(to left, #f7f59c, #faec21);
-  --grad-green: linear-gradient(to bottom, #06863d, #094224);
+  --grad-green: linear-gradient(to right, #06863d, #bedec7);
+
+  /* New Tab Colors */
+  --thoughts-bg: #fbe6ef;
+  --thoughts-text: #e9732b;
+  --proc-bg: #e0deec;
+  --proc-text: #182983;
 }
 
 /* --- BASE --- */
@@ -105,8 +111,8 @@ body::after {
 #app-container{
   width:100%;
   height:100%;
-  display:flex;
-  flex-direction:row;
+  display: flex;
+  flex-direction: column; /* Top bar on top */
   padding:0;
 }
 
@@ -126,60 +132,136 @@ body::after {
   overflow:hidden;
 }
 
-.app-sidebar{
-  width:32px;
-  display:flex;
-  flex-direction:column;
-  position:relative;
-  overflow:hidden;
-  border-right:var(--border);
-  padding-top: 44px;
-  background-image: var(--grad-green);
+/* --- NEW TOP BAR (Formerly Sidebar Content) --- */
+.new-top-bar {
+  height: 44px;
+  background-image: url('assets/UI items/top-bar.svg'), var(--grad-green);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, 0 0;
+  background-size: 130% 260%, 100% 100%;
+  background-blend-mode: soft-light, normal;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 10px;
+  gap: 10px;
+  z-index: 100;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.sidebar-tab{
-  width:100%;
-  height:140px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  /* background moved to ::before */
-  font-family: 'HP001', monospace;
-  font-size:14px;
-  cursor:pointer;
-  writing-mode: vertical-rl;
-  text-orientation: upleft;
-  margin-bottom: 6px;
+.top-nav-btn {
   position: relative;
-  z-index:10;
-  text-transform: none;
-  color: #009045;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'HP001', monospace;
+  font-size: 14px;
+  color: #026fcf;
+  cursor: pointer;
+  padding: 0 20px;
+  border-radius: 0;
+  transition: transform 0.2s;
+  text-transform: lowercase;
+  border: none;
+  background: transparent;
+  z-index: 1;
 }
-.sidebar-tab::before {
+.top-nav-btn::before {
   content: "";
   position: absolute;
   inset: 0;
   background: var(--grad-gray);
-  border-radius: 10px 0 0 10px;
+  border: 1px solid #999;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  transform: perspective(100px) rotateX(25deg);
+  transform-origin: bottom;
+  z-index: -1;
+  box-shadow: 0 -1px 2px rgba(0,0,0,0.1);
+}
+.top-nav-btn:hover {
+  color: #000;
+  background: transparent;
+  border-color: transparent;
+}
+.top-nav-btn:hover::before {
+  filter: brightness(1.05);
+}
+.top-nav-btn.active {
+  color: var(--white);
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  z-index: 10;
+}
+.top-nav-btn.active::before {
+  background: var(--grad-blue);
+  border-color: #0371cf;
+  transform: perspective(100px) rotateX(25deg);
+  box-shadow: none;
+}
+
+/* --- NEW SIDEBAR (Formerly Topbar Content) --- */
+.new-sidebar {
+  width: 32px;
+  background-image: var(--grad-green);
+  display: flex;
+  flex-direction: column;
+  border-right: var(--border);
+  z-index: 90;
+  flex-shrink: 0;
+  padding-top: 44px;
+  gap: 5px;
+}
+
+.v-tab-btn {
+  position: relative;
+  height: 140px;
+  width: 100%;
+  margin-left: 0;
+  padding-left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: 'HP001', monospace;
+  font-size: 14px;
+  color: #026fcf;
+  text-transform: lowercase;
+  transition: transform 0.2s;
+  z-index: 1;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+.v-tab-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  right: 0;
+  background: var(--grad-gray);
+  border: 1px solid #999;
+  border-right: 1px solid #999;
+  border-radius: 4px 0 0 4px;
   transform: perspective(100px) rotateY(-25deg);
   transform-origin: right;
   z-index: -1;
+  box-shadow: -1px 1px 2px rgba(0,0,0,0.1);
 }
-.sidebar-tab.active{ font-weight:bold; }
-.sidebar-tab.active::before{ background:var(--grad-yellow); }
-.sidebar-tab:hover:not(.active){ filter:brightness(0.95); }
 
-.sidebar-bg-rotated{
-  position:absolute;
-  top:50%; left:50%;
-  width:110vh;
-  height:32px;
-  transform:translate(-50%, -50%) rotate(90deg);
-  background-repeat: no-repeat;
-  background-position: right center;
-  background-size:150% 250%;
-  pointer-events:none;
-  z-index:0;
+.v-tab-btn:hover { color: #000; }
+.v-tab-btn:hover::before { filter: brightness(1.05); }
+
+.v-tab-btn.active {
+  color: var(--white);
+  z-index: 10;
+}
+.v-tab-btn.active::before {
+  background: var(--grad-blue);
+  border-color: #0371cf;
+  transform: perspective(100px) rotateY(-25deg);
+  width: calc(100% + 1px);
+  box-shadow: none;
 }
 
 /* --- INTRO VIEW --- */
@@ -263,100 +345,11 @@ body::after {
   text-transform: none;
 }
 
-/* --- TOP BAR --- */
-.top-bar{
-  height:44px;
-  position:relative;
-  display:flex;
-  align-items:flex-start;
-
-  background-image: url('assets/UI items/top-bar.svg'), var(--grad-green);
-  background-repeat: no-repeat, no-repeat;
-  background-position: center, 0 0;
-  background-size: 130% 260%, 100% 100%;
-  background-blend-mode: soft-light, normal;
-  border-bottom:var(--border);
-  z-index:20;
-}
-
-.top-bar-overlay{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-}
-
-.brand-pill{
-  position:relative;
-  height: 45px;
-  width: 260px;
-  flex-shrink: 0;
-  display:flex;
-  justify-content: center;
-  align-items:center;
-  padding: 10px;
-  z-index:2;
-}
-
-.brand-logo{
-  height: 40px;
-  width: auto;
-}
-
-/* --- TABS --- */
-.tabs-container{
-  display:flex;
-  align-items:flex-end;
-  height:100%;
-  position:relative;
-  z-index:2;
-}
-.tabs-container.disabled {
-  pointer-events: none;
-  opacity: 0.5;
-  filter: grayscale(100%);
-}
-
-.tab-btn{
-  position:relative;
-  height:42px;
-  padding:12px 32px 0 32px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  white-space:nowrap;
-  font-size:14px;
-  color:#026fcf;
-  cursor:pointer;
-}
-
-.tab-btn::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:var(--grad-gray);
-  border:var(--border);
-  border-bottom:none;
-  border-radius:10px 10px 0 0;
-  transform: perspective(70px) rotateX(25deg);
-  transform-origin:bottom;
-  z-index:-1;
-}
-
-.tab-btn.active{
-  color:var(--white);
-  transform: translateY(0);
-}
-
-.tab-btn.active::before{
-  background:var(--grad-blue);
-}
-
 /* --- WORKSPACE --- */
 .workspace{
   flex:1;
   display:none;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 300px 1fr; /* Wider left panel for sub-tabs */
   border-top:none;
 }
 .workspace.active{ display:grid; }
@@ -679,4 +672,63 @@ input[type="range"]::-webkit-slider-thumb{
   background-image: url('assets/canvas%20template/paper%20pattern%201.png');
   background-size: cover;
   background-position: center;
+}
+
+/* --- LIBRARY OVERLAY --- */
+.library-overlay {
+  position: absolute;
+  top: 50px; /* Below top bar */
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--white);
+  border-left: 2px solid var(--black);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+}
+.library-overlay.open {
+  transform: translateX(0);
+}
+.library-toggle {
+  position: absolute;
+  left: -40px;
+  top: 10px;
+  width: 40px;
+  height: 40px;
+  background: var(--white);
+  border: 2px solid var(--black);
+  border-right: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 5px 0 0 5px;
+  font-size: 20px;
+}
+
+/* --- TAB 1 SUB-TABS --- */
+.sub-tab-header {
+  display: flex;
+  height: 40px;
+  margin-bottom: 10px;
+}
+.sub-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: 'HP001', monospace;
+  border-bottom: 3px solid transparent;
+  opacity: 0.6;
+  font-size: 12px;
+}
+.sub-tab-btn.active {
+  opacity: 1;
+  font-weight: bold;
+  border-bottom: 3px solid currentColor;
 }
