@@ -310,6 +310,11 @@ body::after {
   position:relative;
   z-index:2;
 }
+.tabs-container.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
 
 .tab-btn{
   position:relative;

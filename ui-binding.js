@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log("UI Binding Loaded");
 
   // --- Tab Switching Logic ---
-  const tabs = document.querySelectorAll('.tab-btn');
+  const tabs = document.querySelectorAll('.sidebar-tab');
   const workspaces = document.querySelectorAll('.workspace');
 
   tabs.forEach(tab => {
