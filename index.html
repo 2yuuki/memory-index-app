@@ -43,50 +43,16 @@
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
     <div class="intro-content">
-      <h1 class="section-title" style="font-size:36px; text-align:center; margin-bottom:10px; color:var(--black);">Index of Remembering</h1>
-      <p style="text-align:center; color:var(--text-muted); font-family:'HypertextMono'; text-transform:none; margin-bottom:10px;">
-        A Digital Archive for your Fragmented Memories
+      <h1 class="section-title" style="font-size:24px; margin-bottom:16px;">Welcome to Index of Remembering</h1>
+      <p style="line-height:1.6; color:var(--black);">
+        This is a digital memory index inspired by HyperCard aesthetics.
+        <br><br>
+        <strong>How to use:</strong><br>
+        1. <strong>Input:</strong> Write thoughts or upload images.<br>
+        2. <strong>Sketch:</strong> Create ASCII art or pixel drawings.<br>
+        3. <strong>Index:</strong> Organize your memory cards.<br>
       </p>
-      
-      <div class="intro-grid">
-        <!-- Step 1 -->
-        <div class="intro-card">
-          <div class="intro-step-num">01</div>
-          <h3 class="intro-step-title">Input & Process</h3>
-          <p class="intro-desc">
-            Start by writing your thoughts or uploading an image. 
-            The system uses <strong>CMYK ASCII</strong> algorithms to convert your memories into digital textures.
-            <br><br>
-            <em>Tip: Try the 'Dither' mode for a retro look.</em>
-          </p>
-        </div>
-
-        <!-- Step 2 -->
-        <div class="intro-card">
-          <div class="intro-step-num">02</div>
-          <h3 class="intro-step-title">Sketch & Refine</h3>
-          <p class="intro-desc">
-            Switch to the <strong>Sketch Tab</strong> to edit your artwork. 
-            Use the <strong>Smart Brush</strong> for directional strokes or the <strong>Bucket</strong> to fill areas.
-            <br><br>
-            <em>Tip: Press 'Add to Library' to save your work.</em>
-          </p>
-        </div>
-
-        <!-- Step 3 -->
-        <div class="intro-card">
-          <div class="intro-step-num">03</div>
-          <h3 class="intro-step-title">Layout & Export</h3>
-          <p class="intro-desc">
-            Go to the <strong>Index Tab</strong> to organize your collection. 
-            Drag items from the library onto the A4 sheet. Arrange, resize, and <strong>Export</strong> your final memory sheet.
-          </p>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:center; gap:20px;">
-        <button class="btn-retro" style="width:200px; height:50px; font-size:16px; font-weight:bold;" onclick="switchSidebar('tools')">ENTER SYSTEM</button>
-      </div>
+      <button class="btn-retro" style="width:200px; margin-top:24px;" onclick="switchSidebar('tools')">Start Remembering</button>
     </div>
   </div>
 
@@ -235,15 +201,9 @@
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
     </div>
 
-    <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow-y:auto; padding-top:20px;">
-      <div class="artboard-wrapper" style="margin-bottom: 30px;">
-        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
-          <input type="text" value="Artboard 1" class="retro-input artboard-name" style="width:150px; text-align:center;">
-          <button class="btn-retro" onclick="duplicateArtboard(this)">Duplicate</button>
-        </div>
-        <div class="paper-sheet paper-a4 fixed-a4">
-          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
-        </div>
+    <div class="panel-center">
+      <div class="paper-sheet paper-a4 fixed-a4">
+        <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
       </div>
     </div>
   </div>
@@ -341,40 +301,6 @@
       a.click();
       URL.revokeObjectURL(url);
     });
-  }
-
-  window.duplicateArtboard = function(btn) {
-    const wrapper = btn.closest('.artboard-wrapper');
-    const clone = wrapper.cloneNode(true);
-    
-    // Update Name
-    const input = clone.querySelector('.artboard-name');
-    const currentName = input.value;
-    const match = currentName.match(/(\d+)$/);
-    if(match) {
-      input.value = currentName.replace(/\d+$/, parseInt(match[1]) + 1);
-    } else {
-      input.value = currentName + " Copy";
-    }
-
-    // Update ID to avoid duplicates
-    const canvasHolder = clone.querySelector('[id^="layout-canvas-holder"]');
-    if(canvasHolder) {
-      canvasHolder.id = "layout-canvas-holder-" + Date.now();
-    }
-    
-    // Copy Canvas content if any (in case p5.js or other canvas is used)
-    const oldCanvases = wrapper.querySelectorAll('canvas');
-    const newCanvases = clone.querySelectorAll('canvas');
-    if(oldCanvases.length > 0 && oldCanvases.length === newCanvases.length) {
-      oldCanvases.forEach((oldCv, i) => {
-        const newCv = newCanvases[i];
-        const ctx = newCv.getContext('2d');
-        if(ctx) ctx.drawImage(oldCv, 0, 0);
-      });
-    }
-
-    wrapper.parentNode.insertBefore(clone, wrapper.nextSibling);
   }
 </script>
 

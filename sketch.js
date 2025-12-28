@@ -570,7 +570,7 @@ function createUI() {
   if(btnClear) btnClear.mousePressed(() => { resetAllGrids(); saveState(); });
 
   let divAscii = select('#sketch-palette');
-  if (!divAscii && sidebarDiv) { createDiv('2. Patterns').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divAscii = createDiv('').parent(sidebarDiv).id('sketch-palette').class('palette-grid'); }
+  if (!divAscii && sidebarDiv) { createDiv('2. Patterns').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase'); divAscii = createDiv('').parent(sidebarDiv).id('sketch-palette').class('palette-grid'); }
   if(divAscii) {
     divAscii.html('');
     palette.forEach(item => {
@@ -585,7 +585,7 @@ function createUI() {
   
 
   let divColor = select('#sketch-colors');
-  if (!divColor && sidebarDiv) { createDiv('4. Ink Color').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divColor = createDiv('').parent(sidebarDiv).id('sketch-colors').class('palette-grid palette-ink'); }
+  if (!divColor && sidebarDiv) { createDiv('4. Ink Color').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase'); divColor = createDiv('').parent(sidebarDiv).id('sketch-colors').class('palette-grid palette-ink'); }
   if(divColor) {
     divColor.html('');
     colorPalette.forEach(col => {
@@ -872,7 +872,7 @@ function createLayoutUI() {
     layoutSidebarRef.child(group);
     
     // 1. Paper Patterns (Interactive Images)
-    createDiv('Paper Pattern').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    createDiv('Paper Pattern').parent(group).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase');
     let patRow = createDiv('').parent(group).class('mini-row').style('justify-content', 'center').style('gap', '10px');
     
     let btnPrev = createButton('<-').parent(patRow).class('btn-retro').style('width','40px');
@@ -887,7 +887,7 @@ function createLayoutUI() {
     });
 
     // 2. Add Text Tool
-    createDiv('Text Tool').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    createDiv('Text Tool').parent(group).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase');
     let txtRow = createDiv('').parent(group).class('mini-row');
     
     let btnDrawText = createButton('Draw Text Box').id('btn-draw-text').parent(txtRow).class('btn-retro');
@@ -943,7 +943,7 @@ function createLayoutUI() {
     });
 
     // 4. Canvas Controls (Add Artboard)
-    createDiv('Canvas').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    createDiv('Canvas').parent(group).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase');
     let canvasRow = createDiv('').parent(group).class('mini-row');
     let btnAddPage = createButton('Add Artboard').parent(canvasRow).class('btn-retro').style('width', '100%');
     btnAddPage.mousePressed(() => {
@@ -955,14 +955,14 @@ function createLayoutUI() {
     });
 
     // 4. Settings (Snap)
-    createDiv('Settings').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    createDiv('Settings').parent(group).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase');
     let settingRow = createDiv('').parent(group).class('mini-row');
     let chkSnap = createCheckbox('Snap to Grid', isSnapToGrid).parent(settingRow);
     chkSnap.style('font-family', 'monospace').style('font-size', '14px');
     chkSnap.changed(() => { isSnapToGrid = chkSnap.checked(); });
 
     // 5. Project (Save/Load)
-    createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px').style('text-transform','uppercase');
     let projRow = createDiv('').parent(group).class('mini-row');
     let btnSave = createButton('Save Layout').parent(projRow).class('btn-retro');
     let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro');
@@ -1402,7 +1402,7 @@ function createPageBackground(parent, index, setAsActive = false) {
     label.style('top', '-20px'); label.style('left', '-1px');
     label.style('background', '#0072BC'); label.style('color', 'white');
     label.style('font-size', '14px'); label.style('padding', '2px 6px'); label.style('font-weight', 'bold');
-    label.style('font-family', "'HP001', monospace"); label.style('text-transform', 'lowercase'); label.style('pointer-events', 'none');
+    label.style('font-family', "'HP001', monospace"); label.style('pointer-events', 'none');
 
     if (setAsActive) setActiveArtboard(bg.elt);
 }
