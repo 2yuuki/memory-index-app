@@ -345,6 +345,90 @@ body::after {
   text-transform: none;
 }
 
+/* --- TOP BAR --- */
+.top-bar{
+  height:44px;
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+
+  background-image: url('assets/UI items/top-bar.svg'), var(--grad-green);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, 0 0;
+  background-size: 130% 260%, 100% 100%;
+  background-blend-mode: soft-light, normal;
+  border-bottom:var(--border);
+  z-index:20;
+}
+
+.top-bar-overlay{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.brand-pill{
+  position:relative;
+  height: 45px;
+  width: 260px;
+  flex-shrink: 0;
+  display:flex;
+  justify-content: center;
+  align-items:center;
+  padding: 10px;
+  z-index:2;
+}
+
+.brand-logo{
+  height: 40px;
+  width: auto;
+}
+
+/* --- TABS --- */
+.tabs-container{
+  display:flex;
+  align-items:flex-end;
+  height:100%;
+  position:relative;
+  z-index:2;
+}
+
+.tab-btn{
+  position:relative;
+  height:42px;
+  padding:12px 32px 0 32px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:nowrap;
+  font-size:14px;
+  color:#026fcf;
+  cursor:pointer;
+}
+
+.tab-btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--grad-gray);
+  border:var(--border);
+  border-bottom:none;
+  border-radius:10px 10px 0 0;
+  transform: perspective(70px) rotateX(25deg);
+  transform-origin:bottom;
+  z-index:-1;
+}
+
+.tab-btn.active{
+  color:var(--white);
+  transform: translateY(0);
+}
+
+.tab-btn.active::before{
+  background:var(--grad-blue);
+}
+
 /* --- WORKSPACE --- */
 .workspace{
   flex:1;

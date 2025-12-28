@@ -7,89 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    /* --- Artboard UI Enhancements --- */
-    .artboard-wrapper {
-      margin-bottom: 40px;
-      transition: transform 0.2s, opacity 0.2s;
-      cursor: grab;
-    }
-    .artboard-wrapper.dragging {
-      opacity: 0.5;
-      transform: scale(0.98);
-      cursor: grabbing;
-    }
-    .artboard-header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      height: 30px;
-    }
-    .artboard-label {
-      font-family: 'HypertextMono', monospace;
-      font-size: 14px;
-      padding: 2px 8px;
-      border: 1px solid transparent;
-      cursor: text;
-      min-width: 100px;
-      text-align: center;
-    }
-    .artboard-label:hover {
-      border: 1px dashed #aaa;
-    }
-    .artboard-label-input {
-      font-family: 'HypertextMono', monospace;
-      font-size: 14px;
-      text-align: center;
-      width: 150px;
-      border: 1px solid var(--tab-blue);
-      outline: none;
-      background: var(--white);
-    }
-    .btn-icon {
-      background: var(--white);
-      border: 1px solid #ccc;
-      cursor: pointer;
-      font-size: 16px;
-      width: 30px;
-      height: 30px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .btn-icon:hover {
-      background: #f0f0f0;
-      transform: translateY(-1px);
-    }
-    /* Fix for paper pattern in Index Tab */
-    #tab-index .paper-sheet {
-      position: relative;
-      background-image: none;
-      background-color: #fff;
-    }
-    #tab-index .paper-sheet::before {
-      content: "";
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 842px; height: 595px; /* Swapped A4 dimensions for rotation */
-      background-image: url('assets/canvas%20template/paper%20pattern%201.png');
-      background-size: 100% 100%;
-      transform: translate(-50%, -50%) rotate(90deg);
-      z-index: 0;
-      pointer-events: none;
-    }
-    #tab-index .paper-sheet > div {
-      position: relative;
-      z-index: 1;
-    }
-  </style>
 </head>
 <body>
 
@@ -111,11 +28,16 @@
       <div class="v-tab-btn" data-tab="tab-layout">4. Paper Memory Teller</div>
     </div>
 
-    <!-- LIBRARY OVERLAY (Pinned) -->
-    <div class="library-overlay" id="libOverlay">
-      <div class="library-toggle" onclick="toggleLibrary()">📚</div>
-      <div class="section-title" style="padding:10px;">Library</div>
-      <div id="lib-grid" class="lib-grid" style="padding:10px; overflow-y:auto;"></div>
+      <div class="brand-pill">
+        <img src="assets/UI%20items/logo.svg" class="brand-logo" alt="Index of Remembering">
+      </div>
+
+      <div class="tabs-container">
+        <div class="tab-btn active" data-tab="tab-input">1. Memories Input</div>
+        <div class="tab-btn" data-tab="tab-sketch">2. Memories ASCII Sketch</div>
+        <div class="tab-btn" data-tab="tab-index">3. The Memory Diagram</div>
+        <div class="tab-btn" data-tab="tab-layout">4. The Paper Memory Teller Sheet</div>
+      </div>
     </div>
 
   <!-- INTRO VIEW -->
@@ -172,9 +94,44 @@
 
   <!-- TAB 1 -->
   <div class="workspace active" id="tab-input">
-    
-    <!-- Left Panel with Sub-tabs -->
-    <div class="panel-left" style="padding:0; background:transparent;">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="1. Input">
+
+      <div class="section-title">1/ Write down your thoughts here</div>
+      <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
+      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+
+      <div class="divider"></div>
+
+      <div class="section-title">2/ Image Input</div>
+      <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
+      <button class="btn-retro" id="btnLoadImage">+ load image</button>
+      <input type="file" id="fileIn" hidden />
+
+      <div class="divider"></div>
+
+      <div class="section-title">ASCII Options</div>
+      <div class="mini-row">
+        <span>Ink Type</span>
+        <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
+          <option value="cmyk">CMYK Marker</option>
+          <option value="stabilo">Stabilo Marker</option>
+          <option value="mono">Monochrome</option>
+          <option value="dither">Dither</option>
+          <option value="image">Original</option>
+        </select>
+      </div>
+      <div class="mini-row">
+        <span>Pattern</span>
+        <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
+      </div>
+      <div class="mini-row">
+        <span>Preset</span>
+        <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
+      </div>
+      <div class="mini-row">
+        <span>Threshold</span>
+        <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
+      </div>
       
       <!-- Sub-tab Navigation -->
       <div class="sub-tab-header">
@@ -273,19 +230,19 @@
   <!-- TAB 3 -->
   <div class="workspace" id="tab-index">
     <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
-      <div class="section-title">Tools</div>
-      <button class="btn-retro" id="btnSelectTool" title="Selection Tool">🖱️ Select</button>
+      <div class="section-title">Library</div>
+      <div id="lib-grid" class="lib-grid"></div>
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
     </div>
 
     <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow-y:auto; padding-top:20px;">
-      <div class="artboard-wrapper" draggable="true">
-        <div class="artboard-header">
-          <span class="artboard-label" ondblclick="makeEditable(this)">Artboard 1</span>
-          <button class="btn-icon" onclick="duplicateArtboard(this)" title="Duplicate Artboard">❐</button>
+      <div class="artboard-wrapper" style="margin-bottom: 30px;">
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+          <input type="text" value="Artboard 1" class="retro-input artboard-name" style="width:150px; text-align:center;">
+          <button class="btn-retro" onclick="duplicateArtboard(this)">Duplicate</button>
         </div>
         <div class="paper-sheet paper-a4 fixed-a4">
-          <div id="layout-canvas-holder" style="width:100%; height:100%;"></div>
+          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
         </div>
       </div>
     </div>
@@ -338,20 +295,15 @@
   //fixSvgStretch('.panel-left', 'assets/UI%20items/panel-left.svg');
   //fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
 
-  // Initialize Drag and Drop for existing artboards
-  document.querySelectorAll('.artboard-wrapper').forEach(el => addDnDHandlers(el));
-
   // Sidebar Switch Logic
   window.switchSidebar = function(mode) {
     const introView = document.getElementById('intro-view');
     const appBody = document.getElementById('main-app-body');
-    const topNavBtns = document.querySelectorAll('.top-nav-btn');
-    const sidebar = document.querySelector('.new-sidebar');
+    const tabs = document.querySelectorAll('.sidebar-tab');
 
     if (mode === 'intro') {
       introView.style.display = 'flex';
       appBody.style.display = 'none';
-      if(sidebar) sidebar.classList.add('disabled');
       // FIX: Loop qua tabs để active đúng cái cần thiết thay vì hardcode index
       topNavBtns.forEach(t => {
         if(t.textContent.includes('Introduction')) t.classList.add('active');
@@ -359,9 +311,8 @@
       });
     } else {
       introView.style.display = 'none';
-      appBody.style.display = 'flex'; // Ensure flex layout
-      if(sidebar) sidebar.classList.remove('disabled');
-      topNavBtns.forEach(t => {
+      appBody.style.display = 'flex';
+      tabs.forEach(t => {
         if(t.textContent.includes('Tool')) t.classList.add('active');
         else t.classList.remove('active');
       });
@@ -397,13 +348,13 @@
     const clone = wrapper.cloneNode(true);
     
     // Update Name
-    const label = clone.querySelector('.artboard-label');
-    const currentName = label.innerText;
+    const input = clone.querySelector('.artboard-name');
+    const currentName = input.value;
     const match = currentName.match(/(\d+)$/);
     if(match) {
-      label.innerText = currentName.replace(/\d+$/, parseInt(match[1]) + 1);
+      input.value = currentName.replace(/\d+$/, parseInt(match[1]) + 1);
     } else {
-      label.innerText = currentName + " Copy";
+      input.value = currentName + " Copy";
     }
 
     // Update ID to avoid duplicates
@@ -423,123 +374,7 @@
       });
     }
 
-    // Re-attach Drag and Drop handlers
-    addDnDHandlers(clone);
-
     wrapper.parentNode.insertBefore(clone, wrapper.nextSibling);
-  }
-
-  // --- Rename Logic ---
-  window.makeEditable = function(el) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = el.innerText;
-    input.className = 'artboard-label-input';
-    input.onblur = function() { saveLabel(this); };
-    input.onkeydown = function(e) { if(e.key === 'Enter') saveLabel(this); };
-    el.parentNode.replaceChild(input, el);
-    input.focus();
-  }
-
-  window.saveLabel = function(input) {
-    const span = document.createElement('span');
-    span.className = 'artboard-label';
-    span.innerText = input.value;
-    span.ondblclick = function() { makeEditable(this); };
-    input.parentNode.replaceChild(span, input);
-  }
-
-  // --- Drag and Drop Logic ---
-  let dragSrcEl = null;
-  function handleDragStart(e) {
-    dragSrcEl = this;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', this.innerHTML);
-    this.classList.add('dragging');
-  }
-  function handleDragOver(e) {
-    if (e.preventDefault) e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-  }
-  function handleDrop(e) {
-    if (e.stopPropagation) e.stopPropagation();
-    if (dragSrcEl !== this) {
-      const parent = this.parentNode;
-      const nodes = Array.from(parent.children);
-      if (nodes.indexOf(dragSrcEl) < nodes.indexOf(this)) {
-        parent.insertBefore(dragSrcEl, this.nextSibling);
-      } else {
-        parent.insertBefore(dragSrcEl, this);
-      }
-    }
-    return false;
-  }
-  function handleDragEnd(e) { this.classList.remove('dragging'); }
-  function addDnDHandlers(elem) {
-    elem.addEventListener('dragstart', handleDragStart, false);
-    elem.addEventListener('dragover', handleDragOver, false);
-    elem.addEventListener('drop', handleDrop, false);
-    elem.addEventListener('dragend', handleDragEnd, false);
-  }
-
-  // --- PDF Export Logic ---
-  // Replace the export button to handle multiple artboards PDF export
-  const btnExport = document.getElementById('btnExportLayout');
-  if(btnExport) {
-    const newBtn = btnExport.cloneNode(true);
-    btnExport.parentNode.replaceChild(newBtn, btnExport);
-    
-    newBtn.addEventListener('click', async () => {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const artboards = document.querySelectorAll('#tab-index .paper-sheet');
-      
-      if(artboards.length === 0) return;
-
-      newBtn.textContent = "Generating PDF...";
-      newBtn.style.cursor = "wait";
-
-      for (let i = 0; i < artboards.length; i++) {
-        const sheet = artboards[i];
-        const canvas = await html2canvas(sheet, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-        const imgWidth = 210; 
-        const pageHeight = 297; 
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        if (i > 0) doc.addPage();
-        doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      }
-      
-      doc.save('memory-index.pdf');
-      newBtn.textContent = "export A4";
-      newBtn.style.cursor = "pointer";
-    });
-  }
-
-  // --- Sub-tab Logic for Tab 1 ---
-  window.switchSubTab = function(tabName) {
-    const thoughts = document.getElementById('sub-thoughts');
-    const processor = document.getElementById('sub-processor');
-    const btns = document.querySelectorAll('.sub-tab-btn');
-
-    if(tabName === 'thoughts') {
-      thoughts.style.display = 'flex';
-      processor.style.display = 'none';
-      btns[0].classList.add('active');
-      btns[1].classList.remove('active');
-    } else {
-      thoughts.style.display = 'none';
-      processor.style.display = 'flex';
-      btns[0].classList.remove('active');
-      btns[1].classList.add('active');
-    }
-  }
-
-  // --- Library Toggle ---
-  window.toggleLibrary = function() {
-    document.getElementById('libOverlay').classList.toggle('open');
   }
 </script>
 
