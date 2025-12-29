@@ -1351,6 +1351,14 @@ window.addToLibrary = function(p5Img, name) {
   item.mousePressed(() => { if (activeTab === 'tab-sketch') loadImage(dataURL, handleImageLoad); });
   item.elt.draggable = true;
   item.elt.ondragstart = (e) => { e.dataTransfer.setData("text/plain", dataURL); };
+
+  // Animation feedback on Global Library Button
+  let btn = document.getElementById('global-lib-btn');
+  if(btn) {
+    btn.classList.remove('lib-saved-anim');
+    void btn.offsetWidth; // trigger reflow
+    btn.classList.add('lib-saved-anim');
+  }
 };
 
 // --- LAYOUT HELPERS ---

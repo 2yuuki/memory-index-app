@@ -109,7 +109,7 @@
           <!-- Left Column: UI Controls -->
           <div class="proc-ui-col">
             <div class="section-title">Image Input</div>
-            <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
+            <div class="dashed-preview" id="preview-area"><span class="muted">Empty</span></div>
             <button class="btn-retro" id="btnLoadImage">+ load image</button>
             <input type="file" id="fileIn" hidden />
 
@@ -198,10 +198,6 @@
   <!-- TAB 3 -->
   <div class="workspace" id="tab-index">
     <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
-      <div class="section-title">Library</div>
-      <div class="muted" style="font-size:12px; margin-bottom:10px;">Moved to right panel -></div>
-      <button class="btn-retro" onclick="toggleGlobalLibrary()">OPEN LIBRARY</button>
-      <div class="divider"></div>
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
     </div>
 
@@ -273,6 +269,23 @@
   //fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
 
   // Sidebar Switch Logic
+  function playTypewriter() {
+    const titleEl = document.getElementById('intro-title');
+    if(!titleEl) return;
+    const text = "Index of Remembering";
+    titleEl.innerText = ""; // Clear initial text
+    
+    let i = 0;
+    function typeWriter() {
+      if (i < text.length) {
+        titleEl.innerText += text.charAt(i);
+        i++;
+        setTimeout(typeWriter, 100); // Speed: 100ms per char
+      }
+    }
+    setTimeout(typeWriter, 100);
+  }
+
   window.switchSidebar = function(mode) {
     const introView = document.getElementById('intro-view');
     const appBody = document.getElementById('main-app-body');
@@ -295,6 +308,9 @@
       
       // Disable Sidebar Tabs in Intro
       sidebarTabs.forEach(t => t.classList.add('disabled-tab'));
+      
+      // Replay Typewriter Effect
+      playTypewriter();
 
     } else {
       introView.style.display = 'none';
@@ -403,21 +419,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize State (Intro Active, others disabled)
     switchSidebar('intro');
-
-    // 2. Typewriter Effect
-    const titleEl = document.getElementById('intro-title');
-    const text = "Index of Remembering";
-    titleEl.innerText = ""; // Clear initial text
-    
-    let i = 0;
-    function typeWriter() {
-      if (i < text.length) {
-        titleEl.innerText += text.charAt(i);
-        i++;
-        setTimeout(typeWriter, 100); // Speed: 100ms per char
-      }
-    }
-    setTimeout(typeWriter, 500); // Start after 500ms delay
   });
 </script>
 

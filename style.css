@@ -4,10 +4,6 @@
   src: url('fonts/HP001_b5h.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'HypertextMono';
-  src: url('fonts/00HypertextMonoNon-Commercial-Light.otf') format('opentype');
-}
-@font-face {
   font-family: 'OCR A';
   src: url('fonts/OCRAStd.otf') format('opentype');
 }
@@ -139,8 +135,8 @@ body::after {
   position:relative;
   overflow:hidden;
   border-right:var(--border);
-  padding-top: 60px;
-  background-image: var(--grad-green);
+  padding-top: 40px;
+  background-image: linear-gradient(to right, #06863d, #bedec7);
 }
 
 .sidebar-tab{
@@ -156,6 +152,7 @@ body::after {
   cursor:pointer;
   writing-mode: vertical-rl;
   text-orientation: upleft;
+  text-orientation: mixed;
   position: relative;
   z-index:10;
   text-transform: uppercase;
@@ -166,6 +163,7 @@ body::after {
   position: absolute;
   inset: 0;
   background: var(--grad-gray);
+  background: linear-gradient(to left, #f5f5f5, #a5a5a5);
   border-radius: 10px 0 0 10px;
   transform: perspective(100px) rotateY(-25deg);
   transform-origin: right;
@@ -173,6 +171,7 @@ body::after {
 }
 .sidebar-tab.active{ font-weight:bold; }
 .sidebar-tab.active::before{ background:var(--grad-yellow); }
+.sidebar-tab.active::before{ background:linear-gradient(to left, #f7f59c, #faec21); }
 .sidebar-tab:hover:not(.active){ filter:brightness(0.95); }
 
 .sidebar-bg-rotated{
@@ -294,13 +293,14 @@ body::after {
 .brand-pill{
   position:relative;
   height: 60px;
-  width: 260px;
+  width: 200px;
   flex-shrink: 0;
   display:flex;
   justify-content: center;
   align-items:center;
   padding: 10px;
   z-index:2;
+  display: none;
 }
 
 .brand-logo{
@@ -320,7 +320,7 @@ body::after {
 .tab-btn{
   position:relative;
   height:45px;
-  width: 260px;
+  width: 200px;
   padding: 25px;
   align-items:center;
   justify-content:center;
@@ -357,7 +357,7 @@ body::after {
 .workspace{
   flex:1;
   display:none;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 400px 1fr;
   border-top:none;
 }
 .workspace.active{ display:grid; }
@@ -779,14 +779,11 @@ input[type="range"]::-webkit-slider-thumb{
   position: absolute;
   top: 0; /* Full height relative to panel-left */
   left: 100%; /* Đẩy panel sang bên phải của panel cha */
-  width: calc(133.3333vw - 320px); /* Sidebar (60px) + Panel Left (260px) = 320px */
+  width: calc(133.3333vw - 440px); /* Sidebar (40px) + Panel Left (400px) = 440px */
   bottom: 0;
   background: #e0deec;
   color: #182983;
-  border-top: 2px solid var(--black);
-  border-right: 2px solid var(--black);
-  border-bottom: 2px solid var(--black);
-  border-left: 2px solid var(--black);
+  border: none;
   z-index: 50;
   padding: 15px;
   overflow: hidden; /* Tắt cuộn chung để xử lý layout 2 cột */
@@ -904,7 +901,7 @@ input[type="range"]::-webkit-slider-thumb{
   bottom: 0;
   width: 300px;
   background: var(--panel-bg);
-  border-left: 2px solid var(--black);
+  border: none;
   z-index: 1999;
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -933,4 +930,14 @@ input[type="range"]::-webkit-slider-thumb{
   pointer-events: none;
   opacity: 0.5;
   filter: grayscale(100%);
+}
+
+/* --- LIBRARY SAVE ANIMATION --- */
+@keyframes libSavePulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(1.3); background: var(--grad-yellow); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.lib-saved-anim {
+  animation: libSavePulse 0.6s ease-out;
 }
