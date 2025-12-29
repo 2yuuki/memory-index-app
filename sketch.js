@@ -105,7 +105,7 @@ let bitmapPatterns = [
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
   activeTab = tabId;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
   
   let btn = document.querySelector(`[data-tab="${tabId}"]`);
@@ -164,7 +164,7 @@ function setup() {
 
   pgTextLayer = createGraphics(width, height);
   pgTextLayer.pixelDensity(1);
-  pgTextLayer.textFont("'HypertextMono', monospace"); 
+  pgTextLayer.textFont("'HP001', monospace"); 
   pgTextLayer.textAlign(CENTER, CENTER);
   
   // 2. Pre-render Grid
@@ -536,7 +536,7 @@ function createAlignControls() {
   let group = createDiv(''); group.id('ref-image-group').parent(sidebarDiv);
   sidebarDiv.elt.insertBefore(group.elt, sidebarDiv.elt.firstChild); 
   group.style('background', '#eee'); group.style('padding', '10px'); group.style('margin-bottom', '15px');
-  createDiv('1. Input an reference image (optional)').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+  createDiv('Input a reference image (optional)').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
   
   let fileInp = createFileInput(handleFile); fileInp.parent(group).style('margin-bottom', '10px').style('width', '100%');
   let rowShow = createDiv('').parent(group).style('display','flex').style('margin-bottom','5px');
@@ -596,7 +596,7 @@ function createUI() {
 
   let exportGroup = select('#export-group');
   if (!exportGroup && sidebarDiv) {
-      createDiv('5. Actions').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); exportGroup = createDiv('').parent(sidebarDiv).id('export-group');
+      createDiv('Files').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); exportGroup = createDiv('').parent(sidebarDiv).id('export-group');
       exportGroup.style('display','flex').style('flex-direction','column').style('gap','8px');
       let btnPng = createButton('EXPORT PNG (NO GRID)').parent(exportGroup).class('btn-retro'); btnPng.mousePressed(saveArtworkPNG);
       let btnTxt = createButton('EXPORT TXT').parent(exportGroup).class('btn-retro'); btnTxt.mousePressed(saveArtworkTXT);
@@ -1080,7 +1080,7 @@ function makeElementInteractive(elmnt) {
           btn.innerText = text;
           btn.style.padding = '6px 12px';
           btn.style.cursor = 'pointer';
-          btn.style.fontFamily = "'HypertextMono', monospace";
+          btn.style.fontFamily = "'HP001', monospace";
           btn.style.fontSize = '14px';
           btn.style.color = '#000';
           btn.onmouseenter = () => { btn.style.background = '#0072BC'; btn.style.color = '#fff'; };

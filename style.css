@@ -7,6 +7,10 @@
   font-family: 'HypertextMono';
   src: url('fonts/00HypertextMonoNon-Commercial-Light.otf') format('opentype');
 }
+@font-face {
+  font-family: 'OCR A';
+  src: url('fonts/OCRAStd.otf') format('opentype');
+}
 
 /* --- THEME --- */
 :root{
@@ -16,15 +20,15 @@
   --green1:#009045;
   --green2:#0a3a24;
 
-  --tab-blue:#0371cf;
+  --tab-blue:#182983;
   --tab-gray:#d7d7d7;
 
   --panel-bg:#efefef;
   --panel-white:#ffffff;
 
-  --btn-blue:#c9e6fd;
+  --btn-blue:#182983;
 
-  --text-blue:#0371cf;
+  --text-blue:#182983;
   --text-pink:#f75397;
 
   --text-muted:#7a7a7a;
@@ -40,7 +44,7 @@
   --grad-gray: linear-gradient(to bottom, #f5f5f5, #a5a5a5);
   --grad-btn: linear-gradient(to bottom, #eaf6ff, #c9e6fd);
   --grad-yellow: linear-gradient(to left, #f7f59c, #faec21);
-  --grad-green: linear-gradient(to bottom, #06863d, #094224);
+  --grad-green: linear-gradient(to bottom, #06863d, #bedec7);
 }
 
 /* --- BASE --- */
@@ -51,7 +55,7 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: 'HypertextMono', monospace;
+  font-family: 'HP001', monospace;
   font-weight: 400;
   font-size: 16px;
   color: var(--black);
@@ -66,7 +70,7 @@ html, body {
   background-size: 2px 2px;
   background-position: 0 0;
   
-  text-transform: uppercase;
+  text-transform: none;
   position: relative; /* Để ::after đè lên */
 }
 
@@ -96,15 +100,17 @@ body::after {
 
 /* headings look */
 .brand-text,.tab-btn,.section-title{
-  font-family: 'HP001', monospace;
+  font-family: 'OCR A', monospace;
   letter-spacing:.3px;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 /* --- APP LAYOUT --- */
 #app-container{
-  width:100%;
-  height:100%;
+  width:133.3333vw;
+  height:133.3333vh;
+  transform: scale(0.75);
+  transform-origin: top left;
   display:flex;
   flex-direction:row;
   padding:0;
@@ -127,32 +133,32 @@ body::after {
 }
 
 .app-sidebar{
-  width:32px;
+  width:40px;
   display:flex;
   flex-direction:column;
   position:relative;
   overflow:hidden;
   border-right:var(--border);
-  padding-top: 44px;
+  padding-top: 60px;
   background-image: var(--grad-green);
 }
 
 .sidebar-tab{
+  height: 40px;
   width:100%;
-  height:140px;
+  flex: 1; /* Chia đều chiều cao cho 4 tab */
   display:flex;
   align-items:center;
   justify-content:center;
   /* background moved to ::before */
-  font-family: 'HP001', monospace;
-  font-size:14px;
+  font-family: 'OCR A', monospace;
+  font-size:12px;
   cursor:pointer;
   writing-mode: vertical-rl;
   text-orientation: upleft;
-  margin-bottom: 6px;
   position: relative;
   z-index:10;
-  text-transform: none;
+  text-transform: uppercase;
   color: #009045;
 }
 .sidebar-tab::before {
@@ -172,8 +178,8 @@ body::after {
 .sidebar-bg-rotated{
   position:absolute;
   top:50%; left:50%;
-  width:110vh;
-  height:32px;
+  width:200vh;
+  height:40px;
   transform:translate(-50%, -50%) rotate(90deg);
   background-repeat: no-repeat;
   background-position: right center;
@@ -200,13 +206,13 @@ body::after {
 }
 
 .intro-content {
-  background-color: var(--white);
+  background-color: #e0deec;
   padding: 40px;
   border: 2px solid var(--black);
   box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
   max-width: 1000px;
   width: 90%;
-  max-height: 90vh;
+  max-height: 90%;
   overflow-y: auto;
 }
 
@@ -218,7 +224,7 @@ body::after {
 }
 
 .intro-card {
-  background: #f9f9f9;
+  background: #fff;
   border: 1px solid var(--black);
   padding: 20px;
   position: relative;
@@ -233,7 +239,7 @@ body::after {
 }
 
 .intro-step-num {
-  font-family: 'HP001', monospace;
+  font-family: 'OCR A', monospace;
   font-size: 60px;
   color: #e0e0e0;
   position: absolute;
@@ -244,17 +250,17 @@ body::after {
 }
 
 .intro-step-title {
-  font-family: 'HP001', monospace;
+  font-family: 'OCR A', monospace;
   color: var(--black);
   font-size: 20px;
   margin: 0 0 10px 0;
   position: relative;
   z-index: 1;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .intro-desc {
-  font-family: 'HypertextMono', monospace;
+  font-family: 'HP001', monospace;
   font-size: 14px;
   line-height: 1.6;
   color: #444;
@@ -265,12 +271,12 @@ body::after {
 
 /* --- TOP BAR --- */
 .top-bar{
-  height:44px;
+  height:40px;
   position:relative;
   display:flex;
   align-items:flex-start;
 
-  background-image: url('assets/UI items/top-bar.svg'), var(--grad-green);
+  background-image: var(--grad-green);
   background-repeat: no-repeat, no-repeat;
   background-position: center, 0 0;
   background-size: 130% 260%, 100% 100%;
@@ -287,7 +293,7 @@ body::after {
 
 .brand-pill{
   position:relative;
-  height: 45px;
+  height: 60px;
   width: 260px;
   flex-shrink: 0;
   display:flex;
@@ -313,14 +319,14 @@ body::after {
 
 .tab-btn{
   position:relative;
-  height:42px;
-  padding:12px 32px 0 32px;
-  display:flex;
+  height:45px;
+  width: 260px;
+  padding: 25px;
   align-items:center;
   justify-content:center;
   text-align:center;
   white-space:nowrap;
-  font-size:14px;
+  font-size:12px;
   color:#026fcf;
   cursor:pointer;
 }
@@ -359,13 +365,20 @@ body::after {
 /* left/right panels url('assets/UI items/panel-left.svg'),*/
 .panel-left{
   position:relative;
-  background-color: #f7f59c;
+  background-color: #fbe6ef;
+  color: #e9732b;
   background-repeat: no-repeat, repeat;
   padding:14px 12px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  overflow:auto;
+  overflow:visible; /* Cho phép panel con hiển thị tràn ra ngoài (flyout) */
+  z-index: 100; /* Đảm bảo panel con đè lên panel-center */
+}
+
+/* Animation cho Panel chính (Thoughts) khi vào Tab */
+.workspace.active .panel-left {
+  animation: panelSlideIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 /* ribbons (2 mảng xiên bên hông giống ảnh) */
@@ -377,7 +390,7 @@ body::after {
   transform: rotate(-90deg);
   transform-origin:left top;
 
-  font-family: 'HypertextMono', monospace;
+  font-family: 'HP001', monospace;
   font-size:10px;
   font-weight: 50;
   padding:4px 10px;
@@ -425,14 +438,19 @@ body::after {
   border:var(--border);
   padding:8px;
   background:var(--white);
-  font-family: 'HypertextMono', monospace;
+  font-family: 'HP001', monospace;
   font-size:14px;
   outline:none;
-  text-transform: uppercase;
+  text-transform: none;
 }
 textarea.retro-input{
   min-height:86px;
   resize:none;
+}
+
+#inpThought {
+  background-color: #fbe6ef;
+  color: #e9732b;
 }
 
 /* preview */
@@ -459,7 +477,7 @@ textarea.retro-input{
   background-size: 4px 4px, 4px 4px, 100% 100%;
   background-repeat: repeat, repeat, no-repeat;
   color:var(--text-blue);
-  font-family: 'HypertextMono', monospace;
+  font-family: 'HP001', monospace;
   font-size:14px;
   cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.1);
@@ -666,12 +684,253 @@ input[type="range"]::-webkit-slider-thumb{
 }
 
 /* --- OVERRIDES --- */
-.tab-btn[data-tab="tab-index"]::before{ background:var(--grad-gray) !important; }
-.tab-btn[data-tab="tab-index"].active{ color:var(--text-blue) !important; }
+.sidebar-tab[data-tab="tab-index"]::before{ background:var(--grad-gray) !important; }
+.sidebar-tab[data-tab="tab-index"].active{ color:var(--text-blue) !important; }
 
 /* --- TAB 1 PAPER PATTERN --- */
 #tab-input .paper-sheet {
   background-image: url('assets/canvas%20template/paper%20pattern%201.png');
   background-size: cover;
   background-position: center;
+}
+
+/* --- TAB 1 SUB-TABS (Thoughts / Image Processor) --- */
+.sub-tabs-header {
+  display: block;
+  margin: -14px -12px 10px -12px;
+  padding: 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  height: auto;
+  position: static;
+}
+
+.sub-tab-btn {
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+/* Thoughts Button (Main Header) */
+#sub-btn-thoughts {
+  width: 100%;
+  padding: 12px;
+  font-family: 'OCR A', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #e9732b;
+  background: transparent;
+  border: none;
+  text-align: left;
+}
+
+/* Image Processor Button (Side Tab) */
+#sub-btn-image {
+  position: absolute;
+  right: -26px;
+  top: 60px;
+  width: 26px;
+  height: 140px;
+  background: #e0e0e0;
+  border-left: none; /* Visual Right (phẳng để gắn vào panel bên phải) */
+  border-radius: 0 8px 8px 0; /* Visual Left (bo tròn để nhô ra bên trái) */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'OCR A', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  z-index: 40;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  transform: rotate(180deg); /* Flip the button */
+}
+
+#sub-btn-image:hover {
+  background: #eaeaea;
+  width: 28px;
+  /* right: -2px; Giữ nguyên vị trí để nút nở ra phía bên trái */
+}
+
+#sub-btn-image.active {
+  background: #e0deec;
+  color: #182983;
+  font-weight: bold;
+  width: 30px;
+  right: -2px; /* Cố định vị trí bám vào panel */
+  border-left: 1px solid #e0deec; /* Merge với panel (Visual Right) */
+  z-index: 55; /* Above panel border */
+  box-shadow: 4px 0 4px rgba(0,0,0,0.05);
+}
+
+.sub-tab-content {
+  /* Bỏ display:none để dùng opacity/visibility cho hiệu ứng overlay mượt mà */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding-top: 12px; /* Add spacing since header margin was removed */
+  overflow-y: auto; /* Đảm bảo nội dung bên trong vẫn cuộn được */
+  flex: 1;
+}
+
+/* Image Processor Panel - Overlay Style */
+#sub-tab-image {
+  position: absolute;
+  top: 0; /* Full height relative to panel-left */
+  left: 100%; /* Đẩy panel sang bên phải của panel cha */
+  width: calc(133.3333vw - 320px); /* Sidebar (60px) + Panel Left (260px) = 320px */
+  bottom: 0;
+  background: #e0deec;
+  color: #182983;
+  border-top: 2px solid var(--black);
+  border-right: 2px solid var(--black);
+  border-bottom: 2px solid var(--black);
+  border-left: 2px solid var(--black);
+  z-index: 50;
+  padding: 15px;
+  overflow: hidden; /* Tắt cuộn chung để xử lý layout 2 cột */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+  /* Hiệu ứng chuyển động: Trượt từ trái sang phải */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-10px);
+  transition: all 0.3s ease-out; /* Dùng transition khi đóng */
+  pointer-events: none; /* Không chặn click khi ẩn */
+}
+
+#sub-tab-image.active {
+  /* Dùng animation khi mở (active) để tạo hiệu ứng drag out mạnh mẽ */
+  animation: flyoutSlideOut 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.1s forwards;
+  pointer-events: auto;
+}
+
+/* --- KEYFRAMES --- */
+@keyframes panelSlideIn {
+  from { transform: translateX(-50px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes flyoutSlideOut {
+  from {
+    transform: translateX(-26px); /* Start from tab button position */ opacity: 0; visibility: visible; /* Start hidden */
+  }
+  to { transform: translateX(0); opacity: 1; visibility: visible; } /* Slide to the final position */
+}
+
+/* --- Image Processor Split Layout --- */
+.proc-split-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  gap: 20px;
+  height: 100%;
+  min-height: 0; /* Quan trọng cho flex con cuộn được */
+}
+
+.proc-ui-col {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding-right: 10px;
+  border-right: 1px solid rgba(0,0,0,0.1);
+}
+
+.proc-result-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- ARTBOARD WRAPPER (Tab 3) --- */
+.artboard-wrapper {
+  width: 100%;
+  min-width: 620px; /* Đảm bảo đủ rộng cho khổ A4 (595px) để không bị mất góc */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-shrink: 0; /* Quan trọng: Ngăn artboard bị bóp méo khi thêm nhiều */
+}
+@keyframes fadeInSubTab {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- GLOBAL LIBRARY --- */
+#global-lib-btn {
+  position: absolute;
+  right: 0;
+  top: 120px;
+  width: 36px;
+  height: 140px;
+  background: var(--grad-gray);
+  border: 1px solid var(--black);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'OCR A', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-blue);
+  cursor: pointer;
+  z-index: 2000;
+  box-shadow: -2px 2px 4px rgba(0,0,0,0.1);
+  transition: right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#global-lib-btn:hover { background: #eaeaea; width: 40px; }
+
+#global-lib-btn.active {
+  right: 300px; /* Slide out with panel */
+  background: var(--grad-yellow);
+  width: 40px;
+  box-shadow: none;
+  border-left: 1px solid transparent;
+}
+
+#global-lib-panel {
+  position: absolute;
+  top: 60px; /* Below top bar */
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  background: var(--panel-bg);
+  border-left: 2px solid var(--black);
+  z-index: 1999;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+}
+
+#global-lib-panel.active {
+  transform: translateX(0);
+}
+
+/* --- TYPEWRITER EFFECT --- */
+.typewriter-cursor::after {
+  content: '█';
+  margin-left: 4px;
+  color: #e9732b;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* --- DISABLED TAB STATE --- */
+.disabled-tab {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(100%);
 }

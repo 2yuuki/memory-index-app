@@ -14,8 +14,10 @@
 
   <div class="app-sidebar">
     <div class="sidebar-bg-rotated"></div>
-    <div class="sidebar-tab active" onclick="switchSidebar('intro')">I. Introduction</div>
-    <div class="sidebar-tab" onclick="switchSidebar('tools')">II. Tool Tab</div>
+    <div class="sidebar-tab active" data-tab="tab-input" onclick="switchTab('tab-input')">1. Memories Input</div>
+    <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')">2. Memories ASCII Sketch</div>
+    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')">3. The Memory Diagram</div>
+    <div class="sidebar-tab" data-tab="tab-layout" onclick="switchTab('tab-layout')">4. The Memory Teller Sheet</div>
   </div>
 
   <div class="layout-column">
@@ -24,22 +26,19 @@
       <div class="top-bar-overlay"></div>
 
       <div class="brand-pill">
-        <img src="assets/UI%20items/logo.svg" class="brand-logo" alt="Index of Remembering">
       </div>
 
       <div class="tabs-container">
-        <div class="tab-btn active" data-tab="tab-input">1. Memories Input</div>
-        <div class="tab-btn" data-tab="tab-sketch">2. Memories ASCII Sketch</div>
-        <div class="tab-btn" data-tab="tab-index">3. The Memory Diagram</div>
-        <div class="tab-btn" data-tab="tab-layout">4. The Paper Memory Teller Sheet</div>
+        <div class="tab-btn active" onclick="switchSidebar('intro')">I. Introduction</div>
+        <div class="tab-btn" onclick="switchSidebar('tools')">II. Tool Tab</div>
       </div>
     </div>
 
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
     <div class="intro-content">
-      <h1 class="section-title" style="font-size:36px; text-align:center; margin-bottom:10px; color:var(--black);">Index of Remembering</h1>
-      <p style="text-align:center; color:var(--text-muted); font-family:'HypertextMono'; text-transform:none; margin-bottom:10px;">
+      <h1 id="intro-title" class="section-title typewriter-cursor" style="font-size:36px; text-align:center; margin-bottom:10px; color:#182983;"></h1>
+      <p style="text-align:center; color:#182983; font-family:'HP001'; text-transform:none; margin-bottom:10px;">
         A Digital Archive for your Fragmented Memories
       </p>
       
@@ -80,7 +79,7 @@
       </div>
 
       <div style="display:flex; justify-content:center; gap:20px;">
-        <button class="btn-retro" style="width:200px; height:50px; font-size:16px; font-weight:bold;" onclick="switchSidebar('tools')">ENTER SYSTEM</button>
+        <button class="btn-retro" style="width:200px; height:50px; font-size:16px; font-weight:bold; font-family: 'OCR A', monospace;" onclick="switchSidebar('tools')">ENTER SYSTEM</button>
       </div>
     </div>
   </div>
@@ -91,58 +90,79 @@
   <div class="workspace active" id="tab-input">
     <div class="panel-left ribbon ribbon-green" data-ribbon="1. Input">
 
-      <div class="section-title">1/ Write down your thoughts here</div>
-      <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
-      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
-
-      <div class="divider"></div>
-
-      <div class="section-title">2/ Image Input</div>
-      <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
-      <button class="btn-retro" id="btnLoadImage">+ load image</button>
-      <input type="file" id="fileIn" hidden />
-
-      <div class="divider"></div>
-
-      <div class="section-title">ASCII Options</div>
-      <div class="mini-row">
-        <span>Ink Type</span>
-        <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
-          <option value="cmyk">CMYK Marker</option>
-          <option value="stabilo">Stabilo Marker</option>
-          <option value="mono">Monochrome</option>
-          <option value="dither">Dither</option>
-          <option value="image">Original</option>
-        </select>
-      </div>
-      <div class="mini-row">
-        <span>Pattern</span>
-        <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
-      </div>
-      <div class="mini-row">
-        <span>Preset</span>
-        <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
-      </div>
-      <div class="mini-row">
-        <span>Threshold</span>
-        <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
-      </div>
-      
-      <div class="mini-row">
-        <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
-        <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
-        <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
+      <!-- Sub Tabs Header -->
+      <div class="sub-tabs-header">
+        <div id="sub-btn-thoughts" class="sub-tab-btn" onclick="switchSubTab('thoughts')">Thoughts</div>
+        <div id="sub-btn-image" class="sub-tab-btn active" onclick="switchSubTab('image')">Image Processor</div>
       </div>
 
-      <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
-      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
-      <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+      <!-- Sub Tab: Thoughts -->
+      <div id="sub-tab-thoughts" class="sub-tab-content active">
+        <div class="section-title">Write down your thoughts</div>
+        <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
+        <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+      </div>
+
+      <!-- Sub Tab: Image Processor -->
+      <div id="sub-tab-image" class="sub-tab-content active">
+        <div class="proc-split-layout">
+          <!-- Left Column: UI Controls -->
+          <div class="proc-ui-col">
+            <div class="section-title">Image Input</div>
+            <div class="dashed-preview" id="preview-area"><span class="muted">EMPTY</span></div>
+            <button class="btn-retro" id="btnLoadImage">+ load image</button>
+            <input type="file" id="fileIn" hidden />
+
+            <div class="divider"></div>
+
+            <div class="section-title">ASCII Options</div>
+            <div class="mini-row">
+              <span>Ink Type</span>
+              <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
+                <option value="cmyk">CMYK Marker</option>
+                <option value="stabilo">Stabilo Marker</option>
+                <option value="mono">Monochrome</option>
+                <option value="dither">Dither</option>
+                <option value="image">Original</option>
+              </select>
+            </div>
+            <div class="mini-row">
+              <span>Pattern</span>
+              <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
+            </div>
+            <div class="mini-row">
+              <span>Preset</span>
+              <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
+            </div>
+            <div class="mini-row">
+              <span>Threshold</span>
+              <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
+            </div>
+            
+            <div class="mini-row">
+              <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
+              <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
+              <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
+            </div>
+
+            <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
+            <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
+            <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+          </div>
+
+          <!-- Right Column: Result -->
+          <div class="proc-result-col">
+            <div class="section-title">Result</div>
+            <div class="paper-sheet paper-a4" style="width:100%; height:100%; transform:none; border:1px solid #000;">
+              <div id="input-canvas-holder" class="canvas-holder"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="panel-center">
-      <div class="paper-sheet paper-a4">
-        <div id="input-canvas-holder" class="canvas-holder"></div>
-      </div>
+      <!-- Content moved to Image Processor Panel -->
     </div>
   </div>
 
@@ -179,12 +199,14 @@
   <div class="workspace" id="tab-index">
     <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
       <div class="section-title">Library</div>
-      <div id="lib-grid" class="lib-grid"></div>
+      <div class="muted" style="font-size:12px; margin-bottom:10px;">Moved to right panel -></div>
+      <button class="btn-retro" onclick="toggleGlobalLibrary()">OPEN LIBRARY</button>
+      <div class="divider"></div>
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
     </div>
 
-    <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow-y:auto; padding-top:20px;">
-      <div class="artboard-wrapper" style="margin-bottom: 30px;">
+    <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
+      <div class="artboard-wrapper">
         <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
           <input type="text" value="Artboard 1" class="retro-input artboard-name" style="width:150px; text-align:center;">
           <button class="btn-retro" onclick="duplicateArtboard(this)">Duplicate</button>
@@ -209,6 +231,13 @@
   
   </div><!-- end app-body -->
   </div><!-- end layout-column -->
+
+  <!-- GLOBAL LIBRARY (Pinned) -->
+  <div id="global-lib-btn" onclick="toggleGlobalLibrary()">LIBRARY</div>
+  <div id="global-lib-panel">
+    <div class="section-title">Memories Archieve</div>
+    <div id="lib-grid" class="lib-grid"></div>
+  </div>
 
 </div>
 
@@ -247,48 +276,38 @@
   window.switchSidebar = function(mode) {
     const introView = document.getElementById('intro-view');
     const appBody = document.getElementById('main-app-body');
-    const tabs = document.querySelectorAll('.sidebar-tab');
+    const tabs = document.querySelectorAll('.top-bar .tab-btn');
+    const sidebarTabs = document.querySelectorAll('.sidebar-tab');
 
     if (mode === 'intro') {
       introView.style.display = 'flex';
       appBody.style.display = 'none';
-      // FIX: Loop qua tabs để active đúng cái cần thiết thay vì hardcode index
+      
       tabs.forEach(t => {
-        if(t.textContent.includes('Introduction')) t.classList.add('active');
-        else t.classList.remove('active');
+        if(t.textContent.includes('Introduction')) {
+          t.classList.add('active');
+          t.classList.remove('disabled-tab');
+        } else {
+          t.classList.remove('active');
+          t.classList.add('disabled-tab'); // Disable Tool Tab in Intro
+        }
       });
+      
+      // Disable Sidebar Tabs in Intro
+      sidebarTabs.forEach(t => t.classList.add('disabled-tab'));
+
     } else {
       introView.style.display = 'none';
       appBody.style.display = 'flex';
       tabs.forEach(t => {
         if(t.textContent.includes('Tool')) t.classList.add('active');
         else t.classList.remove('active');
+        t.classList.remove('disabled-tab'); // Enable all top tabs
       });
-    }
-
-    // --- Export TXT Function ---
-    document.getElementById('btnSaveTXT').addEventListener('click', () => {
-      let content = "";
-      // 1. Try to get text from DOM (if Show Source is on)
-      const pre = document.querySelector('#input-canvas-holder pre');
-      if(pre) content = pre.innerText;
       
-      // 2. Fallback: Check global variable (You must set window.currentAsciiText in your JS)
-      if(!content && window.currentAsciiText) content = window.currentAsciiText;
-
-      if(!content) {
-        alert("No ASCII text found. \nTip: Enable 'Show Source' or ensure window.currentAsciiText is set.");
-        return;
-      }
-
-      const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "memory_ascii.txt";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+      // Enable Sidebar Tabs
+      sidebarTabs.forEach(t => t.classList.remove('disabled-tab'));
+    }
   }
 
   window.duplicateArtboard = function(btn) {
@@ -324,6 +343,82 @@
 
     wrapper.parentNode.insertBefore(clone, wrapper.nextSibling);
   }
+
+  // --- Sub-Tab Switching Logic ---
+  window.switchSubTab = function(tabName) {
+    const thoughtsBtn = document.getElementById('sub-btn-thoughts');
+    const imageBtn = document.getElementById('sub-btn-image');
+    const thoughtsContent = document.getElementById('sub-tab-thoughts');
+    const imageContent = document.getElementById('sub-tab-image');
+
+    if(tabName === 'Memory Thoughts') {
+      thoughtsBtn.classList.add('active');
+      imageBtn.classList.remove('active');
+      // thoughtsContent is always visible as base, we just hide the overlay
+      imageContent.classList.remove('active');
+    } else {
+      thoughtsBtn.classList.remove('active');
+      imageBtn.classList.add('active');
+      // Show overlay
+      imageContent.classList.add('active');
+    }
+  }
+
+  // --- Global Library Toggle ---
+  window.toggleGlobalLibrary = function() {
+    const btn = document.getElementById('global-lib-btn');
+    const panel = document.getElementById('global-lib-panel');
+    btn.classList.toggle('active');
+    panel.classList.toggle('active');
+  }
+
+  // --- Export TXT Function (Moved outside switchSidebar to prevent errors) ---
+  const btnSaveTXT = document.getElementById('btnSaveTXT');
+  if(btnSaveTXT) {
+    btnSaveTXT.addEventListener('click', () => {
+      let content = "";
+      // 1. Try to get text from DOM (if Show Source is on)
+      const pre = document.querySelector('#input-canvas-holder pre');
+      if(pre) content = pre.innerText;
+      
+      // 2. Fallback: Check global variable
+      if(!content && window.currentAsciiText) content = window.currentAsciiText;
+
+      if(!content) {
+        alert("No ASCII text found. \nTip: Enable 'Show Source' or ensure window.currentAsciiText is set.");
+        return;
+      }
+
+      const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "memory_ascii.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // --- Typewriter Effect & Init ---
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initialize State (Intro Active, others disabled)
+    switchSidebar('intro');
+
+    // 2. Typewriter Effect
+    const titleEl = document.getElementById('intro-title');
+    const text = "Index of Remembering";
+    titleEl.innerText = ""; // Clear initial text
+    
+    let i = 0;
+    function typeWriter() {
+      if (i < text.length) {
+        titleEl.innerText += text.charAt(i);
+        i++;
+        setTimeout(typeWriter, 100); // Speed: 100ms per char
+      }
+    }
+    setTimeout(typeWriter, 500); // Start after 500ms delay
+  });
 </script>
 
 </body>
