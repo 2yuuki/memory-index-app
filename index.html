@@ -10,14 +10,15 @@
 </head>
 <body>
 
+<div class="noise-overlay"></div>
 <div id="app-container">
 
   <div class="app-sidebar">
     <div class="sidebar-bg-rotated"></div>
-    <div class="sidebar-tab active" data-tab="tab-input" onclick="switchTab('tab-input')">1. Memories Input</div>
-    <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')">2. Memories ASCII Sketch</div>
-    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')">3. The Memory Diagram</div>
-    <div class="sidebar-tab" data-tab="tab-layout" onclick="switchTab('tab-layout')">4. The Memory Teller Sheet</div>
+    <div class="sidebar-tab active" data-tab="tab-thoughts" onclick="switchTab('tab-thoughts')">1. Thoughts</div>
+    <div class="sidebar-tab" data-tab="tab-image-proc" onclick="switchTab('tab-image-proc')">2. Image Processor</div>
+    <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')">3. ASCII Sketch</div>
+    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')">4. Memory Diagram</div>
   </div>
 
   <div class="layout-column">
@@ -36,153 +37,269 @@
 
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
-    <div class="intro-content">
-      <h1 id="intro-title" class="section-title typewriter-cursor" style="font-size:36px; text-align:center; margin-bottom:10px; color:#182983;"></h1>
-      <p style="text-align:center; color:#182983; font-family:'HP001'; text-transform:none; margin-bottom:10px;">
-        A Digital Archive for your Fragmented Memories
+      <div class="intro-content">
+    <!-- TITLE -->
+    <h1 id="intro-title"
+        class="section-title typewriter-cursor"
+        style="font-size:36px; text-align:center; margin-bottom:10px; color:#182983;"></h1>
+
+    <p style="text-align:center; color:#182983; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 0 6px 0;">
+      Process Documentation — The Memory Index
+    </p>
+
+    <p style="text-align:center; color:#444; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 auto 18px auto; max-width:1200px; line-height:1.65;">
+      The Memory Index is a public, web-based interactive platform using p5.js that turns personal notes & images into
+      (1) a printable Memory Index Diagram and (2) a printable East–West–South–North fortune-teller.
+      This page documents the thinking, shifts, experiments, and design decisions behind the project.
+      It represents a snapshot of the process at the time of writing — not a final, fixed conclusion.
+    </p>
+
+    <div class="divider"></div>
+
+    <!-- SECTION: CONCEPT -->
+    <div style="max-width:1200px; margin:0 auto;">
+      <div class="section-title" style="color:#182983; margin-top:14px;">1. Concept Statement</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        I wanted to make a major project that inspires people to embrace their past emotions and core memories so they can
+        understand themselves better. I noticed we live in a society that tells us to ignore strong emotions in order to “win” —
+        but from my own experience, respecting what we feel helps us grow.
       </p>
-      
-      <div class="intro-grid">
-        <!-- Step 1 -->
-        <div class="intro-card">
-          <div class="intro-step-num">01</div>
-          <h3 class="intro-step-title">Input & Process</h3>
-          <p class="intro-desc">
-            Start by writing your thoughts or uploading an image. 
-            The system uses <strong>CMYK ASCII</strong> algorithms to convert your memories into digital textures.
-            <br><br>
-            <em>Tip: Try the 'Dither' mode for a retro look.</em>
-          </p>
-        </div>
 
-        <!-- Step 2 -->
-        <div class="intro-card">
-          <div class="intro-step-num">02</div>
-          <h3 class="intro-step-title">Sketch & Refine</h3>
-          <p class="intro-desc">
-            Switch to the <strong>Sketch Tab</strong> to edit your artwork. 
-            Use the <strong>Smart Brush</strong> for directional strokes or the <strong>Bucket</strong> to fill areas.
-            <br><br>
-            <em>Tip: Press 'Add to Library' to save your work.</em>
-          </p>
-        </div>
+      <div class="divider"></div>
 
-        <!-- Step 3 -->
-        <div class="intro-card">
-          <div class="intro-step-num">03</div>
-          <h3 class="intro-step-title">Layout & Export</h3>
-          <p class="intro-desc">
-            Go to the <strong>Index Tab</strong> to organize your collection. 
-            Drag items from the library onto the A4 sheet. Arrange, resize, and <strong>Export</strong> your final memory sheet.
-          </p>
-        </div>
+      <!-- SECTION: QUESTION -->
+      <div class="section-title" style="color:#182983;">2. Project Question</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        <strong>How can we embrace our memories through the net.art?</strong>
+        <br><br>
+        Instead of forcing users toward life prescriptions, the work translates inner states into readable forms — more like
+        gentle hints than answers.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: AUDIENCE -->
+      <div class="section-title" style="color:#182983;">3. Target Audience</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The main audience is <strong>18–30 Vietnamese</strong> (open to everyone), especially creative lovers who feel nostalgic for
+        2000s–2010s Vietnamese pop culture. They want to journal with nostalgia, declutter feelings, create patterns, and make
+        playful visuals — often in late-night micro-sessions. Many dislike “traditional journaling” and prefer a creative-tool
+        experience that feels playful and generative.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: WHAT IT IS -->
+      <div class="section-title" style="color:#182983;">4. What the Website Produces</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The site is a public website anyone can use on desktop or mobile. Users type memories and drop images, then sketch
+        whatever they want into an ASCII painter. The site analyzes and visualizes them as a memory diagram, then generates
+        two printable outcomes customized to each person’s inputs:
+        <br><br>
+        • a printable <strong>Memory Index Diagram</strong><br>
+        • a printable <strong>East–West–South–North</strong> paper fortune-teller
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: METHODOLOGY -->
+      <div class="section-title" style="color:#182983;">5. Methodology</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The interaction flow is designed to be simple and repeatable:
+        <br><br>
+        <strong>Write</strong> thoughts → <strong>Drop</strong> memory images → save into a <strong>memory archive</strong> →
+        sketch on the <strong>ASCII canvas</strong> (optional) → generate the <strong>diagram</strong> + <strong>fortune-teller</strong> →
+        <strong>export</strong> for printing.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: SCOPE SHIFT -->
+      <div class="section-title" style="color:#182983;">6. Scope History & Rationale</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The initial concept was a web-based 3D interactive character — a figure representing everyone’s childhood self —
+        where audiences could relive the past and leave marks through drawing. The idea was too large in scope, and the
+        interaction didn’t evoke deep enough reflection. The project shifted toward journaling as the most effective
+        reflective practice, then expanded it with play: printable artifacts, a second output (diagram), and an ASCII painter
+        tool that lets people sketch freely with letters and patterns.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: VISUAL DIRECTION -->
+      <div class="section-title" style="color:#182983;">7. Visual Direction</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The project sits at an intersection of <strong>net.art</strong> and <strong>Vietnamese nostalgic editorial design</strong>.
+        From net.art, it borrows browser-native visuals, ASCII logic, diagrammatic flows, and glitchy patterns (treating the
+        browser output as both interface and artwork). From Vietnamese nostalgia, it borrows the visual language of student
+        notebooks, lesson sheets, restrained typography, and familiar print textures — tying digital reflection back to
+        tangible, culturally recognizable forms.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: EXPERIMENTS -->
+      <div class="section-title" style="color:#182983;">8. Experiments & Iterations</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        A major part of the process was testing interaction comfort and visual identity.
+        Early prototypes made freehand mouse sketching feel hard and not enjoyable, and the visuals weren’t strongly evoking
+        both Vietnamese nostalgia and net.art at once. This led to repeated UI/UX reflection: quieter palettes, clearer flow,
+        and a stronger “student notebook” vibe rather than loud computer gradients.
+        <br><br>
+        On the image side, multiple filter directions were tested (posterize, pixelate, tracking, and print-emulation). A
+        print-emulation workflow explored splitting images into shadow/midtone/highlight plates, mapped to spot colors
+        (risograph-style) or CMYK channels, plus softer “wash” textures inspired by textbook illustrations.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: ASCII TOOL -->
+      <div class="section-title" style="color:#182983;">9. ASCII Painting Tool</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        The sketch mechanic evolved into an <strong>ASCII painter</strong>: instead of drawing with the mouse like a normal brush,
+        users select ASCII characters/patterns and place them into a grid — like building with LEGO. This approach felt easier
+        and more relaxing in informal user tests with friends, and it aligned better with the project’s terminal/ASCII + print
+        notebook aesthetic.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: PRINTING -->
+      <div class="section-title" style="color:#182983;">10. Printing Tests</div>
+      <p class="intro-desc" style="font-size:15px; max-width:none;">
+        Because the outputs are meant to become physical objects, print tests were done on different papers:
+        normal student notebook papers, handwriting-practice papers, and traditional Vietnamese Dó paper. The Dó paper created
+        a beautiful effect, but the text risked blurring; the safest, clearest option leaned toward student notebook papers.
+      </p>
+
+      <div class="divider"></div>
+
+      <!-- CTA -->
+      <div style="display:flex; justify-content:center; gap:16px; margin:18px 0 6px 0;">
+        <button class="btn-retro"
+                style="width:220px; height:50px; font-size:16px; font-weight:bold; font-family:'Bianzhidai', monospace;"
+                onclick="switchSidebar('tools')">
+          ENTER SYSTEM
+        </button>
       </div>
 
-      <div style="display:flex; justify-content:center; gap:20px;">
-        <button class="btn-retro" style="width:200px; height:50px; font-size:16px; font-weight:bold; font-family: 'OCR A', monospace;" onclick="switchSidebar('tools')">ENTER SYSTEM</button>
-      </div>
+      <p style="text-align:center; color:#444; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 auto; max-width:1200px; line-height:1.65;">
+        Tip: Try a late-night micro-session — one memory, one image, one small ASCII sketch. Save it to your library, then export.
+      </p>
     </div>
+    <!-- Back to Top Button -->
+    <button id="btn-intro-top" class="btn-retro" style="position:fixed; bottom:40px; right:40px; width:auto; padding:12px; z-index:10005; display:none; box-shadow:4px 4px 0 rgba(0,0,0,0.2);">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230f3ebd' d='M5 0h2v2H5zM4 2h4v2H4zM3 4h6v2H3zM2 6h8v2H2zM5 8h2v4H5z'/%3E%3C/svg%3E" style="width:16px; height:16px; image-rendering:pixelated; display:block;">
+    </button>
+  </div>
+
   </div>
 
   <div class="app-body" id="main-app-body" style="display:none;">
 
-  <!-- TAB 1 -->
-  <div class="workspace active" id="tab-input">
-    <div class="panel-left ribbon ribbon-green" data-ribbon="1. Input">
+  <!-- TAB 1: THOUGHTS -->
+  <div class="workspace active" id="tab-thoughts">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="1. Thoughts">
+      <div class="section-title">Write down your thoughts</div>
+      <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
+      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+    </div>
+    <div class="panel-center">
+      <!-- Empty or decorative center for thoughts -->
+    </div>
+  </div>
 
-      <!-- Sub Tabs Header -->
-      <div class="sub-tabs-header">
-        <div id="sub-btn-thoughts" class="sub-tab-btn" onclick="switchSubTab('thoughts')">Thoughts</div>
-        <div id="sub-btn-image" class="sub-tab-btn active" onclick="switchSubTab('image')">Image Processor</div>
+  <!-- TAB 2: IMAGE PROCESSOR -->
+  <div class="workspace" id="tab-image-proc">
+    <div class="panel-left ribbon ribbon-green" data-ribbon="2. Processor">
+      <div class="section-title">Image Processor</div>
+      <!-- Restore hidden elements for compatibility with ui-binding.js -->
+      <div id="preview-area" style="display:none;"></div>
+      <button id="btnLoadImage" style="display:none;"></button>
+      <input type="file" id="fileIn" hidden />
+
+      <div class="section-title">ASCII Options</div>
+      <div class="mini-row">
+        <span>Ink Type</span>
+        <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
+          <option value="cmyk">CMYK Marker</option>
+          <option value="stabilo">Stabilo Marker</option>
+          <option value="mono">Monochrome</option>
+          <option value="dither">Dither</option>
+          <option value="image">Original</option>
+        </select>
+      </div>
+      <div class="mini-row">
+        <span>Pattern</span>
+        <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
+      </div>
+      <div class="mini-row">
+        <span>Preset</span>
+        <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
+      </div>
+      <div class="mini-row">
+        <span>Threshold</span>
+        <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
+      </div>
+      
+      <div class="mini-row">
+        <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
+        <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
+        <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
       </div>
 
-      <!-- Sub Tab: Thoughts -->
-      <div id="sub-tab-thoughts" class="sub-tab-content active">
-        <div class="section-title">Write down your thoughts</div>
-        <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
-        <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+      <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
+      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
+      <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+    </div>
+
+    <div class="panel-center">
+      <div class="paper-sheet paper-a4" style="height:75%; width:auto; aspect-ratio:210/297; margin:auto; transform:none; border:1px solid #000;">
+        <div id="input-canvas-holder" class="canvas-holder">
+          <div class="placeholder-text">Drop Image Here</div>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Sub Tab: Image Processor -->
-      <div id="sub-tab-image" class="sub-tab-content active">
-        <div class="proc-split-layout">
-          <!-- Left Column: UI Controls -->
-          <div class="proc-ui-col">
-            <div class="section-title">Image Input</div>
-            <div class="dashed-preview" id="preview-area"><span class="muted">Empty</span></div>
-            <button class="btn-retro" id="btnLoadImage">+ load image</button>
-            <input type="file" id="fileIn" hidden />
-
-            <div class="divider"></div>
-
-            <div class="section-title">ASCII Options</div>
-            <div class="mini-row">
-              <span>Ink Type</span>
-              <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
-                <option value="cmyk">CMYK Marker</option>
-                <option value="stabilo">Stabilo Marker</option>
-                <option value="mono">Monochrome</option>
-                <option value="dither">Dither</option>
-                <option value="image">Original</option>
-              </select>
-            </div>
-            <div class="mini-row">
-              <span>Pattern</span>
-              <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
-            </div>
-            <div class="mini-row">
-              <span>Preset</span>
-              <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
-            </div>
-            <div class="mini-row">
-              <span>Threshold</span>
-              <input type="range" id="cfgDensity" min="0.1" max="2" step="0.1" value="1.5">
-            </div>
-            
-            <div class="mini-row">
-              <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
-              <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
-              <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
-            </div>
-
-            <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
-            <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
-            <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
-          </div>
-
-          <!-- Right Column: Result -->
-          <div class="proc-result-col">
-            <div class="section-title">Result</div>
-            <div class="paper-sheet paper-a4" style="width:100%; height:100%; transform:none; border:1px solid #000;">
-              <div id="input-canvas-holder" class="canvas-holder"></div>
-            </div>
-          </div>
+  <!-- TAB 3: SKETCH -->
+  <div class="workspace" id="tab-sketch">
+    <!-- Panel 1: Main Tools -->
+    <div id="sketch-main-tools" class="floating-panel">
+      <div class="panel-header">
+        <span>Tools</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div class="tools-grid">
+          <button class="btn-retro" id="btnPencil"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMTEgMkwxMyA0TDEwIDdMNyA1TDExIDJaTTYgNkw5IDlMNCAxNEgyVjEyTDYgNloiLz48L3N2Zz4=" class="pixel-icon"> Pencil</button>
+          <button class="btn-retro" id="btnEraser"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAyTDExIDhMMTQuNSA0LjVMOC41IDJINVpNNSA0TDggN0w2IDlMMyA2TDUgNFoiLz48L3N2Zz4=" class="pixel-icon"> Eraser</button>
+          <button class="btn-retro" id="btnFill"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMSA0TDMgMTJIOS41TDEyIDRIMVpNMiA1SDExTDkuNSAxMUgzLjVMMiA1WiIvPjwvc3ZnPg==" class="pixel-icon"> Bucket</button>
+          <button class="btn-retro" id="btnClearSketch"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAxSDExVjJIMUMxVjNIMVYySDVWMVpNMiA0SDE0VjE1SDJWNFpNMCA1VjEwSDFWNUgwWk0xNSA1VjEwSDE2VjVIMTVaIi8+PC9zdmc+" class="pixel-icon"> Clear</button>
         </div>
       </div>
     </div>
 
-    <div class="panel-center">
-      <!-- Content moved to Image Processor Panel -->
+    <!-- Panel 2: Patterns -->
+    <div id="sketch-patterns-panel" class="floating-panel" style="top:220px;">
+      <div class="panel-header">
+        <span>Patterns</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div id="sketch-palette" class="palette-grid"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- TAB 2 -->
-  <div class="workspace" id="tab-sketch">
-    <div class="panel-left ribbon ribbon-green" data-ribbon="2. Sketch">
-      <div class="section-title">Tools</div>
-      <button class="btn-retro" id="btnPencil">✏️ Pencil</button>
-      <button class="btn-retro" id="btnEraser">🧼 Eraser</button>
-      <button class="btn-retro" id="btnFill">🪣 Bucket</button>
-      <button class="btn-retro" id="btnClearSketch">🗑️ Clear</button>
-
-      <div class="divider"></div>
-
-      <div class="section-title">Patterns</div>
-      <div id="sketch-palette" class="palette-grid"></div>
-
-      <div class="section-title">Ink</div>
-      <div id="sketch-colors" class="palette-grid palette-ink"></div>
-
+    <!-- Panel 3: Ink -->
+    <div id="sketch-ink-panel" class="floating-panel" style="top:440px;">
+      <div class="panel-header">
+        <span>Ink</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div id="sketch-colors" class="palette-grid palette-ink"></div>
+      </div>
     </div>
 
     <div style="position:relative; width:100%; height:100%; overflow:auto; background:#d0d0d0;">
@@ -195,10 +312,16 @@
     </div>
   </div>
 
-  <!-- TAB 3 -->
+  <!-- TAB 4: INDEX -->
   <div class="workspace" id="tab-index">
-    <div class="panel-left ribbon ribbon-green" data-ribbon="3. Index">
+    <div id="layout-tools-panel" class="floating-panel">
+      <div class="panel-header">
+        <span>4. Memory Diagram Tools</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
       <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
+      </div>
     </div>
 
     <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
@@ -214,16 +337,6 @@
     </div>
   </div>
 
-  <!-- TAB 4 (placeholder giống ảnh) -->
-  <div class="workspace" id="tab-layout">
-    <div class="panel-left ribbon ribbon-green" data-ribbon="4. Paper">
-      <div class="section-title">Paper Memories</div>
-      <div class="muted">Placeholder tab (you can plug your layout/export here).</div>
-    </div>
-    <div class="panel-center">
-      <div class="paper-sheet paper-a4"></div>
-    </div>
-  </div>
   
   </div><!-- end app-body -->
   </div><!-- end layout-column -->
@@ -233,6 +346,19 @@
   <div id="global-lib-panel">
     <div class="section-title">Memories Archieve</div>
     <div id="lib-grid" class="lib-grid"></div>
+  </div>
+
+  <!-- MUSIC PLAYER WIDGET -->
+  <div id="music-player-widget" class="music-widget">
+    <div class="music-header">
+      <span>♫ Music Player</span>
+      <button id="btn-toggle-music" class="btn-mini"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+    </div>
+    <div id="music-content" class="music-content">
+      <input type="text" id="music-url-input" class="retro-input" placeholder="Paste YouTube / Spotify Link..." style="font-size:10px; padding:6px;">
+      <button id="btn-play-music" class="btn-retro" style="font-size:10px; padding:4px;">Load Track</button>
+      <div id="music-embed-container" style="margin-top:4px; min-height:0;"></div>
+    </div>
   </div>
 
 </div>
@@ -290,11 +416,15 @@
     const introView = document.getElementById('intro-view');
     const appBody = document.getElementById('main-app-body');
     const tabs = document.querySelectorAll('.top-bar .tab-btn');
-    const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+    const appSidebar = document.querySelector('.app-sidebar');
 
     if (mode === 'intro') {
       introView.style.display = 'flex';
       appBody.style.display = 'none';
+      if(appSidebar) {
+        appSidebar.style.display = ''; /* Xóa inline style cũ nếu có */
+        appSidebar.classList.add('hidden');
+      }
       
       tabs.forEach(t => {
         if(t.textContent.includes('Introduction')) {
@@ -306,8 +436,6 @@
         }
       });
       
-      // Disable Sidebar Tabs in Intro
-      sidebarTabs.forEach(t => t.classList.add('disabled-tab'));
       
       // Replay Typewriter Effect
       playTypewriter();
@@ -315,14 +443,22 @@
     } else {
       introView.style.display = 'none';
       appBody.style.display = 'flex';
+      if(appSidebar) {
+        appSidebar.style.display = ''; /* Xóa inline style cũ nếu có */
+        appSidebar.classList.remove('hidden');
+      }
       tabs.forEach(t => {
         if(t.textContent.includes('Tool')) t.classList.add('active');
         else t.classList.remove('active');
         t.classList.remove('disabled-tab'); // Enable all top tabs
       });
       
-      // Enable Sidebar Tabs
-      sidebarTabs.forEach(t => t.classList.remove('disabled-tab'));
+      // Auto-switch to Tab 1 (Thoughts)
+      if(window.switchTab) window.switchTab('tab-thoughts');
+      
+      // Auto-play music when entering Tool Tab
+      if(window.playRandomMusic) window.playRandomMusic();
+      
     }
   }
 
@@ -358,26 +494,6 @@
     }
 
     wrapper.parentNode.insertBefore(clone, wrapper.nextSibling);
-  }
-
-  // --- Sub-Tab Switching Logic ---
-  window.switchSubTab = function(tabName) {
-    const thoughtsBtn = document.getElementById('sub-btn-thoughts');
-    const imageBtn = document.getElementById('sub-btn-image');
-    const thoughtsContent = document.getElementById('sub-tab-thoughts');
-    const imageContent = document.getElementById('sub-tab-image');
-
-    if(tabName === 'Memory Thoughts') {
-      thoughtsBtn.classList.add('active');
-      imageBtn.classList.remove('active');
-      // thoughtsContent is always visible as base, we just hide the overlay
-      imageContent.classList.remove('active');
-    } else {
-      thoughtsBtn.classList.remove('active');
-      imageBtn.classList.add('active');
-      // Show overlay
-      imageContent.classList.add('active');
-    }
   }
 
   // --- Global Library Toggle ---
@@ -419,6 +535,24 @@
   document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize State (Intro Active, others disabled)
     switchSidebar('intro');
+
+    // 2. Intro Scroll "Back to Top" Logic
+    const introView = document.getElementById('intro-view');
+    const btnIntroTop = document.getElementById('btn-intro-top');
+    
+    if(introView && btnIntroTop) {
+      introView.addEventListener('scroll', () => {
+        if(introView.scrollTop > 300) {
+          btnIntroTop.style.display = 'block';
+        } else {
+          btnIntroTop.style.display = 'none';
+        }
+      });
+      
+      btnIntroTop.addEventListener('click', () => {
+        introView.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
   });
 </script>
 

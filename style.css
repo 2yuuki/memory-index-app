@@ -1,11 +1,11 @@
 /* --- FONTS --- */
 @font-face {
-  font-family: 'HP001';
-  src: url('fonts/HP001_b5h.ttf') format('truetype');
+  font-family: 'KK7VCROSDMono';
+  src: url('fonts/KK7VCROSDMono.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'OCR A';
-  src: url('fonts/OCRAStd.otf') format('opentype');
+  font-family: 'Bianzhidai';
+  src: url('fonts/bianzhidai_noBG-Pearl.otf') format('opentype');
 }
 
 /* --- THEME --- */
@@ -13,34 +13,37 @@
   --black:#000;
   --white:#fff;
 
-  --green1:#009045;
+  --green1:#39b34a;
   --green2:#0a3a24;
 
-  --tab-blue:#182983;
+  --tab-blue:#0f3ebd;
   --tab-gray:#d7d7d7;
 
-  --panel-bg:#efefef;
+  --panel-bg:#ededed;
   --panel-white:#ffffff;
 
-  --btn-blue:#182983;
+  --btn-blue:#0f3ebd;
 
-  --text-blue:#182983;
-  --text-pink:#f75397;
+  --text-blue:#0f3ebd;
+  --text-pink:#fa0afa;
 
   --text-muted:#7a7a7a;
 
   --border:none;
 
-  /* nền dạng hạt như ảnh */
   --bg-grain:
     radial-gradient(rgba(0,0,0,.12) 1px, transparent 1px);
 
   /* Gradients */
   --grad-blue: linear-gradient(to bottom, #90c2ff, #0371cf);
-  --grad-gray: linear-gradient(to bottom, #f5f5f5, #a5a5a5);
+  --grad-gray: linear-gradient(to bottom, #f5f5f5, #56494b);
+  --grad-gray-side: linear-gradient(to right, #f5f5f5, #56494b);
   --grad-btn: linear-gradient(to bottom, #eaf6ff, #c9e6fd);
-  --grad-yellow: linear-gradient(to left, #f7f59c, #faec21);
-  --grad-green: linear-gradient(to bottom, #06863d, #bedec7);
+  --grad-pink: linear-gradient(to top, #fa0afa, #ededed);
+  --grad-pink-side: linear-gradient(to left, #fa0afa, #ededed);
+  --grad-green: linear-gradient(to bottom, #39b34a, #ededed);
+  --grad-green-side: linear-gradient(to right, #39b34a, #ededed);
+
 }
 
 /* --- BASE --- */
@@ -51,61 +54,72 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: 'HP001', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-weight: 400;
   font-size: 16px;
   color: var(--black);
   
-  /* Nền gốc màu xám nhẹ */
   background-color: #d8d8d8; 
-  
-  /* Tạo nền lưới ô vuông nhỏ xíu (Pixel Grid) */
-  background-image: 
-    linear-gradient(#bbb 1px, transparent 1px),
-    linear-gradient(90deg, #bbb 1px, transparent 1px);
-  background-size: 2px 2px;
-  background-position: 0 0;
   
   text-transform: none;
   position: relative; /* Để ::after đè lên */
 }
 
-/* HIỆU ỨNG DITHER STITCH (CHÉO CARO) */
-body::after {
+/* HIGH CONTRAST OVERLAY */
+body::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
-  
-  /* Tạo họa tiết Stitch chéo */
-  background-image: 
-    /* Lớp chéo 1: Đen mờ */
-    linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%), 
-    /* Lớp chéo 2: Đen mờ (ngược chiều) */
-    linear-gradient(-45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%);
-  
-  /* Kích thước cực nhỏ để tạo cảm giác Pixel */
-  background-size: 4px 4px;
-  background-position: 0 0, 2px 0; /* Lệch nhau để đan xen */
-  
-  /* Hòa trộn để làm dịu mắt */
-  mix-blend-mode: multiply;
-  opacity: 0.6; /* Điều chỉnh độ đậm nhạt của dither tại đây */
+  z-index: 9990;
+  backdrop-filter: contrast(1.25);
+}
+
+/* HIỆU ỨNG DITHER STITCH (CHÉO CARO) */
+body::after {
+  display: none;
+}
+
+/* DYNAMIC NOISE GRAIN */
+.noise-overlay {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9992; /* Nằm giữa Threshold (9990) và Dither (9999) */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  animation: noise-anim 0.2s infinite;
+}
+
+@keyframes noise-anim {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -5%); }
+  20% { transform: translate(-10%, 5%); }
+  30% { transform: translate(5%, -10%); }
+  40% { transform: translate(-5%, 15%); }
+  50% { transform: translate(-10%, 5%); }
+  60% { transform: translate(15%, 0); }
+  70% { transform: translate(0, 10%); }
+  80% { transform: translate(-15%, 0%); }
+  90% { transform: translate(10%, 5%); }
+  100% { transform: translate(5%, 0); }
 }
 
 /* headings look */
 .brand-text,.tab-btn,.section-title{
-  font-family: 'OCR A', monospace;
+  font-family: 'Bianzhidai', monospace;
   letter-spacing:.3px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 /* --- APP LAYOUT --- */
 #app-container{
-  width:133.3333vw;
-  height:133.3333vh;
-  transform: scale(0.75);
+  width:100vw;
+  height:100vh;
+  transform: scale(1);
   transform-origin: top left;
   display:flex;
   flex-direction:row;
@@ -129,49 +143,51 @@ body::after {
 }
 
 .app-sidebar{
-  width:40px;
+  width:36px;
   display:flex;
   flex-direction:column;
   position:relative;
   overflow:hidden;
   border-right:var(--border);
-  padding-top: 40px;
-  background-image: linear-gradient(to right, #06863d, #bedec7);
+  padding-top: 36px;
+  background-image: var(--grad-green-side);
+  transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.app-sidebar.hidden {
+  width: 0;
+  border: none;
 }
 
 .sidebar-tab{
-  height: 40px;
+  height: 36px;
   width:100%;
   flex: 1; /* Chia đều chiều cao cho 4 tab */
   display:flex;
   align-items:center;
   justify-content:center;
-  /* background moved to ::before */
-  font-family: 'OCR A', monospace;
+  font-family: 'Bianzhidai', monospace;
   font-size:12px;
   cursor:pointer;
-  writing-mode: vertical-rl;
-  text-orientation: upleft;
+  writing-mode: sideways-lr;
   text-orientation: mixed;
   position: relative;
   z-index:10;
-  text-transform: uppercase;
-  color: #009045;
+  text-transform: none;
+  color: #f4f4f4;
 }
 .sidebar-tab::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--grad-gray);
-  background: linear-gradient(to left, #f5f5f5, #a5a5a5);
+  background: var(--grad-gray-side);
   border-radius: 10px 0 0 10px;
   transform: perspective(100px) rotateY(-25deg);
   transform-origin: right;
   z-index: -1;
 }
 .sidebar-tab.active{ font-weight:bold; }
-.sidebar-tab.active::before{ background:var(--grad-yellow); }
-.sidebar-tab.active::before{ background:linear-gradient(to left, #f7f59c, #faec21); }
+.sidebar-tab.active::before{ background:var(--grad-pink-side); }
 .sidebar-tab:hover:not(.active){ filter:brightness(0.95); }
 
 .sidebar-bg-rotated{
@@ -191,12 +207,12 @@ body::after {
 .intro-container{
   flex:1;
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
   padding:40px;
   position: relative;
   z-index: 10000;
-  overflow: hidden;
+  overflow-y: auto;
   background-color: var(--panel-bg);
   background-image: url('assets/ASCII%20images/memory_jitter.gif'), var(--bg-grain);
   background-size: cover;
@@ -205,14 +221,15 @@ body::after {
 }
 
 .intro-content {
-  background-color: #e0deec;
+  background-color: #ededed;
   padding: 40px;
   border: 2px solid var(--black);
   box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
-  max-width: 1000px;
+  max-width: 1400px;
   width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
+  margin: auto;
 }
 
 .intro-grid {
@@ -238,7 +255,7 @@ body::after {
 }
 
 .intro-step-num {
-  font-family: 'OCR A', monospace;
+  font-family: 'Bianzhidai', monospace;
   font-size: 60px;
   color: #e0e0e0;
   position: absolute;
@@ -249,17 +266,17 @@ body::after {
 }
 
 .intro-step-title {
-  font-family: 'OCR A', monospace;
+  font-family: 'Bianzhidai', monospace;
   color: var(--black);
   font-size: 20px;
   margin: 0 0 10px 0;
   position: relative;
   z-index: 1;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .intro-desc {
-  font-family: 'HP001', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-size: 14px;
   line-height: 1.6;
   color: #444;
@@ -270,16 +287,11 @@ body::after {
 
 /* --- TOP BAR --- */
 .top-bar{
-  height:40px;
+  height:36px;
   position:relative;
   display:flex;
   align-items:flex-start;
-
   background-image: var(--grad-green);
-  background-repeat: no-repeat, no-repeat;
-  background-position: center, 0 0;
-  background-size: 130% 260%, 100% 100%;
-  background-blend-mode: soft-light, normal;
   border-bottom:var(--border);
   z-index:20;
 }
@@ -304,7 +316,7 @@ body::after {
 }
 
 .brand-logo{
-  height: 40px;
+  height: 30px;
   width: auto;
 }
 
@@ -319,7 +331,8 @@ body::after {
 
 .tab-btn{
   position:relative;
-  height:45px;
+  height:30px;
+  width:100%;
   width: 200px;
   padding: 25px;
   align-items:center;
@@ -327,7 +340,6 @@ body::after {
   text-align:center;
   white-space:nowrap;
   font-size:12px;
-  color:#026fcf;
   cursor:pointer;
 }
 
@@ -350,7 +362,7 @@ body::after {
 }
 
 .tab-btn.active::before{
-  background:var(--grad-blue);
+  background: var(--grad-pink)
 }
 
 /* --- WORKSPACE --- */
@@ -361,6 +373,38 @@ body::after {
   border-top:none;
 }
 .workspace.active{ display:grid; }
+
+/* --- TAB 1: THOUGHTS (Full Width) --- */
+/* TAB 3 & 4 also Full Width now */
+#tab-thoughts, #tab-sketch, #tab-index {
+  grid-template-columns: 1fr;
+  background-color: #ededed;
+  background-image: url('assets/canvas%20template/paper%20pattern%201%2016x9.png');
+  background-size: 98% 98%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
+}
+#tab-thoughts .panel-center {
+  display: none;
+}
+/* Reset panel center for sketch/index to show canvas */
+#tab-sketch .panel-center, #tab-index .panel-center {
+  display: flex;
+}
+#tab-thoughts .section-title,
+#tab-image-proc .panel-left > .section-title:first-child {
+  font-size: 60pt;
+  -webkit-text-stroke: 1px var(--black);
+  text-align: left;
+  line-height: 1.1;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+#tab-thoughts .panel-left {
+  padding-left: 80px;
+  background: transparent;
+}
 
 /* left/right panels url('assets/UI items/panel-left.svg'),*/
 .panel-left{
@@ -376,9 +420,68 @@ body::after {
   z-index: 100; /* Đảm bảo panel con đè lên panel-center */
 }
 
+/* --- FLOATING PANELS (Tab 3 & 4) --- */
+.floating-panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 280px;
+  max-height: 80vh;
+  background-color: #fbe6ef;
+  border: 2px solid var(--black);
+  box-shadow: 6px 6px 0 rgba(0,0,0,0.2);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  background: var(--grad-blue);
+  color: white;
+  padding: 8px 10px;
+  font-family: 'Bianzhidai', monospace;
+  font-size: 14px;
+  cursor: move;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-minimize-btn {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  line-height: 1;
+}
+
+.pixel-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* --- CUSTOM CURSORS --- */
+.cursor-pencil {
+  cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIgZD0iTTExIDJMMTMgNEwxMCA3TDcgNUwxMSAyWk02IDZMOSA5TDQgMTRIMlYxMkw2IDZaIi8+PC9zdmc+') 2 14, auto !important;
+}
+.cursor-eraser {
+  cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIgZD0iTTUgMkwxMSA4TDE0LjUgNC41TDguNSAySDVaTTUgNEw4IDdMNiA9TDMgNkw1IDRaIi8+PC9zdmc+') 8 8, auto !important;
+}
+
 /* Animation cho Panel chính (Thoughts) khi vào Tab */
 .workspace.active .panel-left {
-  animation: panelSlideIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  /* animation: panelSlideIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; */
 }
 
 /* ribbons (2 mảng xiên bên hông giống ảnh) */
@@ -390,7 +493,7 @@ body::after {
   transform: rotate(-90deg);
   transform-origin:left top;
 
-  font-family: 'HP001', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-size:10px;
   font-weight: 50;
   padding:4px 10px;
@@ -438,7 +541,7 @@ body::after {
   border:var(--border);
   padding:8px;
   background:var(--white);
-  font-family: 'HP001', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-size:14px;
   outline:none;
   text-transform: none;
@@ -449,8 +552,14 @@ textarea.retro-input{
 }
 
 #inpThought {
-  background-color: #fbe6ef;
-  color: #e9732b;
+  width: 90%;
+  background-color: transparent;
+  color: #fa0afa;
+  line-height: 60px;
+  background-image: radial-gradient(circle at bottom, #fa0afa 1.5px, transparent 1.5px);
+  background-size: 12px 60px;
+  background-attachment: local;
+  min-height: 360px;
 }
 
 /* preview */
@@ -477,7 +586,7 @@ textarea.retro-input{
   background-size: 4px 4px, 4px 4px, 100% 100%;
   background-repeat: repeat, repeat, no-repeat;
   color:var(--text-blue);
-  font-family: 'HP001', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-size:14px;
   cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.1);
@@ -604,7 +713,7 @@ input[type="range"]::-webkit-slider-thumb{
 .btn-zoom:active{ transform: translateY(1px); box-shadow:0 1px 2px rgba(0,0,0,0.1); }
 
 .zoom-text{
-  font-family: 'HypertextMono', monospace;
+  font-family: 'KK7VCROSDMono', monospace;
   font-weight:700;
   font-size:14px;
   background:var(--white);
@@ -613,6 +722,18 @@ input[type="range"]::-webkit-slider-thumb{
   padding:4px 6px;
   text-align:center;
   text-transform: none;
+}
+
+.placeholder-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Bianzhidai', monospace;
+  font-size: 24px;
+  color: var(--text-muted);
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 /* archive */
@@ -659,17 +780,6 @@ input[type="range"]::-webkit-slider-thumb{
 }
 .palette-ink{ grid-template-columns:repeat(4,1fr); }
 
-/* optional grid overlay in sketch */
-.grid-bg{
-  position:absolute;
-  inset:0;
-  background:
-    linear-gradient(to right, rgba(0,0,0,.08) 1px, transparent 1px) 0 0/20px 20px,
-    linear-gradient(to bottom, rgba(0,0,0,.08) 1px, transparent 1px) 0 0/20px 20px;
-  pointer-events:none;
-  opacity:.35;
-}
-
 /* scrollbar */
 ::-webkit-scrollbar{ width:10px; height:10px; }
 ::-webkit-scrollbar-track{ background:#ececec; }
@@ -687,161 +797,36 @@ input[type="range"]::-webkit-slider-thumb{
 .sidebar-tab[data-tab="tab-index"]::before{ background:var(--grad-gray) !important; }
 .sidebar-tab[data-tab="tab-index"].active{ color:var(--text-blue) !important; }
 
+/* --- TAB 2 BACKGROUND --- */
+#tab-image-proc {
+  background-color: #ededed;
+  background-image: url('assets/canvas%20template/paper%20pattern%201%2016x9.png');
+  background-size: 98% 98%;
+  background-blend-mode: multiply;
+  background-repeat: no-repeat;
+  background-position: center;
+
+}
+#tab-image-proc .panel-left,
+#tab-image-proc .panel-center {
+  background: transparent;
+  padding-left: 80px;
+}
+
 /* --- TAB 1 PAPER PATTERN --- */
 #tab-input .paper-sheet {
   background-image: url('assets/canvas%20template/paper%20pattern%201.png');
-  background-size: cover;
+  background-size: 98% 98%;
   background-position: center;
 }
 
-/* --- TAB 1 SUB-TABS (Thoughts / Image Processor) --- */
-.sub-tabs-header {
-  display: block;
-  margin: -14px -12px 10px -12px;
-  padding: 0;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  height: auto;
-  position: static;
-}
-
-.sub-tab-btn {
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s;
-}
-
-/* Thoughts Button (Main Header) */
-#sub-btn-thoughts {
-  width: 100%;
-  padding: 12px;
-  font-family: 'OCR A', monospace;
-  font-size: 14px;
-  font-weight: bold;
-  color: #e9732b;
-  background: transparent;
-  border: none;
-  text-align: left;
-}
-
-/* Image Processor Button (Side Tab) */
-#sub-btn-image {
-  position: absolute;
-  right: -26px;
-  top: 60px;
-  width: 26px;
-  height: 140px;
-  background: #e0e0e0;
-  border-left: none; /* Visual Right (phẳng để gắn vào panel bên phải) */
-  border-radius: 0 8px 8px 0; /* Visual Left (bo tròn để nhô ra bên trái) */
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'OCR A', monospace;
-  font-size: 12px;
-  color: var(--text-muted);
-  z-index: 40;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-  transform: rotate(180deg); /* Flip the button */
-}
-
-#sub-btn-image:hover {
-  background: #eaeaea;
-  width: 28px;
-  /* right: -2px; Giữ nguyên vị trí để nút nở ra phía bên trái */
-}
-
-#sub-btn-image.active {
-  background: #e0deec;
-  color: #182983;
-  font-weight: bold;
-  width: 30px;
-  right: -2px; /* Cố định vị trí bám vào panel */
-  border-left: 1px solid #e0deec; /* Merge với panel (Visual Right) */
-  z-index: 55; /* Above panel border */
-  box-shadow: 4px 0 4px rgba(0,0,0,0.05);
-}
-
-.sub-tab-content {
-  /* Bỏ display:none để dùng opacity/visibility cho hiệu ứng overlay mượt mà */
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  padding-top: 12px; /* Add spacing since header margin was removed */
-  overflow-y: auto; /* Đảm bảo nội dung bên trong vẫn cuộn được */
-  flex: 1;
-}
-
-/* Image Processor Panel - Overlay Style */
-#sub-tab-image {
-  position: absolute;
-  top: 0; /* Full height relative to panel-left */
-  left: 100%; /* Đẩy panel sang bên phải của panel cha */
-  width: calc(133.3333vw - 440px); /* Sidebar (40px) + Panel Left (400px) = 440px */
-  bottom: 0;
-  background: #e0deec;
-  color: #182983;
-  border: none;
-  z-index: 50;
-  padding: 15px;
-  overflow: hidden; /* Tắt cuộn chung để xử lý layout 2 cột */
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-
-  /* Hiệu ứng chuyển động: Trượt từ trái sang phải */
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(-10px);
-  transition: all 0.3s ease-out; /* Dùng transition khi đóng */
-  pointer-events: none; /* Không chặn click khi ẩn */
-}
-
-#sub-tab-image.active {
-  /* Dùng animation khi mở (active) để tạo hiệu ứng drag out mạnh mẽ */
-  animation: flyoutSlideOut 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.1s forwards;
-  pointer-events: auto;
-}
-
 /* --- KEYFRAMES --- */
+/*
 @keyframes panelSlideIn {
   from { transform: translateX(-50px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-
-@keyframes flyoutSlideOut {
-  from {
-    transform: translateX(-26px); /* Start from tab button position */ opacity: 0; visibility: visible; /* Start hidden */
-  }
-  to { transform: translateX(0); opacity: 1; visibility: visible; } /* Slide to the final position */
-}
-
-/* --- Image Processor Split Layout --- */
-.proc-split-layout {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  gap: 20px;
-  height: 100%;
-  min-height: 0; /* Quan trọng cho flex con cuộn được */
-}
-
-.proc-ui-col {
-  width: 280px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  padding-right: 10px;
-  border-right: 1px solid rgba(0,0,0,0.1);
-}
-
-.proc-result-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+*/
 
 /* --- ARTBOARD WRAPPER (Tab 3) --- */
 .artboard-wrapper {
@@ -853,10 +838,12 @@ input[type="range"]::-webkit-slider-thumb{
   margin-bottom: 30px;
   flex-shrink: 0; /* Quan trọng: Ngăn artboard bị bóp méo khi thêm nhiều */
 }
+/*
 @keyframes fadeInSubTab {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
+*/
 
 /* --- GLOBAL LIBRARY --- */
 #global-lib-btn {
@@ -865,7 +852,7 @@ input[type="range"]::-webkit-slider-thumb{
   top: 120px;
   width: 36px;
   height: 140px;
-  background: var(--grad-gray);
+  background: #fbe50b;
   border: 1px solid var(--black);
   border-right: none;
   border-radius: 8px 0 0 8px;
@@ -874,7 +861,7 @@ input[type="range"]::-webkit-slider-thumb{
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'OCR A', monospace;
+  font-family: 'Bianzhidai', monospace;
   font-size: 14px;
   font-weight: bold;
   color: var(--text-blue);
@@ -884,11 +871,11 @@ input[type="range"]::-webkit-slider-thumb{
   transition: right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-#global-lib-btn:hover { background: #eaeaea; width: 40px; }
+#global-lib-btn:hover { background: #e5d00a; width: 40px; }
 
 #global-lib-btn.active {
   right: 300px; /* Slide out with panel */
-  background: var(--grad-yellow);
+  background: #fbe50b;
   width: 40px;
   box-shadow: none;
   border-left: 1px solid transparent;
@@ -900,7 +887,7 @@ input[type="range"]::-webkit-slider-thumb{
   right: 0;
   bottom: 0;
   width: 300px;
-  background: var(--panel-bg);
+  background: #fbe50b;
   border: none;
   z-index: 1999;
   transform: translateX(100%);
@@ -940,4 +927,65 @@ input[type="range"]::-webkit-slider-thumb{
 }
 .lib-saved-anim {
   animation: libSavePulse 0.6s ease-out;
+}
+
+/* --- MUSIC PLAYER WIDGET --- */
+.music-widget {
+  position: absolute;
+  bottom: 20px;
+  left: 60px; /* Clear sidebar */
+  width: 240px;
+  background: var(--panel-bg);
+  border: 2px solid var(--black);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+  z-index: 8000;
+  display: flex;
+  flex-direction: column;
+}
+.music-header {
+  background: var(--grad-blue);
+  color: #fff;
+  padding: 6px 10px;
+  font-family: 'Bianzhidai', monospace;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.music-content {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btn-mini {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  width: 16px; height: 16px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  font-family: monospace;
+}
+
+/* Ensure canvases and pre-rendered graphics don't animate into view */
+#sketch-canvas-holder canvas, #layout-canvas-holder canvas, canvas#myCanvas, .paper-sheet > canvas {
+  transition: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+  will-change: auto !important;
+}
+
+/* Make artboard grid and lines visually ultra-thin */
+.pg-grid-canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+/* If artboards or wrappers had fade-in, remove it */
+.artboard-wrapper, .artboard-wrapper * {
+  transition: none !important;
+  animation: none !important;
 }

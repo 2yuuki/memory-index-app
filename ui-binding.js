@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const workspaces = document.querySelectorAll('.workspace');
 
   tabs.forEach(tab => {
+    // Skip tabs that don't have data-tab attribute (e.g., Top Bar navigation tabs)
+    if (!tab.hasAttribute('data-tab')) return;
+
     tab.onclick = () => {
       // Ignore disabled tabs
       if(tab.style.cursor === 'default') return;
