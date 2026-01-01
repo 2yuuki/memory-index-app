@@ -103,6 +103,10 @@ let bitmapPatterns = [
 
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
+  if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
+      resetImageProcessorState();
+  }
+
   activeTab = tabId;
   document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
@@ -120,6 +124,26 @@ window.switchTab = function(tabId) {
   } else {
     cnv.style.display = 'none';
   }
+}
+
+function resetImageProcessorState() {
+    // Clear canvas and reset state for Tab 2
+    const holder = select('#tab-image-proc #input-canvas-holder');
+    if(holder) {
+        // Remove canvas and fallback images, keep placeholder
+        const children = holder.elt.children;
+        for(let i = children.length - 1; i >= 0; i--) {
+            if(!children[i].classList.contains('placeholder-text')) {
+                children[i].remove();
+            }
+        }
+        const ph = holder.elt.querySelector('.placeholder-text');
+        if(ph) ph.style.display = 'block';
+    }
+    const fi = select('#fileIn');
+    if(fi) fi.value('');
+    const sheet = select('#tab-image-proc .paper-sheet');
+    if(sheet) sheet.style('aspect-ratio', '297/210'); // Reset to default Landscape
 }
 
 // --- SETUP ---
@@ -214,6 +238,48 @@ function setup() {
   setupLayoutTab(); 
   setupMusicPlayer();
   setupImageProcessorDrop();
+  setupThoughtsDateHeader();
+
+  let tInput = select('#inpThought');
+  if(tInput) tInput.attribute('placeholder', 'what are you thinking right now?');
+
+  // --- ADD THOUGHTS BUTTON LOGIC ---
+  let btnCreateCard = select('#btnCreateCard');
+  if (btnCreateCard) {
+      btnCreateCard.mousePressed(() => {
+          let inp = select('#inpThought');
+          let txt = inp.value();
+          if (!txt.trim()) return;
+
+          // Create graphic for the card
+          let pg = createGraphics(400, 300);
+          pg.pixelDensity(1);
+          pg.background(255);
+          
+          // Draw Paper Pattern
+          pg.stroke(220); pg.strokeWeight(1);
+          for(let y=40; y<300; y+=30) pg.line(0, y, 400, y);
+          pg.stroke(255, 0, 0, 50); pg.line(40, 0, 40, 300); // Margin
+
+          // Draw Text
+          pg.noStroke(); pg.fill('#fa0afa');
+          pg.textFont("'KK7VCROSDMono', monospace"); pg.textSize(16);
+          pg.textAlign(LEFT, TOP);
+          pg.text(txt.toUpperCase(), 50, 50, 340, 240);
+
+          // Draw Date/Time
+          let now = new Date();
+          let dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          pg.textSize(10); pg.textAlign(RIGHT, BOTTOM);
+          pg.text(dateStr, 380, 290);
+
+          // Add to Library
+          if (window.addToLibrary) window.addToLibrary(pg, "Thought Card", { text: txt.toUpperCase(), date: dateStr });
+          pg.remove();
+          
+          inp.value(''); // Clear input
+      });
+  }
 
   // Make Floating Panels Draggable
   makePanelDraggable('sketch-main-tools');
@@ -232,6 +298,9 @@ function setup() {
   document.addEventListener('keydown', (e) => {
       // Chỉ hoạt động khi đang ở Tab 3 (Index/Layout)
       if (activeTab !== 'tab-index') return;
+
+      // Ignore shortcuts if typing in text fields
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
 
       // Delete / Backspace: Xóa phần tử đang chọn
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -261,6 +330,45 @@ function setup() {
               e.preventDefault(); 
               pasteLayoutSelection(); 
           }
+          // Ctrl + Enter: Add Artboard
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              let target = activeArtboard;
+              if (!target) {
+                  let bgs = document.querySelectorAll('.layout-page-bg');
+                  if (bgs.length > 0) target = bgs[bgs.length-1];
+              }
+              if (target) addArtboardRelative(target);
+          }
+      }
+  });
+
+  // --- TOOLTIP SYSTEM ---
+  const tooltip = document.getElementById('floating-tooltip');
+
+  document.body.addEventListener('mouseover', (e) => {
+      let target = e.target.closest('[data-tooltip]');
+      if (target && tooltip) {
+          tooltip.innerText = target.getAttribute('data-tooltip');
+          tooltip.style.display = 'block';
+      }
+  });
+  document.body.addEventListener('mouseout', (e) => {
+      let target = e.target.closest('[data-tooltip]');
+      if (target && tooltip) {
+          tooltip.style.display = 'none';
+      }
+  });
+  document.body.addEventListener('mousemove', (e) => {
+      if (tooltip && tooltip.style.display === 'block') {
+          let x = e.clientX + 15;
+          let y = e.clientY + 15;
+          // Boundary check to keep tooltip on screen
+          if (x + tooltip.offsetWidth > window.innerWidth) x = e.clientX - tooltip.offsetWidth - 5;
+          if (y + tooltip.offsetHeight > window.innerHeight) y = e.clientY - tooltip.offsetHeight - 5;
+          
+          tooltip.style.left = x + 'px';
+          tooltip.style.top = y + 'px';
       }
   });
 }
@@ -341,8 +449,7 @@ function drawSingleCellText(x, y) {
   if (char !== "") {
       pgTextLayer.textSize(userFontSize);
       let purpleColor = color(inkColorHex);
-      let bgColor = colorGrid[y][x];
-      let displayColor = (bgColor && isColorDark(bgColor)) ? color(255) : purpleColor;
+      let displayColor = purpleColor;
       let posX = cx + cellW/2; let posY = cy + cellH/2;
 
       pgTextLayer.noStroke();
@@ -360,8 +467,7 @@ function updateLayerTextVisuals() {
       let char = grid[y][x];
       if (char !== "") {
           let cx = x * cellW; let cy = y * cellH;
-          let bgColor = colorGrid[y][x];
-          let displayColor = (bgColor && isColorDark(bgColor)) ? color(255) : purpleColor;
+          let displayColor = purpleColor;
           let posX = cx + cellW/2; let posY = cy + cellH/2;
           pgTextLayer.noStroke();
           pgTextLayer.fill(displayColor);
@@ -593,6 +699,16 @@ function keyPressed() {
   if (keyCode === ESCAPE) { toolMode = "DRAW"; selStart = null; isShiftSelecting = false; }
 }
 
+function mouseWheel(event) {
+  if (activeTab === 'tab-sketch') {
+    if (event.ctrlKey || event.metaKey) {
+      let delta = event.delta > 0 ? -0.1 : 0.1;
+      updateSketchZoom(delta);
+      return false;
+    }
+  }
+}
+
 // --- AUTO SAVE ---
 function saveToLocalStorage() {
   try {
@@ -655,6 +771,7 @@ function createUI() {
     divAscii.html('');
     palette.forEach(item => {
       let btn = createButton(item).parent(divAscii);
+      btn.attribute('data-tooltip', `Select '${item}' character`);
       if (item === "SMART") btn.style('grid-column', 'span 2'); 
       btn.mousePressed(() => {
         selectedChar = item; isEraser = false; if (toolMode !== "FILL") toolMode = "DRAW"; mainMode = "ASCII";
@@ -670,6 +787,7 @@ function createUI() {
     divColor.html('');
     colorPalette.forEach(col => {
       let btn = createButton('').parent(divColor).style('width', '100%').style('height', '28px').style('background', col);
+      btn.attribute('data-tooltip', `Select color ${col}`);
       btn.mousePressed(() => { selectedColor = col; isColorEraser = false; if (toolMode !== "FILL") toolMode = "DRAW"; mainMode = "COLOR"; });
     });
   }
@@ -678,14 +796,14 @@ function createUI() {
   if (!exportGroup && sidebarDiv) {
       createDiv('Files').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); exportGroup = createDiv('').parent(sidebarDiv).id('export-group');
       exportGroup.style('display','flex').style('flex-direction','column').style('gap','8px');
-      let btnPng = createButton('EXPORT PNG (NO GRID)').parent(exportGroup).class('btn-retro'); btnPng.mousePressed(saveArtworkPNG);
-      let btnTxt = createButton('EXPORT TXT').parent(exportGroup).class('btn-retro'); btnTxt.mousePressed(saveArtworkTXT);
-      let btnSvg = createButton('EXPORT SVG').parent(exportGroup).class('btn-retro'); btnSvg.mousePressed(exportSVG);
+      let btnPng = createButton('EXPORT PNG (NO GRID)').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as PNG image.'); btnPng.mousePressed(saveArtworkPNG);
+      let btnTxt = createButton('EXPORT TXT').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as Text file.'); btnTxt.mousePressed(saveArtworkTXT);
+      let btnSvg = createButton('EXPORT SVG').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as SVG vector.'); btnSvg.mousePressed(exportSVG);
       let importWrapper = createDiv('').parent(exportGroup).style('position','relative');
-      createButton('IMPORT SVG (EDIT)').parent(importWrapper).class('btn-retro');
+      createButton('IMPORT SVG (EDIT)').parent(importWrapper).class('btn-retro').attribute('data-tooltip', 'Import SVG to edit.');
       let fileInp = createFileInput(handleSVGImport).parent(importWrapper); fileInp.style('position','absolute').style('top','0').style('left','0').style('opacity','0').style('width','100%').style('height','100%').style('cursor','pointer');
       createDiv('').parent(exportGroup).class('divider');
-      let btnLib = createButton('ADD TO LIBRARY').parent(exportGroup).class('btn-retro');
+      let btnLib = createButton('ADD TO LIBRARY').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch to Memory Archive.');
       btnLib.mousePressed(() => {
           let name = select('#sSketchName') ? select('#sSketchName').value() : "Sketch";
           let pg = createGraphics(canvasW, canvasH); pg.pixelDensity(1); pg.background(255);
@@ -721,7 +839,7 @@ function exportSVG() {
   let svg = `<?xml version="1.0" standalone="no"?><svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/>`;
   for(let y=0; y<rows; y++) for(let x=0; x<cols; x++) if(colorGrid[y][x]) svg += `<rect x="${x*cellW}" y="${y*cellH}" width="${cellW}" height="${cellH}" fill="${colorGrid[y][x]}" stroke="none"/>`;
   for(let y=0; y<rows; y++) for(let x=0; x<cols; x++) {
-      let char = grid[y][x]; if(char !== "") { let fill = (colorGrid[y][x] && isColorDark(colorGrid[y][x])) ? "#FFF" : inkColorHex; let safe = char.replace(/&/g, '&amp;').replace(/</g, '&lt;'); svg += `<text x="${x*cellW+cellW/2}" y="${y*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`; } 
+      let char = grid[y][x]; if(char !== "") { let fill = inkColorHex; let safe = char.replace(/&/g, '&amp;').replace(/</g, '&lt;'); svg += `<text x="${x*cellW+cellW/2}" y="${y*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`; } 
   }
   svg += `</svg>`; let blob = new Blob([svg], {type: "image/svg+xml"}); let url = URL.createObjectURL(blob); let a = document.createElement("a"); a.href = url; a.download = "drawing.svg"; a.click();
 }
@@ -749,9 +867,26 @@ function updateSketchZoom(amount) {
         holder.style('transform', `scale(${sketchScale})`);
         holder.style('transform-origin', '0 0');
     }
+    let lbl = select('#sketch-zoom-val');
+    if(lbl) lbl.html(Math.round(sketchScale * 100) + '%');
 }
 
 function setupSketchZoomUI() {
+    // 1. Try to attach to existing HTML elements first
+    let btnIn = select('#btnSketchZoomIn');
+    let btnOut = select('#btnSketchZoomOut');
+    let lblZoom = select('#sketch-zoom-val');
+
+    if (btnIn && btnOut) {
+        btnIn.mousePressed(() => updateSketchZoom(0.1));
+        btnOut.mousePressed(() => updateSketchZoom(-0.1));
+        if(lblZoom) {
+             lblZoom.style('cursor', 'pointer');
+             lblZoom.mousePressed(() => { sketchScale = 1.0; updateSketchZoom(0); });
+        }
+        return;
+    }
+
     let centerPanel = select('#tab-sketch .panel-center');
     if (!centerPanel) {
         let holder = select('#sketch-canvas-holder');
@@ -956,8 +1091,8 @@ function createLayoutUI() {
     createDiv('Paper Pattern').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let patRow = createDiv('').parent(group).class('mini-row').style('justify-content', 'center').style('gap', '10px');
     
-    let btnPrev = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;">');
-    let btnNext = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNiAyTDEyIDhMNiAxNFYyWiIvPjwvc3ZnPg==" class="pixel-icon">');
+    let btnPrev = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;">').attribute('data-tooltip', 'Previous Pattern');
+    let btnNext = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNiAyTDEyIDhMNiAxNFYyWiIvPjwvc3ZnPg==" class="pixel-icon">').attribute('data-tooltip', 'Next Pattern');
 
     btnPrev.mousePressed(() => {
         changeActiveArtboardPattern(-1);
@@ -971,7 +1106,7 @@ function createLayoutUI() {
     createDiv('Text Tool').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let txtRow = createDiv('').parent(group).class('mini-row');
     
-    let btnDrawText = createButton('Draw Text Box').id('btn-draw-text').parent(txtRow).class('btn-retro');
+    let btnDrawText = createButton('Draw Text Box').id('btn-draw-text').parent(txtRow).class('btn-retro').attribute('data-tooltip', 'Click and drag to create a text box.');
     btnDrawText.mousePressed(() => {
         layoutTool = 'TEXT_BOX';
         document.body.style.cursor = 'crosshair';
@@ -980,9 +1115,9 @@ function createLayoutUI() {
     
     // Text Alignment
     let alignRow = createDiv('').parent(group).class('mini-row').style('margin-top','6px').style('gap','4px');
-    let btnLeft = createButton('Left').parent(alignRow).class('btn-retro').style('flex','1');
-    let btnCenter = createButton('Center').parent(alignRow).class('btn-retro').style('flex','1');
-    let btnRight = createButton('Right').parent(alignRow).class('btn-retro').style('flex','1');
+    let btnLeft = createButton('Left').parent(alignRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Align text left.');
+    let btnCenter = createButton('Center').parent(alignRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Align text center.');
+    let btnRight = createButton('Right').parent(alignRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Align text right.');
 
     const applyAlign = (align) => {
         if(selectedLayoutElement) {
@@ -1023,30 +1158,18 @@ function createLayoutUI() {
         }
     });
 
-    // 4. Canvas Controls (Add Artboard)
-    createDiv('Canvas').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
-    let canvasRow = createDiv('').parent(group).class('mini-row');
-    let btnAddPage = createButton('Add Artboard').parent(canvasRow).class('btn-retro').style('width', '100%');
-    btnAddPage.mousePressed(() => {
-        let holder = select('#layout-canvas-holder');
-        let pages = holder.elt.querySelectorAll('.layout-page-bg').length;
-        createPageBackground(holder, pages);
-        let newH = (pages + 1) * (1123 + 20); 
-        holder.style('height', newH + 'px');
-    });
-
     // 4. Settings (Snap)
     createDiv('Settings').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let settingRow = createDiv('').parent(group).class('mini-row');
-    let chkSnap = createCheckbox('Snap to Grid', isSnapToGrid).parent(settingRow);
+    let chkSnap = createCheckbox('Snap to Grid', isSnapToGrid).parent(settingRow).attribute('data-tooltip', 'Toggle grid snapping.');
     chkSnap.style('font-family', 'monospace').style('font-size', '14px');
     chkSnap.changed(() => { isSnapToGrid = chkSnap.checked(); });
 
     // 5. Project (Save/Load)
     createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let projRow = createDiv('').parent(group).class('mini-row');
-    let btnSave = createButton('Save Layout').parent(projRow).class('btn-retro');
-    let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro');
+    let btnSave = createButton('Save Layout').parent(projRow).class('btn-retro').attribute('data-tooltip', 'Save project to JSON.');
+    let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro').attribute('data-tooltip', 'Load project from JSON.');
     btnSave.mousePressed(saveLayoutProject);
     btnLoad.mousePressed(() => {
         let fi = select('#layout-load-input');
@@ -1116,6 +1239,24 @@ function selectLayoutElement(elmnt) {
                 picker.value(col.toString('#rrggbb'));
             }
         }
+    }
+}
+
+// --- THOUGHTS TAB HEADER ---
+function setupThoughtsDateHeader() {
+    let panel = select('#tab-thoughts .panel-left');
+    if (panel && !select('#notebook-date-header')) {
+        let container = createDiv('');
+        container.id('notebook-date-header');
+        
+        createSpan('Ngày ').parent(container);
+        createInput('').parent(container).class('date-input');
+        createSpan(' Tháng ').parent(container);
+        createInput('').parent(container).class('date-input');
+        createSpan(' Năm ').parent(container);
+        createInput('').parent(container).class('date-input');
+
+        panel.elt.insertBefore(container.elt, panel.elt.firstChild);
     }
 }
 
@@ -1260,6 +1401,15 @@ function setupImageProcessorDrop() {
              if (fileInput.files.length > 0) {
                  const ph = dropZone.querySelector('.placeholder-text');
                  if (ph) ph.style.display = 'none';
+                 
+                 // Update aspect ratio to match input image
+                 const file = fileInput.files[0];
+                 const img = new Image();
+                 img.onload = () => {
+                     const sheet = select('#tab-image-proc .paper-sheet');
+                     if(sheet) sheet.style('aspect-ratio', `${img.width}/${img.height}`);
+                 };
+                 img.src = URL.createObjectURL(file);
              }
         });
     }
@@ -1574,21 +1724,51 @@ function restoreLayoutState(htmlState) {
 }
 
 function copyLayoutSelection() {
-    if (selectedLayoutElement) {
-        layoutClipboard = selectedLayoutElement.outerHTML;
+   if (selectedLayoutElement) {
+        layoutClipboard = { type: 'element', html: selectedLayoutElement.outerHTML };
+    } else if (activeArtboard) {
+        // Copy Artboard Content
+        let pageH = 1123;
+        let artboardTop = activeArtboard.offsetTop;
+        let content = [];
+
+        let holder = select('#layout-canvas-holder');
+        let children = holder.elt.children;
+
+        for (let el of children) {
+            if (el.classList.contains('layout-page-bg')) continue;
+
+            let elTop = parseInt(el.style.top || 0);
+            // Check overlap with active artboard
+            if (elTop >= artboardTop && elTop < artboardTop + pageH) {
+                content.push({
+                    html: el.outerHTML,
+                    relY: elTop - artboardTop,
+                    relX: parseInt(el.style.left || 0)
+                });
+            }
+        }
+
+        layoutClipboard = {
+            type: 'artboard',
+            pattern: activeArtboard.getAttribute('data-pattern'),
+            content: content
+        };
     }
 }
 
 function pasteLayoutSelection() {
-    if (layoutClipboard) {
+    if (!layoutClipboard) return;
+
+    if (layoutClipboard.type === 'element') {
         saveLayoutState();
         let holder = select('#layout-canvas-holder');
-        let temp = createDiv(layoutClipboard);
+        let temp = createDiv(layoutClipboard.html);
         let el = temp.elt.firstChild;
         
-        // Clean up handles from clipboard content before adding
-        let oldHandles = el.querySelectorAll('.resize-handle, .rotate-handle');
-        oldHandles.forEach(h => h.remove());
+     // Clean up handles from clipboard content before adding
+       let oldHandles = el.querySelectorAll('.resize-handle, .rotate-handle');
+       oldHandles.forEach(h => h.remove());
 
         holder.elt.appendChild(el);
         temp.remove();
@@ -1599,7 +1779,49 @@ function pasteLayoutSelection() {
         el.style.outline = 'none';
         
         makeElementInteractive(el);
-        selectLayoutElement(el);
+       selectLayoutElement(el);
+    } else if (layoutClipboard.type === 'artboard') {
+        if (!activeArtboard) return;
+        
+        // Add new artboard after current
+        let newBg = addArtboardRelative(activeArtboard);
+        
+        // Apply Pattern
+        let pat = layoutClipboard.pattern;
+       newBg.setAttribute('data-pattern', pat);
+        let layer = newBg.querySelector('.layout-pattern-layer');
+        if(layer) layer.style.backgroundImage = `url('assets/canvas%20template/paper%20pattern%20${pat}.png')`;
+        
+        // Add Content
+        let holder = select('#layout-canvas-holder');
+        let newTop = newBg.offsetTop;
+        
+        layoutClipboard.content.forEach(item => {
+            let temp = createDiv(item.html);
+            let el = temp.elt.firstChild;
+       // Apply Pattern
+        let pat = layoutClipboard.pattern;
+        newBg.setAttribute('data-pattern', pat);
+        let layer = newBg.querySelector('.layout-pattern-layer');
+        if(layer) layer.style.backgroundImage = `url('assets/canvas%20template/paper%20pattern%20${pat}.png')`;
+
+            
+            // Clean handles
+            let handles = el.querySelectorAll('.resize-handle, .rotate-handle, .move-handle');
+            handles.forEach(h => h.remove());
+            
+            // Position relative to new artboard
+            el.style.top = (newTop + item.relY) + 'px';
+            el.style.left = item.relX + 'px';
+            el.style.outline = 'none';
+            
+            holder.elt.appendChild(el);
+            temp.remove();
+            
+            makeElementInteractive(el);
+        });
+        
+        setActiveArtboard(newBg);
     }
 }
 
@@ -1622,14 +1844,40 @@ function drawStatusPanel() {
 }
 
 // --- GLOBAL: ADD TO LIBRARY ---
-window.addToLibrary = function(p5Img, name) {
+window.addToLibrary = function(p5Img, name, extraData) {
   let libGrid = document.getElementById('lib-grid');
   if (!libGrid) return;
   p5Img.loadPixels();
   let dataURL = p5Img.canvas.toDataURL();
   let item = createDiv(''); item.class('lib-item'); item.parent(libGrid);
   let imgEl = createImg(dataURL, name || 'Artwork'); imgEl.parent(item);
-  item.mousePressed(() => { if (activeTab === 'tab-sketch') loadImage(dataURL, handleImageLoad); });
+  item.mousePressed(() => { 
+      if (name === "Thought Card") {
+          let modal = document.getElementById('thought-card-modal');
+          let modalImg = document.getElementById('thought-card-img');
+          let modalHtml = document.getElementById('thought-card-html');
+          
+          if(modal) {
+              if (extraData && extraData.text) {
+                  if(modalImg) modalImg.style.display = 'none';
+                  if(modalHtml) {
+                      modalHtml.style.display = 'block';
+                      let txtEl = document.getElementById('thought-card-text-content');
+                      let dateEl = document.getElementById('thought-card-date');
+                      if(txtEl) txtEl.innerText = extraData.text;
+                      if(dateEl) dateEl.innerText = extraData.date || "";
+                  }
+              } else {
+                  if(modalHtml) modalHtml.style.display = 'none';
+                  if(modalImg) {
+                      modalImg.style.display = 'block';
+                      modalImg.src = dataURL;
+                  }
+              }
+              modal.style.display = 'flex';
+          }
+      } else if (activeTab === 'tab-sketch') loadImage(dataURL, handleImageLoad); 
+  });
   item.elt.draggable = true;
   item.elt.ondragstart = (e) => { e.dataTransfer.setData("text/plain", dataURL); };
 
@@ -1659,7 +1907,7 @@ function createPageBackground(parent, index, setAsActive = false) {
     bg.style('z-index', '-1'); 
     bg.style('pointer-events', 'none'); 
     bg.style('overflow', 'hidden');
-    
+
     // Store pattern index in DOM
     bg.attribute('data-pattern', '1');
 
@@ -1671,7 +1919,9 @@ function createPageBackground(parent, index, setAsActive = false) {
     bg.elt.onclick = (e) => {
         e.stopPropagation();
         setActiveArtboard(bg.elt);
+        selectLayoutElement(null); // Deselect content when clicking bg
     };
+    bg.style('cursor', 'pointer');
 
     // Pattern Layer (Rotated 90deg)
     let pattern = createDiv('');
@@ -1687,6 +1937,7 @@ function createPageBackground(parent, index, setAsActive = false) {
     // Artboard Label
     let label = createDiv(`Artboard ${index + 1}`);
     label.parent(bg);
+    label.class('artboard-label');
     label.style('position', 'absolute');
     label.style('top', '-20px'); label.style('left', '-1px');
     label.style('background', '#0072BC'); label.style('color', 'white');
@@ -1694,6 +1945,55 @@ function createPageBackground(parent, index, setAsActive = false) {
     label.style('font-family', "'KK7VCROSDMono', monospace"); label.style('text-transform', 'lowercase'); label.style('pointer-events', 'none');
 
     if (setAsActive) setActiveArtboard(bg.elt);
+}
+
+function addArtboardRelative(targetBgElt) {
+    saveLayoutState();
+    let holder = select('#layout-canvas-holder');
+    
+    // 1. Calculate Shift Threshold
+    let pageH = 1123; let gap = 20;
+    let shiftAmount = pageH + gap;
+    let thresholdY = targetBgElt.offsetTop + pageH; 
+    
+    // 2. Shift Content Elements (push everything down)
+    let children = holder.elt.children;
+    for (let el of children) {
+        if (el.classList.contains('layout-page-bg')) continue;
+        if (el.id === 'layout-viewport') continue;
+        
+        let currentTop = parseInt(el.style.top || 0);
+        if (currentTop >= thresholdY - 5) {
+            el.style.top = (currentTop + shiftAmount) + 'px';
+        }
+    }
+    
+    // 3. Create New Artboard
+    let tempContainer = createDiv('');
+    createPageBackground(tempContainer, 0, false);
+    let newBg = tempContainer.elt.firstChild;
+    
+    if (targetBgElt.nextSibling) holder.elt.insertBefore(newBg, targetBgElt.nextSibling);
+    else holder.elt.appendChild(newBg);
+    tempContainer.remove();
+    
+    // 4. Recalculate Positions
+    recalculateLayoutPositions();
+    setActiveArtboard(newBg);
+    return newBg;
+}
+
+function recalculateLayoutPositions() {
+    let holder = select('#layout-canvas-holder');
+    let bgs = holder.elt.querySelectorAll('.layout-page-bg');
+    let pageH = 1123; let gap = 20;
+    bgs.forEach((bg, i) => {
+
+        bg.style.top = (i * (pageH + gap)) + 'px';
+        let lbl = bg.querySelector('.artboard-label');
+        if (lbl) lbl.innerText = `Artboard ${i + 1}`;
+    });
+    holder.style('height', (bgs.length * (pageH + gap)) + 'px');
 }
 
 function setActiveArtboard(el) {

@@ -10,15 +10,16 @@
 </head>
 <body>
 
+<div id="boot-screen"></div>
 <div class="noise-overlay"></div>
 <div id="app-container">
 
   <div class="app-sidebar">
     <div class="sidebar-bg-rotated"></div>
-    <div class="sidebar-tab active" data-tab="tab-thoughts" onclick="switchTab('tab-thoughts')">1. Thoughts</div>
-    <div class="sidebar-tab" data-tab="tab-image-proc" onclick="switchTab('tab-image-proc')">2. Image Processor</div>
-    <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')">3. ASCII Sketch</div>
-    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')">4. Memory Diagram</div>
+    <div class="sidebar-tab active" data-tab="tab-thoughts" onclick="switchTab('tab-thoughts')" data-tooltip="Tab 1: Write and collect your thoughts.">1. Thoughts</div>
+    <div class="sidebar-tab" data-tab="tab-image-proc" onclick="switchTab('tab-image-proc')" data-tooltip="Tab 2: Process images into ASCII art.">2. Image Processor</div>
+    <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')" data-tooltip="Tab 3: Sketch freely with ASCII characters.">3. ASCII Sketch</div>
+    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')" data-tooltip="Tab 4: Arrange your memory diagram.">4. Memory Diagram</div>
   </div>
 
   <div class="layout-column">
@@ -41,7 +42,7 @@
     <!-- TITLE -->
     <h1 id="intro-title"
         class="section-title typewriter-cursor"
-        style="font-size:36px; text-align:center; margin-bottom:10px; color:#182983;"></h1>
+        style="text-align:center;"></h1>
 
     <p style="text-align:center; color:#182983; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 0 6px 0;">
       Process Documentation — The Memory Index
@@ -200,9 +201,9 @@
   <!-- TAB 1: THOUGHTS -->
   <div class="workspace active" id="tab-thoughts">
     <div class="panel-left ribbon ribbon-green" data-ribbon="1. Thoughts">
-      <div class="section-title">Write down your thoughts</div>
+      <div class="section-title">1/ Write down your thoughts here</div>
       <textarea id="inpThought" class="retro-input" placeholder="Type thoughts..."></textarea>
-      <button class="btn-retro" id="btnCreateCard">+ add thoughts</button>
+      <button class="btn-retro" id="btnCreateCard" data-tooltip="Add your thought to the memory archive.">+ add thoughts</button>
     </div>
     <div class="panel-center">
       <!-- Empty or decorative center for thoughts -->
@@ -212,11 +213,11 @@
   <!-- TAB 2: IMAGE PROCESSOR -->
   <div class="workspace" id="tab-image-proc">
     <div class="panel-left ribbon ribbon-green" data-ribbon="2. Processor">
-      <div class="section-title">Image Processor</div>
+      <div class="section-title">2/ Image Processor</div>
       <!-- Restore hidden elements for compatibility with ui-binding.js -->
       <div id="preview-area" style="display:none;"></div>
       <button id="btnLoadImage" style="display:none;"></button>
-      <input type="file" id="fileIn" hidden />
+      <input type="file" id="fileIn" hidden data-tooltip="Upload an image to process." />
 
       <div class="section-title">ASCII Options</div>
       <div class="mini-row">
@@ -248,13 +249,12 @@
         <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
       </div>
 
-      <button class="btn-retro btn-wide" id="cmykSaveBtn">+ add to library</button>
-      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;">download image</button>
-      <button class="btn-retro btn-wide" id="btnSaveTXT" style="margin-top:6px;">download txt</button>
+      <button class="btn-retro" id="cmykSaveBtn" style="margin-top:20px;" data-tooltip="Save processed image to library.">+ add to library</button>
+      <button class="btn-retro" id="btnSavePNG" style="margin-top:6px;" data-tooltip="Download as PNG image.">download image</button>
     </div>
 
     <div class="panel-center">
-      <div class="paper-sheet paper-a4" style="height:75%; width:auto; aspect-ratio:210/297; margin:auto; transform:none; border:1px solid #000;">
+      <div class="paper-sheet paper-a4" style="height:75%; width:auto; aspect-ratio:297/210; margin:auto; transform:none; border:1px solid #000;">
         <div id="input-canvas-holder" class="canvas-holder">
           <div class="placeholder-text">Drop Image Here</div>
         </div>
@@ -272,10 +272,10 @@
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
         <div class="tools-grid">
-          <button class="btn-retro" id="btnPencil"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMTEgMkwxMyA0TDEwIDdMNyA1TDExIDJaTTYgNkw5IDlMNCAxNEgyVjEyTDYgNloiLz48L3N2Zz4=" class="pixel-icon"> Pencil</button>
-          <button class="btn-retro" id="btnEraser"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAyTDExIDhMMTQuNSA0LjVMOC41IDJINVpNNSA0TDggN0w2IDlMMyA2TDUgNFoiLz48L3N2Zz4=" class="pixel-icon"> Eraser</button>
-          <button class="btn-retro" id="btnFill"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMSA0TDMgMTJIOS41TDEyIDRIMVpNMiA1SDExTDkuNSAxMUgzLjVMMiA1WiIvPjwvc3ZnPg==" class="pixel-icon"> Bucket</button>
-          <button class="btn-retro" id="btnClearSketch"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAxSDExVjJIMUMxVjNIMVYySDVWMVpNMiA0SDE0VjE1SDJWNFpNMCA1VjEwSDFWNUgwWk0xNSA1VjEwSDE2VjVIMTVaIi8+PC9zdmc+" class="pixel-icon"> Clear</button>
+          <button class="btn-retro" id="btnPencil" data-tooltip="Draw with selected character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMTEgMkwxMyA0TDEwIDdMNyA1TDExIDJaTTYgNkw5IDlMNCAxNEgyVjEyTDYgNloiLz48L3N2Zz4=" class="pixel-icon"> Pencil</button>
+          <button class="btn-retro" id="btnEraser" data-tooltip="Erase characters."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAyTDExIDhMMTQuNSA0LjVMOC41IDJINVpNNSA0TDggN0w2IDlMMyA2TDUgNFoiLz48L3N2Zz4=" class="pixel-icon"> Eraser</button>
+          <button class="btn-retro" id="btnFill" data-tooltip="Fill area with character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMSA0TDMgMTJIOS41TDEyIDRIMVpNMiA1SDExTDkuNSAxMUgzLjVMMiA1WiIvPjwvc3ZnPg==" class="pixel-icon"> Bucket</button>
+          <button class="btn-retro" id="btnClearSketch" data-tooltip="Clear the entire canvas."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAxSDExVjJIMUMxVjNIMVYySDVWMVpNMiA0SDE0VjE1SDJWNFpNMCA1VjEwSDFWNUgwWk0xNSA1VjEwSDE2VjVIMTVaIi8+PC9zdmc+" class="pixel-icon"> Clear</button>
         </div>
       </div>
     </div>
@@ -320,16 +320,12 @@
         <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
-      <button class="btn-retro btn-wide" id="btnExportLayout">export A4</button>
+      <button class="btn-retro btn-wide" id="btnExportLayout" data-tooltip="Export layout as JSON file.">export A4</button>
       </div>
     </div>
 
     <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
       <div class="artboard-wrapper">
-        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
-          <input type="text" value="Artboard 1" class="retro-input artboard-name" style="width:150px; text-align:center;">
-          <button class="btn-retro" onclick="duplicateArtboard(this)">Duplicate</button>
-        </div>
         <div class="paper-sheet paper-a4 fixed-a4">
           <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
         </div>
@@ -340,24 +336,40 @@
   
   </div><!-- end app-body -->
   </div><!-- end layout-column -->
+  
+  <div id="floating-tooltip"></div>
 
   <!-- GLOBAL LIBRARY (Pinned) -->
-  <div id="global-lib-btn" onclick="toggleGlobalLibrary()">LIBRARY</div>
+  <div id="global-lib-btn" onclick="toggleGlobalLibrary()" data-tooltip="Open Memory Archive.">LIBRARY</div>
   <div id="global-lib-panel">
     <div class="section-title">Memories Archieve</div>
     <div id="lib-grid" class="lib-grid"></div>
   </div>
 
   <!-- MUSIC PLAYER WIDGET -->
-  <div id="music-player-widget" class="music-widget">
+  <div id="music-player-widget" class="music-widget" data-tooltip="Background Music Player.">
     <div class="music-header">
       <span>♫ Music Player</span>
-      <button id="btn-toggle-music" class="btn-mini"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      <button id="btn-toggle-music" class="btn-mini" data-tooltip="Minimize/Maximize player."><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
     </div>
     <div id="music-content" class="music-content">
-      <input type="text" id="music-url-input" class="retro-input" placeholder="Paste YouTube / Spotify Link..." style="font-size:10px; padding:6px;">
-      <button id="btn-play-music" class="btn-retro" style="font-size:10px; padding:4px;">Load Track</button>
+      <input type="text" id="music-url-input" class="retro-input" placeholder="Paste YouTube / Spotify Link..." style="font-size:10px; padding:6px;" data-tooltip="Paste YouTube or Spotify link here.">
+      <button id="btn-play-music" class="btn-retro" style="font-size:10px; padding:4px;" data-tooltip="Load and play track.">Load Track</button>
       <div id="music-embed-container" style="margin-top:4px; min-height:0;"></div>
+    </div>
+  </div>
+
+  <!-- THOUGHT CARD MODAL -->
+  <div id="thought-card-modal" class="modal-overlay" style="display:none;" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <img id="thought-card-img" src="" alt="Thought Card" style="display:none;">
+      <div id="thought-card-html" class="thought-card-html" style="display:none;">
+        <div class="paper-lines"></div>
+        <div class="margin-line"></div>
+        <div id="thought-card-text-content" class="card-text"></div>
+        <div id="thought-card-date" class="card-date"></div>
+      </div>
+      <button class="btn-retro" style="width: auto; padding: 8px 20px;" onclick="document.getElementById('thought-card-modal').style.display='none'">Close</button>
     </div>
   </div>
 
@@ -395,9 +407,60 @@
   //fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
 
   // Sidebar Switch Logic
+  // --- BOOT SEQUENCE ---
+  document.addEventListener('DOMContentLoaded', () => {
+      const bootScreen = document.getElementById('boot-screen');
+      if(bootScreen) {
+        const bootLines = [
+            "MEM_IDX BIOS v1.0.4",
+            "Copyright (C) 2024 Memory Systems Inc.",
+            " ",
+            "Checking RAM... 640K OK",
+            "Loading modules...",
+            " > core.sys",
+            " > graphics.drv",
+            " > audio.lib",
+            "Initializing UI...",
+            "Mounting virtual volumes...",
+            "Done.",
+            " ",
+            "Starting session..."
+        ];
+
+        let delay = 0;
+        bootLines.forEach((line, index) => {
+            delay += Math.random() * 50 + 20;
+            setTimeout(() => {
+                const p = document.createElement('div');
+                p.className = 'boot-line';
+                p.innerText = line;
+                bootScreen.appendChild(p);
+                bootScreen.scrollTop = bootScreen.scrollHeight;
+                if (index === bootLines.length - 1) {
+                    const cursor = document.createElement('span');
+                    cursor.className = 'cursor-blink';
+                    bootScreen.appendChild(cursor);
+                }
+            }, delay);
+        });
+
+        setTimeout(() => {
+            bootScreen.style.transition = 'opacity 0.5s ease-out';
+            bootScreen.style.opacity = '0';
+            setTimeout(() => {
+                bootScreen.style.display = 'none';
+            }, 500);
+        }, delay + 500);
+      }
+  });
+
   function playTypewriter() {
     const titleEl = document.getElementById('intro-title');
     if(!titleEl) return;
+    
+    // Reset cursor visibility at start
+    titleEl.classList.add('typewriter-cursor');
+
     const text = "Index of Remembering";
     titleEl.innerText = ""; // Clear initial text
     
@@ -407,6 +470,9 @@
         titleEl.innerText += text.charAt(i);
         i++;
         setTimeout(typeWriter, 100); // Speed: 100ms per char
+      } else {
+        // Remove cursor when typing finishes
+        titleEl.classList.remove('typewriter-cursor');
       }
     }
     setTimeout(typeWriter, 100);
