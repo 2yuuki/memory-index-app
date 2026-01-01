@@ -1,4 +1,4 @@
-# HyperCard Memory Index
+# The Memory Index
 
 A digital memory index inspired by HyperCard aesthetics, built with p5.js.
 
