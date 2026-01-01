@@ -32,7 +32,7 @@
 
       <div class="tabs-container">
         <div class="tab-btn active" onclick="switchSidebar('intro')">I. Introduction</div>
-        <div class="tab-btn" onclick="switchSidebar('tools')">II. Tool Tab</div>
+        <div class="tab-btn" onclick="switchSidebar('tools')" data-tooltip="Click to enter Tool System">II. Tool Tab</div>
       </div>
     </div>
 
@@ -249,8 +249,8 @@
         <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
       </div>
 
-      <button class="btn-retro" id="cmykSaveBtn" style="margin-top:20px;" data-tooltip="Save processed image to library.">+ add to library</button>
-      <button class="btn-retro" id="btnSavePNG" style="margin-top:6px;" data-tooltip="Download as PNG image.">download image</button>
+      <button class="btn-retro btn-wide" id="cmykSaveBtn" data-tooltip="Save processed image to library.">+ add to library</button>
+      <button class="btn-retro btn-wide" id="btnSavePNG" style="margin-top:6px;" data-tooltip="Download as PNG image.">download image</button>
     </div>
 
     <div class="panel-center">
@@ -369,7 +369,10 @@
         <div id="thought-card-text-content" class="card-text"></div>
         <div id="thought-card-date" class="card-date"></div>
       </div>
-      <button class="btn-retro" style="width: auto; padding: 8px 20px;" onclick="document.getElementById('thought-card-modal').style.display='none'">Close</button>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button id="btn-delete-card" class="btn-retro" style="width: auto; padding: 8px 20px; background-image:none; background-color:#e74c3c; color:white; border-color:#c0392b;">Delete</button>
+        <button class="btn-retro" style="width: auto; padding: 8px 20px;" onclick="document.getElementById('thought-card-modal').style.display='none'">Close</button>
+      </div>
     </div>
   </div>
 
@@ -498,7 +501,6 @@
           t.classList.remove('disabled-tab');
         } else {
           t.classList.remove('active');
-          t.classList.add('disabled-tab'); // Disable Tool Tab in Intro
         }
       });
       

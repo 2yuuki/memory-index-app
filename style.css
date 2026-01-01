@@ -161,7 +161,7 @@ body::after {
   position:relative;
   overflow:hidden;
   border-right:var(--border);
-  padding-top: 36px;
+  padding-top: 32px;
   background-image: var(--grad-green-side);
   transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -172,11 +172,12 @@ body::after {
 }
 
 .sidebar-tab{
-  height: 36px;
+  height: 30px;
   width:100%;
   flex: 1; /* Chia đều chiều cao cho 4 tab */
   display:flex;
-  align-items:center;
+  align-items:flex-end;
+  padding: 8px;
   justify-content:center;
   font-family: 'kk7vcrosdmono', monospace;
   font-size:12px;
@@ -308,7 +309,7 @@ body::after {
 
 /* --- TOP BAR --- */
 .top-bar{
-  height:36px;
+  height:32px;
   position:relative;
   display:flex;
   align-items:flex-start;
@@ -352,11 +353,11 @@ body::after {
 
 .tab-btn{
   position:relative;
-  height:30px;
-  width:100%;
-  width: 200px;
-  padding: 25px;
-  align-items:center;
+  height:26px;
+  width: 200pt;
+  display:flex;
+  align-items:flex;
+  padding: 18px;
   justify-content:center;
   text-align:center;
   white-space:nowrap;
@@ -464,8 +465,8 @@ body::after {
 }
 
 .panel-header {
-  background: var(--grad-blue);
-  color: white;
+  background: #c4c4c4;
+  color: var(--btn-blue);
   padding: 8px 10px;
   font-family: 'Bianzhidai', monospace;
   font-size: 14px;
@@ -651,7 +652,7 @@ textarea.retro-input{
   background-position: 0 0, 2px 2px, 0 0;
   background-size: 4px 4px, 4px 4px, 100% 100%;
   background-repeat: repeat, repeat, no-repeat;
-  color: #fa0afa;
+  color: var(--text-blue);
   font-family: 'KK7VCROSDMono', monospace;
   font-size:14px;
   cursor:pointer;
@@ -1198,6 +1199,8 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   font-size: 16px;
   text-align: left;
   white-space: pre-wrap;
+  user-select: text;
+  cursor: text;
 }
 .card-date {
   position: absolute;
@@ -1206,4 +1209,157 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   font-size: 10px;
   color: #fa0afa;
   text-align: right;
+}
+
+/* --- RESPONSIVE MOBILE (Max Width 768px) --- */
+@media (max-width: 768px) {
+  /* 1. App Container & Sidebar */
+  #app-container {
+    flex-direction: column;
+  }
+  
+  .app-sidebar {
+    width: 100%;
+    height: 50px;
+    flex-direction: row;
+    order: 2; /* Move to bottom */
+    padding-top: 0;
+    border-right: none;
+    border-top: var(--border);
+    background-image: var(--grad-green-side);
+    z-index: 9000;
+  }
+  
+  .sidebar-tab {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    height: 100%;
+    border-bottom: none;
+    font-size: 10px;
+    padding: 0;
+    text-align: center;
+    justify-content: center;
+  }
+  
+  .sidebar-tab::before {
+    display: none;
+  }
+  
+  .sidebar-tab.active {
+    background: rgba(255,255,255,0.3);
+    color: var(--black);
+    font-weight: bold;
+  }
+  
+  .sidebar-bg-rotated { display: none; }
+  
+  .layout-column {
+    width: 100%;
+    height: calc(100% - 50px);
+    order: 1;
+  }
+  
+  /* 2. Top Bar */
+  .top-bar {
+    height: auto;
+    min-height: 40px;
+    flex-wrap: wrap;
+  }
+  .tabs-container {
+    width: 100%;
+  }
+  .tab-btn {
+    width: 50%;
+    padding: 10px 5px;
+    height: 40px;
+    font-size: 11px;
+  }
+  .brand-pill { display: none; }
+
+  /* 3. Workspaces General */
+  .workspace {
+    display: flex !important;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .workspace:not(.active) {
+    display: none !important;
+  }
+  
+  /* 4. Tab Specific Adjustments */
+  #tab-thoughts .panel-left,
+  #tab-image-proc .panel-left {
+    width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+    border-right: none;
+    border-bottom: var(--border);
+    max-height: none;
+    overflow: visible;
+  }
+  
+  #tab-thoughts .section-title,
+  #tab-image-proc .panel-left > .section-title:first-child,
+  #intro-title {
+    font-size: 32pt;
+  }
+  
+  #tab-image-proc .panel-center {
+    width: 100%;
+    height: 500px;
+    padding: 10px;
+  }
+  
+  /* 5. Floating Panels (Tab 3 & 4) -> Static Stacked */
+  .floating-panel {
+    position: relative;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100%;
+    max-height: none;
+    margin-bottom: 10px;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
+  }
+  
+  #sketch-canvas-holder, #layout-canvas-holder {
+    overflow: auto;
+    min-height: 400px;
+  }
+
+  /* 6. Widgets & Overlays */
+  #global-lib-btn {
+    top: auto;
+    bottom: 60px;
+    right: 0;
+    height: 40px;
+    width: 100px;
+    writing-mode: horizontal-tb;
+    border-radius: 8px 0 0 8px;
+  }
+  #global-lib-panel {
+    width: 100%;
+    top: 40px;
+    bottom: 50px;
+  }
+  
+  .music-widget {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 60px;
+    width: 90%;
+  }
+  
+  #floating-tooltip { display: none !important; }
+
+  .intro-container {
+    padding: 10px;
+  }
+  .intro-content {
+    width: 100%;
+    padding: 15px;
+  }
 }

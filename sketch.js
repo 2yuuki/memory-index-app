@@ -18,6 +18,7 @@ let pgColorLayer;
 let pgTextLayer;    
 let pgGridLayer; 
 let templateImg;    
+let libraryItems = []; // Store library data
 
 // --- STATE ---
 let mainMode = "ASCII"; 
@@ -226,6 +227,7 @@ function setup() {
   
   resetAllGrids();
   loadFromLocalStorage();
+  loadLibrary(); // Load saved library items
   saveState(); 
 
   // Init UI
@@ -286,13 +288,13 @@ function setup() {
   makePanelDraggable('sketch-patterns-panel');
   makePanelDraggable('sketch-ink-panel');
   makePanelDraggable('layout-tools-panel');
-  
+  makePanelDraggable('music-player-widget');
 
   window.switchTab('tab-thoughts');
   
-  // Force sidebar to be visible immediately on load
+  // Ensure sidebar is hidden initially (Intro Mode)
   let sb = select('.app-sidebar');
-  if (sb) sb.removeClass('hidden');
+  if (sb) sb.addClass('hidden');
 
   // --- GLOBAL KEYBOARD LISTENER FOR LAYOUT (TAB 3) ---
   document.addEventListener('keydown', (e) => {
@@ -1059,8 +1061,8 @@ function setupLayoutTab() {
   }
 
   // Initialize global sidebar ref
-  let sbEl = document.querySelector('#layout-tools-panel .panel-content');
-  if (sbEl) layoutSidebarRef = new p5.Element(sbEl);
+  let sbEl = select('#layout-tools-panel .panel-content');
+  if (sbEl) layoutSidebarRef = sbEl;
 
   // Create persistent file input for loading (prevents UI destruction issues)
   if (layoutSidebarRef && !select('#layout-load-input')) {
@@ -1075,8 +1077,8 @@ function setupLayoutTab() {
 function createLayoutUI() {
     // Ensure sidebar is available
     if (!layoutSidebarRef) {
-        let sbEl = document.querySelector('#layout-tools-panel .panel-content');
-        if (sbEl) layoutSidebarRef = new p5.Element(sbEl);
+        let sbEl = select('#layout-tools-panel .panel-content');
+        if (sbEl) layoutSidebarRef = sbEl;
     }
     if (!layoutSidebarRef) return;
     
@@ -1420,47 +1422,28 @@ function makePanelDraggable(panelId) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
     
-    const header = panel.querySelector('.panel-header');
-    if (!header) return;
-
-    // Minimize Logic
-    const minBtn = header.querySelector('.panel-minimize-btn');
-    if (minBtn) {
-        minBtn.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent drag start
-        minBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const content = panel.querySelector('.panel-content');
-            if (content) {
-                if (content.style.display === 'none') {
-                    content.style.display = 'block';
-                    minBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
-                } else {
-                    content.style.display = 'none';
-                    minBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNCAwSDZWNEgxMFY2SDZWMTBINVY2SDBWNEg0VjBaIi8+PC9zdmc+" class="pixel-icon" style="width:10px;height:10px;">';
-                }
-            }
-        });
-    }
-
+    // Use section-title as drag handle since header is removed
+    const handle = panel.querySelector('.panel-header') || panel.querySelector('.music-header') || panel;
+    
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
 
-    header.addEventListener('mousedown', (e) => {
+    handle.style.cursor = 'move';
+    handle.addEventListener('mousedown', (e) => {
+        // Only drag on desktop (when position is absolute)
+        if (window.getComputedStyle(panel).position !== 'absolute') return;
+        
         isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        initialLeft = panel.offsetLeft;
-        initialTop = panel.offsetTop;
+        startX = e.clientX; startY = e.clientY;
+        initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
         document.body.style.cursor = 'move';
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         e.preventDefault();
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        panel.style.left = `${initialLeft + dx}px`;
-        panel.style.top = `${initialTop + dy}px`;
+        panel.style.left = `${initialLeft + (e.clientX - startX)}px`;
+        panel.style.top = `${initialTop + (e.clientY - startY)}px`;
     });
 
     window.addEventListener('mouseup', () => {
@@ -1845,41 +1828,19 @@ function drawStatusPanel() {
 
 // --- GLOBAL: ADD TO LIBRARY ---
 window.addToLibrary = function(p5Img, name, extraData) {
-  let libGrid = document.getElementById('lib-grid');
-  if (!libGrid) return;
   p5Img.loadPixels();
   let dataURL = p5Img.canvas.toDataURL();
-  let item = createDiv(''); item.class('lib-item'); item.parent(libGrid);
-  let imgEl = createImg(dataURL, name || 'Artwork'); imgEl.parent(item);
-  item.mousePressed(() => { 
-      if (name === "Thought Card") {
-          let modal = document.getElementById('thought-card-modal');
-          let modalImg = document.getElementById('thought-card-img');
-          let modalHtml = document.getElementById('thought-card-html');
-          
-          if(modal) {
-              if (extraData && extraData.text) {
-                  if(modalImg) modalImg.style.display = 'none';
-                  if(modalHtml) {
-                      modalHtml.style.display = 'block';
-                      let txtEl = document.getElementById('thought-card-text-content');
-                      let dateEl = document.getElementById('thought-card-date');
-                      if(txtEl) txtEl.innerText = extraData.text;
-                      if(dateEl) dateEl.innerText = extraData.date || "";
-                  }
-              } else {
-                  if(modalHtml) modalHtml.style.display = 'none';
-                  if(modalImg) {
-                      modalImg.style.display = 'block';
-                      modalImg.src = dataURL;
-                  }
-              }
-              modal.style.display = 'flex';
-          }
-      } else if (activeTab === 'tab-sketch') loadImage(dataURL, handleImageLoad); 
-  });
-  item.elt.draggable = true;
-  item.elt.ondragstart = (e) => { e.dataTransfer.setData("text/plain", dataURL); };
+  
+  let newItem = {
+      id: Date.now(),
+      dataURL: dataURL,
+      name: name,
+      extraData: extraData
+  };
+  
+  libraryItems.push(newItem);
+  saveLibrary();
+  createLibraryItemDOM(newItem);
 
   // Animation feedback on Global Library Button
   let btn = document.getElementById('global-lib-btn');
@@ -1889,6 +1850,93 @@ window.addToLibrary = function(p5Img, name, extraData) {
     btn.classList.add('lib-saved-anim');
   }
 };
+
+function saveLibrary() {
+    try {
+        localStorage.setItem('mem_idx_library', JSON.stringify(libraryItems));
+    } catch(e) { 
+        console.error("Library save failed (quota exceeded?)", e); 
+        alert("Memory Archive is full! Please delete some items to save new ones.");
+    }
+}
+
+function loadLibrary() {
+    try {
+        let data = localStorage.getItem('mem_idx_library');
+        if (data) {
+            libraryItems = JSON.parse(data);
+            let libGrid = document.getElementById('lib-grid');
+            if(libGrid) libGrid.innerHTML = ''; // Clear existing
+            libraryItems.forEach(item => createLibraryItemDOM(item));
+        }
+    } catch(e) { console.error("Library load failed", e); }
+}
+
+function createLibraryItemDOM(item) {
+  let libGrid = document.getElementById('lib-grid');
+  if (!libGrid) return;
+  
+  let div = createDiv(''); div.class('lib-item'); div.parent(libGrid);
+  let imgEl = createImg(item.dataURL, item.name || 'Artwork'); imgEl.parent(div);
+  
+  div.mousePressed(() => { 
+      openLibraryModal(item);
+  });
+  
+  div.elt.draggable = true;
+  div.elt.ondragstart = (e) => { e.dataTransfer.setData("text/plain", item.dataURL); };
+}
+
+function openLibraryModal(item) {
+    let modal = document.getElementById('thought-card-modal');
+    let modalImg = document.getElementById('thought-card-img');
+    let modalHtml = document.getElementById('thought-card-html');
+    
+    if(modal) {
+        if (item.name === "Thought Card" && item.extraData && item.extraData.text) {
+            // HTML View for Thought Cards
+            if(modalImg) modalImg.style.display = 'none';
+            if(modalHtml) {
+                modalHtml.style.display = 'block';
+                let txtEl = document.getElementById('thought-card-text-content');
+                let dateEl = document.getElementById('thought-card-date');
+                if(txtEl) txtEl.innerText = item.extraData.text;
+                if(dateEl) dateEl.innerText = item.extraData.date || "";
+            }
+        } else {
+            // Image View for everything else
+            if(modalHtml) modalHtml.style.display = 'none';
+            if(modalImg) {
+                modalImg.style.display = 'block';
+                modalImg.src = item.dataURL;
+            }
+        }
+        modal.style.display = 'flex';
+
+        // Setup Delete Button Logic
+        let btnDelete = document.getElementById('btn-delete-card');
+        if (btnDelete) {
+            // Clone button to remove old event listeners from previous opens
+            let newBtn = btnDelete.cloneNode(true);
+            btnDelete.parentNode.replaceChild(newBtn, btnDelete);
+            
+            newBtn.onclick = () => {
+                if(confirm("Are you sure you want to delete this memory?")) {
+                    libraryItems = libraryItems.filter(i => i.id !== item.id);
+                    saveLibrary();
+                    
+                    // Refresh Grid
+                    let libGrid = document.getElementById('lib-grid');
+                    if(libGrid) libGrid.innerHTML = ''; 
+                    libraryItems.forEach(i => createLibraryItemDOM(i));
+                    
+                    modal.style.display = 'none';
+                }
+            };
+        }
+
+    }
+}
 
 // --- LAYOUT HELPERS ---
 function createPageBackground(parent, index, setAsActive = false) {
