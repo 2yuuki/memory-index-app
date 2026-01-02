@@ -307,6 +307,18 @@ body::after {
   text-transform: none;
 }
 
+.intro-logo {
+  display: block;
+  margin: 0 auto 10px auto;
+  width: 80px;
+  animation: bounce 4s steps(6, end) infinite;
+  transform-origin: bottom;
+}
+@keyframes bounce {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.9); }
+}
+
 /* --- TOP BAR --- */
 .top-bar{
   height:32px;
@@ -497,6 +509,19 @@ body::after {
   image-rendering: pixelated;
   display: inline-block;
   vertical-align: middle;
+}
+
+.move-handle {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 16px;
+  height: 16px;
+  background: #0072BC;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  cursor: move;
+  z-index: 11;
 }
 
 /* --- NOTEBOOK DATE HEADER (Tab 1) --- */
@@ -1211,6 +1236,32 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   text-align: right;
 }
 
+.layer-list {
+  background: #fff;
+  border: 1px solid #ccc;
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse; /* Show top layer at the top of the list */
+  margin-top: 5px;
+}
+.layer-item {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.layer-item:hover {
+  background: #e0f0ff;
+}
+.layer-item.selected {
+  background: #0072BC;
+  color: #fff;
+}
 /* --- RESPONSIVE MOBILE (Max Width 768px) --- */
 @media (max-width: 768px) {
   /* 1. App Container & Sidebar */

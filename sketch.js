@@ -728,6 +728,21 @@ function loadFromLocalStorage() {
   } catch(e) {}
 }
 
+function savePanelState(panelId, isVisible) {
+  try {
+    let states = JSON.parse(localStorage.getItem('mem_idx_panel_states') || '{}');
+    states[panelId] = isVisible;
+    localStorage.setItem('mem_idx_panel_states', JSON.stringify(states));
+  } catch(e) {}
+}
+
+function getPanelState(panelId) {
+  try {
+    let states = JSON.parse(localStorage.getItem('mem_idx_panel_states') || '{}');
+    return states[panelId];
+  } catch(e) { return undefined; }
+}
+
 // --- UI GENERATION ---
 function createAlignControls() {
   if (select('#ref-image-group')) return;
@@ -1072,6 +1087,21 @@ function setupLayoutTab() {
   }
 
   createLayoutUI();
+  updateLayoutZoom(0); // Force initial render/transform to show artboard immediately
+
+  // --- Setup MutationObserver for Layer Panel ---
+  const artboard = document.getElementById('layout-canvas-holder');
+  if (artboard) {
+      const observer = new MutationObserver((mutationsList, observer) => {
+          // A simple rebuild is fine for this project's scale.
+          updateLayerPanel();
+      });
+
+      observer.observe(artboard, { childList: true });
+      
+      // Initial population
+      updateLayerPanel();
+  }
 }
 
 function createLayoutUI() {
@@ -1086,7 +1116,7 @@ function createLayoutUI() {
     let existing = document.getElementById('layout-ui-group');
     if (existing) existing.remove();
 
-    let group = createDiv('').id('layout-ui-group');
+    let group = createDiv('').id('layout-ui-group').parent(select('#layer-controls'));
     layoutSidebarRef.child(group);
     
     // 1. Paper Patterns (Interactive Images)
@@ -1242,6 +1272,21 @@ function selectLayoutElement(elmnt) {
             }
         }
     }
+
+    // Update visual selection in layer panel
+    const layerList = document.getElementById('layer-list');
+    if (layerList) {
+        // Remove all 'selected' classes
+        layerList.querySelectorAll('.layer-item').forEach(item => item.classList.remove('selected'));
+        
+        // Add 'selected' to the new one
+        if (selectedLayoutElement && selectedLayoutElement.id) {
+            const newSelectedItem = layerList.querySelector(`[data-target-id="${selectedLayoutElement.id}"]`);
+            if (newSelectedItem) {
+                newSelectedItem.classList.add('selected');
+            }
+        }
+    }
 }
 
 // --- THOUGHTS TAB HEADER ---
@@ -1312,14 +1357,23 @@ function setupMusicPlayer() {
         }
     };
 
+    // Restore state for Music Player
+    const savedState = getPanelState('music-player-widget');
+    if (savedState === false) {
+        content.elt.style.display = 'none';
+        btnToggle.html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNCAwSDZWNEgxMFY2SDZWMTBINVY2SDBWNEg0VjBaIi8+PC9zdmc+" class="pixel-icon" style="width:10px;height:10px;">');
+    }
+
     if (btnToggle) {
         btnToggle.mousePressed(() => {
             if (content.elt.style.display === 'none') {
                 content.elt.style.display = 'flex';
-                btnToggle.html('_');
+                btnToggle.html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">');
+                savePanelState('music-player-widget', true);
             } else {
                 content.elt.style.display = 'none';
-                btnToggle.html('+');
+                btnToggle.html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNCAwSDZWNEgxMFY2SDZWMTBINVY2SDBWNEg0VjBaIi8+PC9zdmc+" class="pixel-icon" style="width:10px;height:10px;">');
+                savePanelState('music-player-widget', false);
             }
         });
     }
@@ -1425,6 +1479,34 @@ function makePanelDraggable(panelId) {
     // Use section-title as drag handle since header is removed
     const handle = panel.querySelector('.panel-header') || panel.querySelector('.music-header') || panel;
     
+    // Minimize Logic for Floating Panels
+    const minBtn = panel.querySelector('.panel-minimize-btn');
+    if (minBtn) {
+        // Restore state
+        const savedState = getPanelState(panelId);
+        const content = panel.querySelector('.panel-content');
+        if (content && savedState === false) {
+             content.style.display = 'none';
+             minBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNCAwSDZWNEgxMFY2SDZWMTBINVY2SDBWNEg0VjBaIi8+PC9zdmc+" class="pixel-icon" style="width:10px;height:10px;">';
+        }
+
+        minBtn.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent drag start
+        minBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (content) {
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    minBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
+                    savePanelState(panelId, true);
+                } else {
+                    content.style.display = 'none';
+                    minBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNNCAwSDZWNEgxMFY2SDZWMTBINVY2SDBWNEg0VjBaIi8+PC9zdmc+" class="pixel-icon" style="width:10px;height:10px;">';
+                    savePanelState(panelId, false);
+                }
+            }
+        });
+    }
+
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
 
@@ -1460,6 +1542,10 @@ function makeElementInteractive(elmnt) {
   // Sync textarea content for saving
   let ta = elmnt.querySelector('textarea');
   if(ta) {
+      ta.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        selectLayoutElement(elmnt);
+      });
       ta.addEventListener('input', function() { this.innerHTML = this.value; });
   }
 
@@ -1952,7 +2038,7 @@ function createPageBackground(parent, index, setAsActive = false) {
     bg.style('left', '0'); bg.style('top', y + 'px');
     bg.style('width', '100%'); bg.style('height', h + 'px');
     bg.style('background-color', 'white');
-    bg.style('border', 'none'); 
+    bg.style('border', '1px dashed #0072BC'); 
     bg.style('box-sizing', 'border-box');
     bg.style('box-shadow', '0 4px 15px rgba(0,0,0,0.08)');
     bg.style('z-index', '-1'); 
@@ -2051,12 +2137,10 @@ function setActiveArtboard(el) {
     activeArtboard = el;
     // Visual feedback
     document.querySelectorAll('.layout-page-bg').forEach(b => {
-        b.style.borderColor = '#0072BC';
-        b.style.borderWidth = '1px';
+        b.style.border = '1px dashed #0072BC';
     });
     if (activeArtboard) {
-        activeArtboard.style.borderColor = '#f75397'; // Pink highlight
-        activeArtboard.style.borderWidth = '2px';
+        activeArtboard.style.border = '2px solid #f75397'; // Pink highlight
     }
 }
 
@@ -2080,6 +2164,47 @@ function changeActiveArtboardPattern(dir) {
     }
 }
 
+function updateLayerPanel() {
+    const layerList = document.getElementById('layer-list');
+    const artboard = document.getElementById('layout-canvas-holder');
+    if (!layerList || !artboard) return;
+
+    layerList.innerHTML = ''; // Clear the list
+
+    const children = Array.from(artboard.children);
+    children.forEach(el => {
+        // Ignore non-layer elements
+        if (el.classList.contains('layout-page-bg') || el.id === 'layout-viewport' || !el.style.position) {
+            return;
+        }
+        
+        if (!el.id) {
+            el.id = 'layer-' + Date.now() + Math.floor(Math.random() * 1000);
+        }
+
+        const layerItem = document.createElement('div');
+        layerItem.className = 'layer-item';
+        
+        let typeIcon = '🖼️'; // Image icon
+        let typeName = 'Image';
+        if (el.querySelector('textarea')) {
+            typeIcon = '📄'; // Text icon
+            typeName = 'Text Box';
+        }
+        layerItem.innerHTML = `<span>${typeIcon}</span> ${typeName}`;
+
+        layerItem.dataset.targetId = el.id;
+
+        layerItem.onclick = () => {
+            const targetElement = document.getElementById(layerItem.dataset.targetId);
+            if (targetElement) {
+                selectLayoutElement(targetElement);
+            }
+        };
+
+        layerList.appendChild(layerItem);
+    });
+}
 // --- SAVE / LOAD LAYOUT ---
 function saveLayoutProject() {
     let holder = select('#layout-canvas-holder');

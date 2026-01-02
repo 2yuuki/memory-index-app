@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Memory Index</title>
+  <link rel="icon" href="assets/UI items/logo.svg" type="image/x-icon" />
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css">
@@ -39,6 +40,7 @@
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
       <div class="intro-content">
+    <img src="assets/UI items/logo.svg" class="intro-logo" alt="Logo">
     <!-- TITLE -->
     <h1 id="intro-title"
         class="section-title typewriter-cursor"
@@ -175,15 +177,6 @@
 
       <div class="divider"></div>
 
-      <!-- CTA -->
-      <div style="display:flex; justify-content:center; gap:16px; margin:18px 0 6px 0;">
-        <button class="btn-retro"
-                style="width:220px; height:50px; font-size:16px; font-weight:bold; font-family:'Bianzhidai', monospace;"
-                onclick="switchSidebar('tools')">
-          ENTER SYSTEM
-        </button>
-      </div>
-
       <p style="text-align:center; color:#444; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 auto; max-width:1200px; line-height:1.65;">
         Tip: Try a late-night micro-session — one memory, one image, one small ASCII sketch. Save it to your library, then export.
       </p>
@@ -268,7 +261,7 @@
     <div id="sketch-main-tools" class="floating-panel">
       <div class="panel-header">
         <span>Tools</span>
-        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
         <div class="tools-grid">
@@ -284,7 +277,7 @@
     <div id="sketch-patterns-panel" class="floating-panel" style="top:220px;">
       <div class="panel-header">
         <span>Patterns</span>
-        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
         <div id="sketch-palette" class="palette-grid"></div>
@@ -295,7 +288,7 @@
     <div id="sketch-ink-panel" class="floating-panel" style="top:440px;">
       <div class="panel-header">
         <span>Ink</span>
-        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
         <div id="sketch-colors" class="palette-grid palette-ink"></div>
@@ -316,18 +309,20 @@
   <div class="workspace" id="tab-index">
     <div id="layout-tools-panel" class="floating-panel">
       <div class="panel-header">
-        <span>4. Memory Diagram Tools</span>
-        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+        <span>Tools</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
-      <button class="btn-retro btn-wide" id="btnExportLayout" data-tooltip="Export layout as JSON file.">export A4</button>
+        <div id="layer-controls"></div>
+        <div class="section-title" style="margin-top:10px;">Layers</div>
+        <div id="layer-list" class="layer-list"></div>
       </div>
     </div>
 
     <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
       <div class="artboard-wrapper">
         <div class="paper-sheet paper-a4 fixed-a4">
-          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #d0d0d0;"></div>
+          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #444;"></div>
         </div>
       </div>
     </div>
