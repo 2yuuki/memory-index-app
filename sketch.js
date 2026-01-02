@@ -1879,12 +1879,15 @@ function createLibraryItemDOM(item) {
   let div = createDiv(''); div.class('lib-item'); div.parent(libGrid);
   let imgEl = createImg(item.dataURL, item.name || 'Artwork'); imgEl.parent(div);
   
-  div.mousePressed(() => { 
+  div.elt.onclick = () => { 
       openLibraryModal(item);
-  });
+  };
   
   div.elt.draggable = true;
-  div.elt.ondragstart = (e) => { e.dataTransfer.setData("text/plain", item.dataURL); };
+  div.elt.ondragstart = (e) => { 
+      e.dataTransfer.setData("text/plain", item.dataURL);
+      e.dataTransfer.effectAllowed = "copy";
+  };
 }
 
 function openLibraryModal(item) {
