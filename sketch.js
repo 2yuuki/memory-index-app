@@ -1089,18 +1089,24 @@ function setupLayoutTab() {
   createLayoutUI();
   updateLayoutZoom(0); // Force initial render/transform to show artboard immediately
 
-  // --- Setup MutationObserver for Layer Panel ---
+  // --- Load Saved Layout ---
+  loadLayoutFromLocalStorage();
+
+  // --- Setup Observer for Auto-Save and Layer Panel ---
   const artboard = document.getElementById('layout-canvas-holder');
   if (artboard) {
-      const observer = new MutationObserver((mutationsList, observer) => {
-          // A simple rebuild is fine for this project's scale.
-          updateLayerPanel();
+      const observer = new MutationObserver((mutations) => {
+          // Auto-save on any change (debounced)
+          saveLayoutToLocalStorage();
+          
+          // Update Layer Panel only on structural changes (add/remove nodes)
+          const structureChanged = mutations.some(m => m.type === 'childList');
+          if (structureChanged) updateLayerPanel();
       });
 
-      observer.observe(artboard, { childList: true });
+      observer.observe(artboard, { childList: true, attributes: true, subtree: true, attributeFilter: ['style', 'class', 'src'] });
       
-      // Initial population
-      updateLayerPanel();
+      // Initial population is handled by loadLayoutFromLocalStorage or default creation
   }
 }
 
@@ -2164,6 +2170,8 @@ function changeActiveArtboardPattern(dir) {
     }
 }
 
+let draggedLayerId = null;
+
 function updateLayerPanel() {
     const layerList = document.getElementById('layer-list');
     const artboard = document.getElementById('layout-canvas-holder');
@@ -2172,7 +2180,13 @@ function updateLayerPanel() {
     layerList.innerHTML = ''; // Clear the list
 
     const children = Array.from(artboard.children);
-    children.forEach(el => {
+    
+    // Filter valid layers first
+    const layers = children.filter(el => !(el.classList.contains('layout-page-bg') || el.id === 'layout-viewport' || !el.style.position));
+
+    // Iterate backwards so the last DOM element (Top Layer) appears first in the list
+    for (let i = layers.length - 1; i >= 0; i--) {
+        const el = layers[i];
         // Ignore non-layer elements
         if (el.classList.contains('layout-page-bg') || el.id === 'layout-viewport' || !el.style.position) {
             return;
@@ -2184,6 +2198,7 @@ function updateLayerPanel() {
 
         const layerItem = document.createElement('div');
         layerItem.className = 'layer-item';
+        layerItem.draggable = true; // Enable Drag
         
         let typeIcon = '🖼️'; // Image icon
         let typeName = 'Image';
@@ -2194,6 +2209,11 @@ function updateLayerPanel() {
         layerItem.innerHTML = `<span>${typeIcon}</span> ${typeName}`;
 
         layerItem.dataset.targetId = el.id;
+        
+        // Selection State
+        if (selectedLayoutElement && selectedLayoutElement.id === el.id) {
+            layerItem.classList.add('selected');
+        }
 
         layerItem.onclick = () => {
             const targetElement = document.getElementById(layerItem.dataset.targetId);
@@ -2202,9 +2222,121 @@ function updateLayerPanel() {
             }
         };
 
+        // Drag Events
+        layerItem.addEventListener('dragstart', handleLayerDragStart);
+        layerItem.addEventListener('dragover', handleLayerDragOver);
+        layerItem.addEventListener('drop', handleLayerDrop);
+
+        // Visibility Toggle
+        const visBtn = document.createElement('button');
+        visBtn.className = 'layer-toggle-vis';
+        
+        if (el.classList.contains('hidden-layer')) {
+            visBtn.innerHTML = '🙈';
+            layerItem.classList.add('hidden');
+        } else {
+            visBtn.innerHTML = '👁️';
+        }
+
+        visBtn.onclick = (e) => {
+            e.stopPropagation(); // Prevent layer selection
+            const targetEl = document.getElementById(layerItem.dataset.targetId);
+            if (targetEl) {
+                targetEl.classList.toggle('hidden-layer');
+                const isHidden = targetEl.classList.contains('hidden-layer');
+                visBtn.innerHTML = isHidden ? '🙈' : '👁️';
+                layerItem.classList.toggle('hidden', isHidden);
+            }
+        };
+        layerItem.prepend(visBtn);
+
         layerList.appendChild(layerItem);
+    }
+}
+
+function handleLayerDragStart(e) {
+    draggedLayerId = this.dataset.targetId;
+    e.dataTransfer.effectAllowed = 'move';
+    this.style.opacity = '0.5';
+}
+
+function handleLayerDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleLayerDrop(e) {
+    e.stopPropagation();
+    const layerList = document.getElementById('layer-list');
+    const draggedItem = layerList.querySelector(`[data-target-id="${draggedLayerId}"]`);
+    if (draggedItem) draggedItem.style.opacity = '1';
+    
+    if (this === draggedItem) return;
+
+    // Determine insert position (before or after based on mouse Y)
+    const rect = this.getBoundingClientRect();
+    const offset = e.clientY - rect.top;
+    
+    if (offset > rect.height / 2) {
+        this.parentNode.insertBefore(draggedItem, this.nextSibling);
+    } else {
+        this.parentNode.insertBefore(draggedItem, this);
+    }
+
+    // Update DOM order to match new list order
+    reorderDOMFromLayerList();
+}
+
+function reorderDOMFromLayerList() {
+    const layerList = document.getElementById('layer-list');
+    const artboard = document.getElementById('layout-canvas-holder');
+    // List is Top -> Bottom. DOM should be Bottom -> Top.
+    // So we reverse the list items and append them to artboard.
+    const items = Array.from(layerList.children).reverse();
+    
+    items.forEach(item => {
+        const el = document.getElementById(item.dataset.targetId);
+        if (el) artboard.appendChild(el);
     });
 }
+
+// --- LOCAL STORAGE LAYOUT PERSISTENCE ---
+let saveLayoutTimeout;
+function saveLayoutToLocalStorage() {
+    clearTimeout(saveLayoutTimeout);
+    saveLayoutTimeout = setTimeout(() => {
+        const holder = select('#layout-canvas-holder');
+        if(holder) {
+            try {
+                localStorage.setItem('mem_idx_layout_content', holder.html());
+            } catch(e) { console.error("Layout save failed", e); }
+        }
+    }, 1000); // Debounce 1s
+}
+
+function loadLayoutFromLocalStorage() {
+    try {
+        const content = localStorage.getItem('mem_idx_layout_content');
+        if(content && content.trim() !== "") {
+            const holder = select('#layout-canvas-holder');
+            if(holder) {
+                holder.html(content);
+                // Re-bind interactivity for all elements
+                restoreLayoutState(content); 
+                // Update layer panel to reflect loaded content
+                updateLayerPanel();
+            }
+        } else {
+            // If no save found, ensure layer panel is built for default content
+            updateLayerPanel();
+        }
+    } catch(e) { 
+        console.error("Layout load failed", e); 
+        updateLayerPanel();
+    }
+}
+
 // --- SAVE / LOAD LAYOUT ---
 function saveLayoutProject() {
     let holder = select('#layout-canvas-holder');

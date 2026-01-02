@@ -652,6 +652,12 @@ textarea.retro-input{
 #inpThought::placeholder {
   color: var(--text-pink);
   opacity: 1;
+  animation: blink-placeholder 1s steps(2, start) infinite;
+}
+
+@keyframes blink-placeholder {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 /* preview */
@@ -1062,6 +1068,16 @@ input[type="range"]::-webkit-slider-thumb{
   display: flex;
   flex-direction: column;
 }
+.music-icon {
+  display: inline-block;
+  animation: music-pulse 2.5s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes music-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
 .music-header {
   background: var(--grad-blue);
   color: #fff;
@@ -1243,7 +1259,7 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   max-height: 200px;
   overflow-y: auto;
   display: flex;
-  flex-direction: column-reverse; /* Show top layer at the top of the list */
+  flex-direction: column;
   margin-top: 5px;
 }
 .layer-item {
@@ -1261,6 +1277,20 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
 .layer-item.selected {
   background: #0072BC;
   color: #fff;
+}
+.layer-toggle-vis {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 5px 0 0;
+}
+.layer-item.hidden {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+.hidden-layer {
+  display: none !important;
 }
 /* --- RESPONSIVE MOBILE (Max Width 768px) --- */
 @media (max-width: 768px) {
