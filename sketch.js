@@ -19,6 +19,7 @@ let pgTextLayer;
 let pgGridLayer; 
 let templateImg;    
 let libraryItems = []; // Store library data
+let draggedLibItem = null; // Track dragged library item
 
 // --- STATE ---
 let mainMode = "ASCII"; 
@@ -1142,6 +1143,21 @@ function setupLayoutTab() {
   layoutDiv.elt.addEventListener('dragover', (e) => e.preventDefault());
   layoutDiv.elt.addEventListener('drop', (e) => {
     e.preventDefault();
+    
+    // 1. Handle Thought Card Drop (Convert to Text Box)
+    if (draggedLibItem && draggedLibItem.extraData && draggedLibItem.extraData.text) {
+       saveLayoutState(); 
+       let rect = layoutDiv.elt.getBoundingClientRect();
+       let boxW = 300;
+       let boxH = 200;
+       let x = (e.clientX - rect.left) / layoutScale - (boxW / 2);
+       let y = (e.clientY - rect.top) / layoutScale - (boxH / 2);
+       
+       createLayoutTextBox(x, y, boxW, boxH, draggedLibItem.extraData.text);
+       draggedLibItem = null;
+       return;
+    }
+
     let data = e.dataTransfer.getData("text/plain");
     if (data && data.startsWith("data:image")) {
        saveLayoutState(); // Save before drop
@@ -1350,15 +1366,32 @@ function createLayoutUI() {
 
     // Text Settings (Size & Color)
     let styleRow = createDiv('').parent(group).class('mini-row').style('margin-top','6px');
-    createSpan('Size:').parent(styleRow).style('font-size','14px');
-    let sizeSlider = createSlider(10, 100, 24).id('text-size-slider').parent(styleRow).style('width','60px');
+    createSpan('Size (pt):').parent(styleRow).style('font-size','14px');
+    let sizeInput = createInput('24', 'number').id('text-size-input').parent(styleRow).class('retro-input').style('width','50px');
+    sizeInput.attribute('min', '1');
+    
+    // NEW: Font Family Selector
+    let fontSelect = createSelect().id('text-font-select').parent(styleRow).class('retro-input').style('width','90px').style('margin-left','4px');
+    ['KK7VCROSDMono', 'ocr-a-std', 'Courier New', 'Arial', 'Times New Roman'].forEach(f => fontSelect.option(f));
+
     let colorPicker = createColorPicker('#000000').id('text-color-picker').parent(styleRow).style('width','30px').style('height','30px').style('border','none').style('box-shadow','0 2px 5px rgba(0,0,0,0.1)');
 
-    sizeSlider.input(() => {
+    sizeInput.input(() => {
         if(selectedLayoutElement) {
             let ta = selectedLayoutElement.querySelector('textarea');
             if(ta) {
-                ta.style.fontSize = sizeSlider.value() + 'px';
+                let val = sizeInput.value();
+                if(val) ta.style.fontSize = val + 'px';
+                saveLayoutState();
+            }
+        }
+    });
+
+    fontSelect.changed(() => {
+        if(selectedLayoutElement) {
+            let ta = selectedLayoutElement.querySelector('textarea');
+            if(ta) {
+                ta.style.fontFamily = fontSelect.value();
                 saveLayoutState();
             }
         }
@@ -1423,24 +1456,33 @@ function finalizeTextBox(tempBox) {
     let t = tempBox.style('top');
     tempBox.remove();
 
-    // Create Wrapper
+    createLayoutTextBox(parseFloat(l), parseFloat(t), parseFloat(w), parseFloat(h), "");
+}
+
+function createLayoutTextBox(x, y, w, h, content = "") {
+    let holder = select('#layout-canvas-holder');
+    if (!holder) return;
+
     let wrapper = createDiv('');
     wrapper.parent(holder);
-    wrapper.style('position', 'absolute').style('left', l).style('top', t);
-    wrapper.style('width', w).style('height', h);
+    wrapper.style('position', 'absolute');
+    wrapper.style('left', x + 'px');
+    wrapper.style('top', y + 'px');
+    wrapper.style('width', w + 'px');
+    wrapper.style('height', h + 'px');
     wrapper.style('border', 'none');
     
-    // Create Textarea
-    let ta = createElement('textarea', '');
+    let ta = createElement('textarea', content);
     ta.parent(wrapper);
     ta.style('width', '100%').style('height', '100%');
     ta.style('background', 'transparent').style('border', 'none').style('resize', 'none');
-    ta.style('font-family', "'KK7VCROSDMono', monospace").style('font-size', '24px');
+    ta.style('font-family', "'KK7VCROSDMono', monospace"); // Ensure correct font
+    ta.style('font-size', '24px');
     ta.style('outline', 'none').style('overflow', 'hidden');
 
     makeElementInteractive(wrapper.elt);
     selectLayoutElement(wrapper.elt);
-    ta.elt.focus();
+    if (!content) ta.elt.focus();
 }
 
 // Helper: Select Element & Toggle Handles
@@ -1463,11 +1505,24 @@ function selectLayoutElement(elmnt) {
         // Sync UI controls if it's a text box
         let ta = selectedLayoutElement.querySelector('textarea');
         if (ta) {
-            let slider = select('#text-size-slider');
-            if(slider) {
+            let input = select('#text-size-input');
+            if(input) {
                 let fs = parseInt(window.getComputedStyle(ta).fontSize);
-                if(!isNaN(fs)) slider.value(fs);
+                if(!isNaN(fs)) input.value(fs);
             }
+            
+            // Sync Font Select
+            let fontSel = select('#text-font-select');
+            if(fontSel) {
+                let currentFont = window.getComputedStyle(ta).fontFamily.replace(/['"]/g, '');
+                for(let opt of fontSel.elt.options) {
+                    if(currentFont.includes(opt.value)) {
+                        fontSel.value(opt.value);
+                        break;
+                    }
+                }
+            }
+
             let picker = select('#text-color-picker');
             if(picker) {
                 let col = color(window.getComputedStyle(ta).color);
@@ -2341,25 +2396,23 @@ function loadLibrary() {
         // Add Clear Button if not exists
         let panel = document.getElementById('global-lib-panel');
         if (panel && !document.getElementById('btn-clear-lib')) {
-            let title = panel.querySelector('.section-title');
-            if (title) {
-                let btn = createButton('CLEAR ALL');
-                btn.id('btn-clear-lib');
-                btn.class('btn-retro');
-                btn.style('font-size', '10px');
-                btn.style('padding', '2px 5px');
-                btn.style('float', 'right');
-                btn.style('margin-top', '-2px');
-                btn.parent(title);
-                btn.mousePressed(() => {
-                    if (confirm('Delete all saved memories? This cannot be undone.')) {
-                        libraryItems = [];
-                        localStorage.removeItem('mem_idx_library');
-                        let libGrid = document.getElementById('lib-grid');
-                        if (libGrid) libGrid.innerHTML = '';
-                    }
-                });
-            }
+            let btn = createButton('CLEAR ALL');
+            btn.id('btn-clear-lib');
+            btn.class('btn-retro');
+            btn.style('width', '100%');
+            btn.style('margin-top', '10px');
+            btn.style('background-color', '#e74c3c');
+            btn.style('color', 'white');
+            btn.style('border-color', '#c0392b');
+            btn.parent(panel);
+            btn.mousePressed(() => {
+                if (confirm('Delete all saved memories? This cannot be undone.')) {
+                    libraryItems = [];
+                    localStorage.removeItem('mem_idx_library');
+                    let libGrid = document.getElementById('lib-grid');
+                    if (libGrid) libGrid.innerHTML = '';
+                }
+            });
         }
     } catch(e) { console.error("Library load failed", e); }
 }
@@ -2377,9 +2430,11 @@ function createLibraryItemDOM(item) {
   
   div.elt.draggable = true;
   div.elt.ondragstart = (e) => { 
+      draggedLibItem = item; // Track item being dragged
       e.dataTransfer.setData("text/plain", item.dataURL);
       e.dataTransfer.effectAllowed = "copy";
   };
+  div.elt.ondragend = () => { draggedLibItem = null; };
 }
 
 function openLibraryModal(item) {
