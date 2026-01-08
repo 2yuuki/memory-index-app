@@ -552,6 +552,9 @@ const cmykSketch = (p) => {
 
             // Hide Spinner
             if(spinner) spinner.style.display = 'none';
+          }, (e) => {
+            alert("Failed to load image.");
+            if(spinner) spinner.style.display = 'none';
           });
         }
       });

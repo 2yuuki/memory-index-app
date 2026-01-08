@@ -94,9 +94,7 @@ let paletteStabilo = [
 
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
-  if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
-      resetImageProcessorState();
-  }
+  // Removed resetImageProcessorState() to prevent canvas destruction and allow persistence
 
   activeTab = tabId;
   document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
@@ -124,7 +122,8 @@ function resetImageProcessorState() {
         // Remove canvas and fallback images, keep placeholder
         const children = holder.elt.children;
         for(let i = children.length - 1; i >= 0; i--) {
-            if(!children[i].classList.contains('placeholder-text')) {
+            // FIX: Do not remove the P5 Canvas!
+            if(!children[i].classList.contains('placeholder-text') && children[i].tagName !== 'CANVAS') {
                 children[i].remove();
             }
         }
@@ -929,13 +928,16 @@ function createUI() {
           let name = select('#sSketchName') ? select('#sSketchName').value() : "Sketch";
           let pg = createGraphics(canvasW, canvasH); pg.pixelDensity(1); pg.background(255);
           pg.image(pgColorLayer, 0, 0); pg.image(pgTextLayer, 0, 0);
-          if(window.addToLibrary) { window.addToLibrary(pg, name); alert(`Saved "${name}" to Library!`); } pg.remove();
+          if(window.addToLibrary) { window.addToLibrary(pg, name); } pg.remove();
       });
   }
 }
 
 // --- IO FUNCTIONS ---
-function handleFile(file) { if (file.type === 'image') loadImage(file.data, handleImageLoad); }
+function handleFile(file) { 
+    if (file.type === 'image') loadImage(file.data, handleImageLoad, () => alert("Failed to load image.")); 
+    else alert("Invalid file type. Please drop an image.");
+}
 function handleImageLoad(img) { templateImg = img; showTemplateImg = true; if(sliderScale) sliderScale.value(1.0); if(sliderX) sliderX.value(canvasW/2); }
 
 // Helper to find content bounding box
@@ -2110,52 +2112,104 @@ function drawUIOverlays() {
 function exportActiveArtboardPNG() {
     if (!activeArtboard) { alert("Please select an artboard first (click on its background)."); return; }
     if (typeof html2canvas === 'undefined') { alert("html2canvas library not loaded."); return; }
+    
+    let holder = document.getElementById('layout-canvas-holder');
+    
+    // 1. Save State & Reset Zoom
+    let savedTransform = holder.style.transform;
+    holder.style.transform = 'none';
 
-    // Hide UI elements
-    let handles = activeArtboard.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+    // 2. Hide UI Elements Globally
+    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
     handles.forEach(h => h.style.display = 'none');
-    let originalBorder = activeArtboard.style.border;
-    activeArtboard.style.border = 'none';
+    
+    let bgs = holder.querySelectorAll('.layout-page-bg');
+    let originalBorders = [];
+    bgs.forEach(bg => {
+        originalBorders.push(bg.style.border);
+        bg.style.border = 'none';
+    });
 
-    html2canvas(activeArtboard, { scale: 2, useCORS: true, backgroundColor: null }).then(canvas => {
+    // 3. Calculate Crop Region
+    let x = activeArtboard.offsetLeft;
+    let y = activeArtboard.offsetTop;
+    let w = activeArtboard.offsetWidth;
+    let h = activeArtboard.offsetHeight;
+
+    html2canvas(holder, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: null,
+        x: x, y: y, width: w, height: h
+    }).then(canvas => {
         let link = document.createElement('a');
         link.download = 'memory-diagram.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Restore UI
+        // 4. Restore State
         handles.forEach(h => h.style.display = '');
-        activeArtboard.style.border = originalBorder;
+        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
+        holder.style.transform = savedTransform;
+    }).catch(err => {
+        console.error("Export PNG failed:", err);
+        // Restore State on error to prevent UI from getting stuck
+        handles.forEach(h => h.style.display = '');
+        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
+        holder.style.transform = savedTransform;
     });
 }
 
 function exportAllArtboardsPDF() {
     if (typeof window.jspdf === 'undefined') { alert("jspdf library not loaded."); return; }
     const { jsPDF } = window.jspdf;
-
-    let artboards = document.querySelectorAll('.layout-page-bg');
+    
+    let holder = document.getElementById('layout-canvas-holder');
+    let artboards = holder.querySelectorAll('.layout-page-bg');
     if (artboards.length === 0) return;
+
+    // 1. Save State & Reset Zoom
+    let savedTransform = holder.style.transform;
+    holder.style.transform = 'none';
+
+    // 2. Hide UI Elements Globally
+    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+    handles.forEach(h => h.style.display = 'none');
+    
+    let bgs = holder.querySelectorAll('.layout-page-bg');
+    let originalBorders = [];
+    bgs.forEach(bg => {
+        originalBorders.push(bg.style.border);
+        bg.style.border = 'none';
+    });
 
     let doc = new jsPDF('p', 'mm', 'a4');
     let promises = [];
 
     artboards.forEach((ab, index) => {
-        // Hide UI
-        let handles = ab.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
-        handles.forEach(h => h.style.display = 'none');
-        let originalBorder = ab.style.border;
-        ab.style.border = 'none';
+        let x = ab.offsetLeft;
+        let y = ab.offsetTop;
+        let w = ab.offsetWidth;
+        let h = ab.offsetHeight;
 
         promises.push(
-            html2canvas(ab, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                handles.forEach(h => h.style.display = '');
-                ab.style.border = originalBorder;
+            html2canvas(holder, { 
+                scale: 2, 
+                useCORS: true, 
+                backgroundColor: '#ffffff',
+                x: x, y: y, width: w, height: h
+            }).then(canvas => {
                 return { index: index, canvas: canvas };
             })
         );
     });
 
     Promise.all(promises).then(results => {
+        // 3. Restore State
+        handles.forEach(h => h.style.display = '');
+        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
+        holder.style.transform = savedTransform;
+
         results.sort((a, b) => a.index - b.index);
         results.forEach((res, i) => {
             if (i > 0) doc.addPage();
@@ -2163,13 +2217,39 @@ function exportAllArtboardsPDF() {
             doc.addImage(imgData, 'PNG', 0, 0, 210, 297); // A4 dimensions
         });
         doc.save('memory-index.pdf');
+    }).catch(err => {
+        console.error("Export PDF failed:", err);
+        // Restore State on error to prevent UI from getting stuck
+        handles.forEach(h => h.style.display = '');
+        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
+        holder.style.transform = savedTransform;
     });
 }
 
 // --- GLOBAL: ADD TO LIBRARY ---
 window.addToLibrary = function(p5Img, name, extraData) {
-  p5Img.loadPixels();
-  let dataURL = p5Img.canvas.toDataURL();
+  // Optimization: Resize image to prevent LocalStorage Quota Exceeded
+  // Original canvas is large (1600x2400), we scale it down for the library.
+  let targetW = 400; 
+  let scaleFactor = targetW / p5Img.width;
+  if (scaleFactor > 1) scaleFactor = 1; 
+  
+  let w = Math.floor(p5Img.width * scaleFactor);
+  let h = Math.floor(p5Img.height * scaleFactor);
+
+  let tempCanvas = document.createElement('canvas');
+  tempCanvas.width = w;
+  tempCanvas.height = h;
+  // Hint for performance to suppress warnings if read frequently
+  let ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
+  
+  // Fill white background to ensure transparency renders correctly in JPEG
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, w, h);
+  
+  ctx.drawImage(p5Img.canvas, 0, 0, w, h);
+  
+  let dataURL = tempCanvas.toDataURL('image/jpeg', 0.5);
   
   let newItem = {
       id: Date.now(),
@@ -2179,15 +2259,23 @@ window.addToLibrary = function(p5Img, name, extraData) {
   };
   
   libraryItems.push(newItem);
-  saveLibrary();
-  createLibraryItemDOM(newItem);
-
-  // Animation feedback on Global Library Button
-  let btn = document.getElementById('global-lib-btn');
-  if(btn) {
-    btn.classList.remove('lib-saved-anim');
-    void btn.offsetWidth; // trigger reflow
-    btn.classList.add('lib-saved-anim');
+  
+  try {
+      saveLibrary();
+      createLibraryItemDOM(newItem);
+      // Animation feedback on Global Library Button
+      let btn = document.getElementById('global-lib-btn');
+      if(btn) {
+        btn.classList.remove('lib-saved-anim');
+        void btn.offsetWidth; // trigger reflow
+        btn.classList.add('lib-saved-anim');
+      }
+      alert("Saved to Memory Archive!");
+  } catch(e) {
+      // If save failed, remove from memory to keep state consistent
+      libraryItems.pop();
+      console.error("Failed to add to library:", e);
+      alert("Failed to save to library. Storage might be full.");
   }
 };
 
@@ -2197,6 +2285,7 @@ function saveLibrary() {
     } catch(e) { 
         console.error("Library save failed (quota exceeded?)", e); 
         alert("Memory Archive is full! Please delete some items to save new ones.");
+        throw e; // Propagate error to caller
     }
 }
 
@@ -2208,6 +2297,30 @@ function loadLibrary() {
             let libGrid = document.getElementById('lib-grid');
             if(libGrid) libGrid.innerHTML = ''; // Clear existing
             libraryItems.forEach(item => createLibraryItemDOM(item));
+        }
+        
+        // Add Clear Button if not exists
+        let panel = document.getElementById('global-lib-panel');
+        if (panel && !document.getElementById('btn-clear-lib')) {
+            let title = panel.querySelector('.section-title');
+            if (title) {
+                let btn = createButton('CLEAR ALL');
+                btn.id('btn-clear-lib');
+                btn.class('btn-retro');
+                btn.style('font-size', '10px');
+                btn.style('padding', '2px 5px');
+                btn.style('float', 'right');
+                btn.style('margin-top', '-2px');
+                btn.parent(title);
+                btn.mousePressed(() => {
+                    if (confirm('Delete all saved memories? This cannot be undone.')) {
+                        libraryItems = [];
+                        localStorage.removeItem('mem_idx_library');
+                        let libGrid = document.getElementById('lib-grid');
+                        if (libGrid) libGrid.innerHTML = '';
+                    }
+                });
+            }
         }
     } catch(e) { console.error("Library load failed", e); }
 }
