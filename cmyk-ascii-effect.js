@@ -18,7 +18,7 @@ const cmykSketch = (p) => {
   // CMYK Stroke Settings
   let cmykSettings = {
     weight: 2.5,
-    threshold: 50,
+    threshold: 40,
     gamma: 1.3,
     jitter: 1.5,
     probPow: 1.3
@@ -37,7 +37,7 @@ const cmykSketch = (p) => {
   let centroid = { x: 0, y: 0, ok: false }, fade = 0;
 
   // ASCII settings
-  let grid = 5; // Tương ứng với density 1.5 (8/1.5)
+  let asciiGrid = 5; // Renamed to avoid conflict with global grid in sketch.js
   let baseFont = 14;
   let asciiOpacity = 240;
   let rampReplica = " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@";
@@ -67,6 +67,38 @@ const cmykSketch = (p) => {
   let baseFPS = 15; 
   let minSamplePeriod = 1000 / 60; 
 
+  // Helper for optimized canvas with willReadFrequently
+  function createOptimizedGraphics(w, h) {
+    const cnv = document.createElement('canvas');
+    cnv.width = w;
+    cnv.height = h;
+    const ctx = cnv.getContext('2d', { willReadFrequently: true });
+    return {
+      canvas: cnv,
+      elt: cnv, // Alias for p5 compatibility
+      width: w,
+      height: h,
+      ctx: ctx,
+      pixels: null,
+      imageData: null,
+      clear: function() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+      },
+      image: function(img, x, y, w, h) {
+        const src = img.canvas || img.elt || img;
+        if (w !== undefined && h !== undefined) this.ctx.drawImage(src, x, y, w, h);
+        else this.ctx.drawImage(src, x, y);
+      },
+      loadPixels: function() {
+        this.imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+        this.pixels = this.imageData.data;
+      },
+      updatePixels: function() {
+        if (this.imageData) this.ctx.putImageData(this.imageData, 0, 0);
+      }
+    };
+  }
+
   p.setup = function() {
     let cnv = p.createCanvas(800, 800);
     // FIX: Target the correct container ID from index.html
@@ -79,6 +111,7 @@ const cmykSketch = (p) => {
       cnv.style('display', 'block');
       cnv.style('margin', '0 auto');
       cnv.style('mix-blend-mode', 'multiply');
+      cnv.elt.getContext('2d', { willReadFrequently: true }); // Hint to suppress warnings
     }
 
     p.frameRate(30); // OPTIMIZATION: Reduce FPS to save resources
@@ -87,9 +120,7 @@ const cmykSketch = (p) => {
     p.textAlign(p.CENTER, p.CENTER);
     p.noStroke();
     
-    gfxFrame = p.createGraphics(p.width, p.height);
-    gfxFrame.pixelDensity(1);
-    gfxFrame.elt.getContext('2d', { willReadFrequently: true });
+    gfxFrame = createOptimizedGraphics(p.width, p.height);
 
     imgBuffer = p.createGraphics(p.width, p.height);
     imgBuffer.pixelDensity(1);
@@ -253,7 +284,7 @@ const cmykSketch = (p) => {
   function drawAsciiReplicaOrMask() {
     gfxFrame.loadPixels();
     
-    const cell = grid;
+    const cell = asciiGrid;
     const cols = p.floor(p.width / cell);
     const rows = p.floor(p.height / cell);
     const n = cols * rows;
@@ -291,15 +322,26 @@ const cmykSketch = (p) => {
 
     p.textAlign(p.CENTER, p.CENTER);
 
+    // OPTIMIZATION: Define offsets outside the loop to avoid GC churn
+    const offsets = [
+      { x: -cmykSettings.jitter, y: -cmykSettings.jitter },
+      { x: cmykSettings.jitter, y: -cmykSettings.jitter },
+      { x: 0, y: cmykSettings.jitter },
+      { x: 0, y: 0 }
+    ];
+
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const idxCell = y * cols + x;
-        const cx = (x * cell + cell * 0.5) | 0;
-        const cy = (y * cell + cell * 0.5) | 0;
+        const cx = (x * cell + cell * 0.5);
+        const cy = (y * cell + cell * 0.5);
 
         let r=255,g=255,b=255,a=0; 
         if (haveImg) {
-          const i = 4 * (cy * p.width + cx);
+          // FIX: Use integer coordinates for pixel array access to avoid undefined values
+          const sx = p.floor(cx);
+          const sy = p.floor(cy);
+          const i = 4 * (sy * gfxFrame.width + sx);
           if (i >= 0 && i < gfxFrame.pixels.length - 3) {
             r = gfxFrame.pixels[i];
             g = gfxFrame.pixels[i+1];
@@ -372,14 +414,6 @@ const cmykSketch = (p) => {
         // Use Stabilo palette if selected, otherwise default to CMYK angles/colors
         let palette = (colorMode === 'stabilo') ? stabiloPalette : cmykPalette;
         
-        // Offsets (Jitter)
-        const offsets = [
-          { x: -cmykSettings.jitter, y: -cmykSettings.jitter },
-          { x: cmykSettings.jitter, y: -cmykSettings.jitter },
-          { x: 0, y: cmykSettings.jitter },
-          { x: 0, y: 0 }
-        ];
-
 
         for (let layer = 0; layer < 4; layer++) {
           let val = values[layer];
@@ -474,12 +508,12 @@ const cmykSketch = (p) => {
     }
     
     gfxFrame.updatePixels();
-    p.image(gfxFrame, 0, 0);
+    p.image(gfxFrame.canvas, 0, 0);
   }
 
   /* ---------------- Track ---------------- */
   function drawAsciiTrack() {
-    const cell = grid;
+    const cell = asciiGrid;
     const cols = p.floor(p.width / cell);
     const rows = p.floor(p.height / cell);
 
@@ -561,20 +595,22 @@ const cmykSketch = (p) => {
             // FIX: Auto-rescale large images for performance
             let w = img.width;
             let h = img.height;
-            const MAX_DIM = 1000; // Limit max dimension to 1000px
-            if (w > MAX_DIM || h > MAX_DIM) {
-                let ratio = w / h;
-                if (w > h) { w = MAX_DIM; h = MAX_DIM / ratio; }
-                else { h = MAX_DIM; w = MAX_DIM * ratio; }
-                blobImg.resize(w, h); // Resize the p5 image object directly
+            
+            // Only resize if file size > 2MB
+            if (file.size > 2 * 1024 * 1024) {
+                const MAX_DIM = 1000; // Limit max dimension to 1000px
+                if (w > MAX_DIM || h > MAX_DIM) {
+                    let ratio = w / h;
+                    if (w > h) { w = MAX_DIM; h = MAX_DIM / ratio; }
+                    else { h = MAX_DIM; w = MAX_DIM * ratio; }
+                    blobImg.resize(w, h); // Resize the p5 image object directly
+                }
             }
 
             p.resizeCanvas(w, h);
             
             // Recreate buffers with new size
-            gfxFrame = p.createGraphics(w, h);
-            gfxFrame.pixelDensity(1);
-            gfxFrame.elt.getContext('2d', { willReadFrequently: true });
+            gfxFrame = createOptimizedGraphics(w, h);
             
             imgBuffer = p.createGraphics(w, h);
             imgBuffer.pixelDensity(1);
@@ -593,6 +629,7 @@ const cmykSketch = (p) => {
             // Hide Spinner
             if(spinner) spinner.style.display = 'none';
             needsUpdate = true; // Trigger redraw
+            p.redraw(); // Force draw immediately
           }, (e) => {
             if(window.customAlert) window.customAlert("Failed to load image.");
             else alert("Failed to load image.");
@@ -613,11 +650,10 @@ const cmykSketch = (p) => {
     const sWeight = p.select('#cfgWeight');
     if(sWeight) sWeight.input(() => { cmykSettings.weight = parseFloat(sWeight.value()); needsUpdate = true; });
 
-    // Map "Threshold" slider to Grid Density (Inverse logic: higher density = smaller grid)
-    const sDensity = p.select('#cfgDensity');
-    if(sDensity) sDensity.input(() => {
-      grid = p.floor(8 / parseFloat(sDensity.value())); 
-      if(grid < 2) grid = 2;
+    // Map "Threshold" slider (CMYK Threshold)
+    const sThreshold = p.select('#cfgThreshold');
+    if(sThreshold) sThreshold.input(() => {
+      cmykSettings.threshold = parseFloat(sThreshold.value());
       needsUpdate = true;
     });
     
@@ -692,8 +728,8 @@ const cmykSketch = (p) => {
     if(btnDownload) {
       btnDownload.mousePressed(() => {
         if (isJittering) {
-          // Save GIF 120 frames (p5.js shows its own progress bar, styled by Observer in setup)
-          p.saveGif("memory_jitter.gif", 120, { units: 'frames' });
+          // Save GIF 30 frames (faster) instead of 120. 30 frames @ 30fps = 1 second loop.
+          p.saveGif("memory_jitter.gif", 30, { units: 'frames' });
         } else {
           p.save("memory_static.png");
           showStatus("IMAGE SAVED");
