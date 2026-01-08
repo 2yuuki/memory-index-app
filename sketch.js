@@ -41,13 +41,14 @@ let userFontSize = 12;
 
 // --- HISTORY & CLIPBOARD (SKETCH) ---
 let history = [];
-const MAX_HISTORY = 50; 
+const MAX_HISTORY = 20; 
 let selStart = null, selEnd = null;
 let sketchRedoHistory = [];
 let clipboard = null;
 
 // --- LAYOUT HISTORY & CLIPBOARD (TAB 3) ---
 let layoutHistory = [];
+const MAX_LAYOUT_HISTORY = 20;
 let layoutRedoHistory = [];
 let layoutClipboard = null;
 
@@ -81,11 +82,14 @@ let palette = [
     "@", "#", "$", "%", "&", "8", "W", "M", "Q", "Z", "X", "O", "0", 
     "?", "!", "I", "1", "i", "l", "÷", "×", "±", "∞", "≈", "≡", "♪", "♫"
 ];
-let colorPalette = [
-  "#FFFF00", "#00FFFF", "#FF00FF", "#00FF00", 
-  "#FF0000", "#0000FF", "#FFA500", "#800080",
-  "#008000", "#808000", "#000080", "#808000",
-  "#C0C0C0", "#808080", "#FFFFFF", "#000000"
+let paletteCMYK = [
+  "#00FFFF", "#FF00FF", "#FFFF00", "#000000"
+];
+let paletteStabilo = [
+  "#FFFF00", "#FFCC00", "#FF9900", "#FF3333",
+  "#FF0099", "#CC00CC", "#9900FF", "#0033FF",
+  "#0099FF", "#00CCFF", "#00CC99", "#009900",
+  "#33CC33", "#99CC00", "#CCFF00", "#555555"
 ];
 
 // --- CORE: TAB SWITCHING ---
@@ -781,21 +785,53 @@ function createAlignControls() {
 
 function createUI() {
   let btnPencil = select('#btnPencil'); let btnEraser = select('#btnEraser'); let btnFill = select('#btnFill'); let btnClear = select('#btnClearSketch');
+  
+  // --- VISUAL UPDATE HELPER FOR TOOLS ---
+  const updateToolVisuals = () => {
+      [btnPencil, btnEraser, btnFill].forEach(b => {
+          if(b) {
+              b.style('background', '');
+              b.style('color', '');
+              b.style('border', '');
+          }
+      });
+      let activeBtn = null;
+      if (toolMode === "FILL") activeBtn = btnFill;
+      else if (toolMode === "DRAW") {
+          if (isEraser) activeBtn = btnEraser;
+          else activeBtn = btnPencil;
+      }
+      if (activeBtn) {
+          activeBtn.style('background', '#faec21'); // Active Highlight (Yellow)
+          activeBtn.style('color', '#000');
+          activeBtn.style('border', '1px solid #000');
+      }
+  };
+  // --------------------------------------
+
   if (btnPencil && btnEraser && btnFill && btnClear) {
       let sidebarNode = btnPencil.parent();
+      let toolsGroup = sidebarNode;
       if (sidebarNode && !sidebarNode.classList.contains('tools-grid')) {
-          let toolsGroup = createDiv(''); toolsGroup.addClass('tools-grid'); sidebarNode.insertBefore(toolsGroup.elt, btnPencil.elt);
+          toolsGroup = createDiv(''); toolsGroup.addClass('tools-grid'); sidebarNode.insertBefore(toolsGroup.elt, btnPencil.elt);
           btnPencil.parent(toolsGroup); btnEraser.parent(toolsGroup); btnFill.parent(toolsGroup); btnClear.parent(toolsGroup);
-          
-          // Add Undo/Redo Buttons
-          let btnUndo = createButton('UNDO').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(undo);
-          let btnRedo = createButton('REDO').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(redo);
+      }
+
+      // Add Undo/Redo Buttons if not present
+      if (!select('#btnSketchUndo')) {
+          let btnUndo = createButton('UNDO').id('btnSketchUndo').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(undo);
+          let btnRedo = createButton('REDO').id('btnSketchRedo').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(redo);
+          btnUndo.attribute('data-tooltip', 'Undo (Ctrl+Z)');
+          btnRedo.attribute('data-tooltip', 'Redo (Ctrl+Shift+Z)');
       }
   }
-  if(btnPencil) btnPencil.mousePressed(() => { toolMode = "DRAW"; isEraser = false; mainMode = "ASCII"; });
-  if(btnEraser) btnEraser.mousePressed(() => { toolMode = "DRAW"; isEraser = true; });
-  if(btnFill) btnFill.mousePressed(() => { toolMode = "FILL"; });
+  if(btnPencil) btnPencil.mousePressed(() => { toolMode = "DRAW"; isEraser = false; mainMode = "ASCII"; updateToolVisuals(); });
+  if(btnEraser) btnEraser.mousePressed(() => { toolMode = "DRAW"; isEraser = true; updateToolVisuals(); });
+  if(btnFill) btnFill.mousePressed(() => { toolMode = "FILL"; updateToolVisuals(); });
   if(btnClear) btnClear.mousePressed(() => { resetAllGrids(); saveState(); });
+  
+  // Initial call
+  updateToolVisuals();
 
   let divAscii = select('#sketch-palette');
   if (!divAscii && sidebarDiv) { createDiv('2. Patterns').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divAscii = createDiv('').parent(sidebarDiv).id('sketch-palette').class('palette-grid'); }
@@ -814,13 +850,66 @@ function createUI() {
   
 
   let divColor = select('#sketch-colors');
-  if (!divColor && sidebarDiv) { createDiv('4. Ink Color').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divColor = createDiv('').parent(sidebarDiv).id('sketch-colors').class('palette-grid palette-ink'); }
+  if (!divColor && sidebarDiv) { createDiv('4. Ink Color').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divColor = createDiv('').parent(sidebarDiv).id('sketch-colors'); }
   if(divColor) {
+    divColor.removeClass('palette-grid'); // Remove grid class from container to allow stacking
+    divColor.removeClass('palette-ink');
     divColor.html('');
-    colorPalette.forEach(col => {
-      let btn = createButton('').parent(divColor).style('width', '100%').style('height', '28px').style('background', col);
-      btn.attribute('data-tooltip', `Select color ${col}`);
-      btn.mousePressed(() => { selectedColor = col; isColorEraser = false; if (toolMode !== "FILL") toolMode = "DRAW"; mainMode = "COLOR"; });
+    
+    // NEW: Helper for color buttons
+    const highlightColorBtn = (targetBtn) => {
+        divColor.elt.querySelectorAll('button').forEach(b => {
+            b.style.border = '1px solid #ccc';
+            b.style.transform = 'scale(1)';
+            b.style.zIndex = '0';
+            b.style.boxShadow = 'none';
+        });
+        if(targetBtn) {
+            targetBtn.style.border = '2px solid #000';
+            targetBtn.style.transform = 'scale(1.15)';
+            targetBtn.style.zIndex = '1';
+            targetBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        }
+    };
+
+    // CMYK Section
+    createDiv('CMYK').parent(divColor).style('font-size','12px').style('font-weight','bold').style('margin-bottom','4px').style('margin-top','0px');
+    let cmykGrid = createDiv('').parent(divColor).class('palette-grid palette-ink').style('grid-template-columns', 'repeat(4, 1fr)').style('gap', '4px').style('margin-bottom', '10px');
+    paletteCMYK.forEach(col => {
+      let btn = createButton('').parent(cmykGrid).style('width', '100%').style('height', '28px').style('background', col).style('border', '1px solid #ccc');
+      btn.attribute('data-tooltip', `Select CMYK ${col}`);
+      
+      // Initial highlight
+      if(col === selectedColor) setTimeout(() => highlightColorBtn(btn.elt), 0);
+
+      btn.mousePressed(() => { 
+          selectedColor = col; 
+          isColorEraser = false; 
+          if (toolMode !== "FILL") toolMode = "DRAW"; 
+          mainMode = "COLOR"; 
+          highlightColorBtn(btn.elt);
+          updateToolVisuals();
+      });
+    });
+
+    // Stabilo Section
+    createDiv('Stabilo').parent(divColor).style('font-size','12px').style('font-weight','bold').style('margin-bottom','4px');
+    let stabiloGrid = createDiv('').parent(divColor).class('palette-grid palette-ink').style('grid-template-columns', 'repeat(4, 1fr)').style('gap', '4px');
+    paletteStabilo.forEach(col => {
+      let btn = createButton('').parent(stabiloGrid).style('width', '100%').style('height', '28px').style('background', col).style('border', '1px solid #ccc');
+      btn.attribute('data-tooltip', `Select Stabilo ${col}`);
+      
+      // Initial highlight
+      if(col === selectedColor) setTimeout(() => highlightColorBtn(btn.elt), 0);
+
+      btn.mousePressed(() => { 
+          selectedColor = col; 
+          isColorEraser = false; 
+          if (toolMode !== "FILL") toolMode = "DRAW"; 
+          mainMode = "COLOR"; 
+          highlightColorBtn(btn.elt);
+          updateToolVisuals();
+      });
     });
   }
 
@@ -1188,6 +1277,14 @@ function createLayoutUI() {
     let group = createDiv('').id('layout-ui-group').parent(select('#layer-controls'));
     layoutSidebarRef.child(group);
     
+    // 0. History
+    createDiv('History').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    let histRow = createDiv('').parent(group).class('mini-row').style('gap','4px');
+    let btnUndo = createButton('UNDO').parent(histRow).class('btn-retro').style('flex','1').style('font-size','10px').attribute('data-tooltip', 'Undo (Ctrl+Z)');
+    let btnRedo = createButton('REDO').parent(histRow).class('btn-retro').style('flex','1').style('font-size','10px').attribute('data-tooltip', 'Redo (Ctrl+Shift+Z)');
+    btnUndo.mousePressed(undoLayout);
+    btnRedo.mousePressed(redoLayout);
+
     // 1. Paper Patterns (Interactive Images)
     createDiv('Paper Pattern').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let patRow = createDiv('').parent(group).class('mini-row').style('justify-content', 'center').style('gap', '10px');
@@ -1840,7 +1937,7 @@ function saveLayoutState() {
     let holder = select('#layout-canvas-holder');
     if(holder) {
         layoutHistory.push(holder.html());
-        if(layoutHistory.length > 50) layoutHistory.shift();
+        if(layoutHistory.length > MAX_LAYOUT_HISTORY) layoutHistory.shift();
         layoutRedoHistory = [];
     }
 }
