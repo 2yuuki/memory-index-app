@@ -6,6 +6,8 @@
   <title>The Memory Index</title>
   <link rel="icon" href="assets/UI items/logo.svg" type="image/x-icon" />
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css">
 </head>
@@ -35,157 +37,277 @@
         <div class="tab-btn active" onclick="switchSidebar('intro')">I. Introduction</div>
         <div class="tab-btn" onclick="switchSidebar('tools')" data-tooltip="Click to enter Tool System">II. Tool Tab</div>
       </div>
+
+      <div class="top-right-controls"></div>
     </div>
 
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
-      <div class="intro-content">
-    <img src="assets/UI items/logo.svg" class="intro-logo" alt="Logo">
-    <!-- TITLE -->
-    <h1 id="intro-title"
-        class="section-title typewriter-cursor"
-        style="text-align:center;"></h1>
+      <div class="intro-content" style="position: relative; background-color: #fdfbf7; border: 2px solid #0072BC; box-shadow: 10px 10px 0 #0072BC; font-family: 'KK7VCROSDMono', monospace;">
+        <div class="paper-lines"></div>
+        <div class="margin-line"></div>
+        <div style="position: relative; z-index: 1;">
 
-    <p style="text-align:center; color:#182983; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 0 6px 0;">
-      Process Documentation — The Memory Index
-    </p>
+  <img src="assets/UI items/logo.svg" class="intro-logo" alt="Logo">
 
-    <p style="text-align:center; color:#444; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 auto 18px auto; max-width:1200px; line-height:1.65;">
-      The Memory Index is a public, web-based interactive platform using p5.js that turns personal notes & images into
-      (1) a printable Memory Index Diagram and (2) a printable East–West–South–North fortune-teller.
-      This page documents the thinking, shifts, experiments, and design decisions behind the project.
-      It represents a snapshot of the process at the time of writing — not a final, fixed conclusion.
+  <h1 id="intro-title" class="section-title" style="text-align:center;">
+    The Memory Index
+  </h1>
+
+  <p style="text-align:center; font-family:'KK7VCROSDMono'; color:#182983; line-height:1.6;">
+    Creative Process Documentation<br>
+    Nguyen Thu Trang – s3926717<br>
+    COMM2754 Major Project, Semester C 2025<br>
+    School of Communication and Design, RMIT University Vietnam
+  </p>
+
+  <div class="divider"></div>
+
+  <div style="max-width:1200px; margin:0 auto;">
+
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">I. Project Overview</h2>
+
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">1. Concept Statement</h3>
+    <p class="intro-desc">
+      I want to make a major project that would inspire people to embrace their past emotions
+      and core memories so they can understand themselves better. Since I notice that we are
+      living in a society that tells us to ignore the strong emotions in order to win in life,
+      but it’s not true. From my own experience, respecting what we feel helps us grow.
     </p>
 
     <div class="divider"></div>
 
-    <!-- SECTION: CONCEPT -->
-    <div style="max-width:1200px; margin:0 auto;">
-      <div class="section-title" style="color:#182983; margin-top:14px;">1. Concept Statement</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        I wanted to make a major project that inspires people to embrace their past emotions and core memories so they can
-        understand themselves better. I noticed we live in a society that tells us to ignore strong emotions in order to “win” —
-        but from my own experience, respecting what we feel helps us grow.
-      </p>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">2. Abstract</h3>
+    <p class="intro-desc">
+      The Memory Index is a public, web-based interactive platform built with p5.js. The project
+      transforms personal memories—written notes, images, and sketches—into printable visual
+      artifacts. These outputs take the form of a Memory Index Diagram and an East–West–South–North
+      paper fortune-teller. The project explores how net.art aesthetics and computational systems
+      can function as tools for emotional reflection.
+    </p>
 
-      <div class="divider"></div>
+    <p class="intro-desc"><em>Fig 1. My ASCII drawing using my own Memory Index Tool</em></p>
 
-      <!-- SECTION: QUESTION -->
-      <div class="section-title" style="color:#182983;">2. Project Question</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        <strong>How can we embrace our memories through the net.art?</strong>
-        <br><br>
-        Instead of forcing users toward life prescriptions, the work translates inner states into readable forms — more like
-        gentle hints than answers.
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">3. Project Question</h3>
+    <p class="intro-desc">
+      The guiding research question for this project is:
+      <br><br>
+      <strong>“How can we embrace our memories through the net.art?”</strong>
+      <br><br>
+      Rather than offering answers or prescriptions, the project investigates how net.art systems—
+      such as diagrams, ASCII graphics, and browser-native interactions—can translate emotional
+      states into readable and revisit-able forms.
+    </p>
 
-      <!-- SECTION: AUDIENCE -->
-      <div class="section-title" style="color:#182983;">3. Target Audience</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The main audience is <strong>18–30 Vietnamese</strong> (open to everyone), especially creative lovers who feel nostalgic for
-        2000s–2010s Vietnamese pop culture. They want to journal with nostalgia, declutter feelings, create patterns, and make
-        playful visuals — often in late-night micro-sessions. Many dislike “traditional journaling” and prefer a creative-tool
-        experience that feels playful and generative.
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">4. Target Audience</h3>
+    <p class="intro-desc">
+      The primary audience for The Memory Index is Vietnamese users aged 18–30, though the platform
+      remains open to everyone. This audience is nostalgic for Vietnamese pop culture from the
+      2000s–2010s and enjoys journaling, DIY making, and visual experimentation. Many users dislike
+      traditional text-only journaling and prefer playful, generative tools that allow reflection
+      in short, late-night sessions.
+    </p>
 
-      <!-- SECTION: WHAT IT IS -->
-      <div class="section-title" style="color:#182983;">4. What the Website Produces</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The site is a public website anyone can use on desktop or mobile. Users type memories and drop images, then sketch
-        whatever they want into an ASCII painter. The site analyzes and visualizes them as a memory diagram, then generates
-        two printable outcomes customized to each person’s inputs:
-        <br><br>
-        • a printable <strong>Memory Index Diagram</strong><br>
-        • a printable <strong>East–West–South–North</strong> paper fortune-teller
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">II. Scope History and Rationale</h2>
+    <p class="intro-desc">
+      The project initially began as a web-based 3D interactive character representing a universal
+      childhood self. Users would draw onto the character to leave traces of their memories.
+      However, the scope was too large, and the interaction did not evoke sufficient emotional
+      depth. The project shifted toward journaling as a more effective reflective practice and
+      evolved into a web platform that transforms memories into printable artifacts.
+    </p>
 
-      <!-- SECTION: METHODOLOGY -->
-      <div class="section-title" style="color:#182983;">5. Methodology</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The interaction flow is designed to be simple and repeatable:
-        <br><br>
-        <strong>Write</strong> thoughts → <strong>Drop</strong> memory images → save into a <strong>memory archive</strong> →
-        sketch on the <strong>ASCII canvas</strong> (optional) → generate the <strong>diagram</strong> + <strong>fortune-teller</strong> →
-        <strong>export</strong> for printing.
-      </p>
+    <p class="intro-desc">
+      <strong>Interactive Flow:</strong><br>
+      Goal: Turn individual memories into a shared skin for the kid; at the end, destroy the figure
+      to show the “transformation through love.”
+    </p>
 
-      <div class="divider"></div>
+    <div class="divider"></div>
 
-      <!-- SECTION: SCOPE SHIFT -->
-      <div class="section-title" style="color:#182983;">6. Scope History & Rationale</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The initial concept was a web-based 3D interactive character — a figure representing everyone’s childhood self —
-        where audiences could relive the past and leave marks through drawing. The idea was too large in scope, and the
-        interaction didn’t evoke deep enough reflection. The project shifted toward journaling as the most effective
-        reflective practice, then expanded it with play: printable artifacts, a second output (diagram), and an ASCII painter
-        tool that lets people sketch freely with letters and patterns.
-      </p>
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">III. Methodology</h2>
+    <p class="intro-desc">
+      The interaction flow of the website is intentionally simple and flexible. Users write down
+      their thoughts, upload memory-related images, and optionally sketch using an ASCII painting
+      tool. These inputs are archived and processed to generate a Memory Index Diagram and a paper
+      fortune-teller, which users can export and print.
+    </p>
 
-      <div class="divider"></div>
+    <div class="divider"></div>
 
-      <!-- SECTION: VISUAL DIRECTION -->
-      <div class="section-title" style="color:#182983;">7. Visual Direction</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The project sits at an intersection of <strong>net.art</strong> and <strong>Vietnamese nostalgic editorial design</strong>.
-        From net.art, it borrows browser-native visuals, ASCII logic, diagrammatic flows, and glitchy patterns (treating the
-        browser output as both interface and artwork). From Vietnamese nostalgia, it borrows the visual language of student
-        notebooks, lesson sheets, restrained typography, and familiar print textures — tying digital reflection back to
-        tangible, culturally recognizable forms.
-      </p>
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">IV. Background Research</h2>
 
-      <div class="divider"></div>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">1. Ikigai Theory</h3>
+    <p class="intro-desc">
+      Ikigai diagrams try to make sense of fuzzy, emotional questions with rational axes (what you
+      love / are good at / can be paid for / the world needs). I borrow that spirit—turning affect
+      into readable indices—but avoid life prescription; the output here is just gentle hints.
+    </p>
 
-      <!-- SECTION: EXPERIMENTS -->
-      <div class="section-title" style="color:#182983;">8. Experiments & Iterations</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        A major part of the process was testing interaction comfort and visual identity.
-        Early prototypes made freehand mouse sketching feel hard and not enjoyable, and the visuals weren’t strongly evoking
-        both Vietnamese nostalgia and net.art at once. This led to repeated UI/UX reflection: quieter palettes, clearer flow,
-        and a stronger “student notebook” vibe rather than loud computer gradients.
-        <br><br>
-        On the image side, multiple filter directions were tested (posterize, pixelate, tracking, and print-emulation). A
-        print-emulation workflow explored splitting images into shadow/midtone/highlight plates, mapped to spot colors
-        (risograph-style) or CMYK channels, plus softer “wash” textures inspired by textbook illustrations.
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">2. Net.art Diagram</h3>
+    <p class="intro-desc">
+      Works like MTAA’s Simple Net Art Diagram show how a feeling or practice can be explained
+      through schematics and data-like flows. This project adapts that move: an ASCII, ECG-style
+      trace models inner states as a system you can read and revisit.
+    </p>
 
-      <!-- SECTION: ASCII TOOL -->
-      <div class="section-title" style="color:#182983;">9. ASCII Painting Tool</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        The sketch mechanic evolved into an <strong>ASCII painter</strong>: instead of drawing with the mouse like a normal brush,
-        users select ASCII characters/patterns and place them into a grid — like building with LEGO. This approach felt easier
-        and more relaxing in informal user tests with friends, and it aligned better with the project’s terminal/ASCII + print
-        notebook aesthetic.
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">
+      3. Olia Lialina, <em>My Boyfriend Came Back from the War</em> (1996)
+    </h3>
+    <p class="intro-desc">
+      Lialina’s split-screen, click-to-unfold interaction proves the web browser itself can stage
+      time, tension, and revelation. I reuse the progressive disclosure pattern—nested panels
+      opened by clicking—but for self-reflection rather than narrative.
+    </p>
 
-      <!-- SECTION: PRINTING -->
-      <div class="section-title" style="color:#182983;">10. Printing Tests</div>
-      <p class="intro-desc" style="font-size:15px; max-width:none;">
-        Because the outputs are meant to become physical objects, print tests were done on different papers:
-        normal student notebook papers, handwriting-practice papers, and traditional Vietnamese Dó paper. The Dó paper created
-        a beautiful effect, but the text risked blurring; the safest, clearest option leaned toward student notebook papers.
-      </p>
+    <div class="divider"></div>
 
-      <div class="divider"></div>
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">V. Creative Practice and Iterative Development</h2>
 
-      <p style="text-align:center; color:#444; font-family:'KK7VCROSDMono'; text-transform:none; margin:0 auto; max-width:1200px; line-height:1.65;">
-        Tip: Try a late-night micro-session — one memory, one image, one small ASCII sketch. Save it to your library, then export.
-      </p>
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">1. Week 0–2: Visual Direction and Early Experiments</h3>
+    <p class="intro-desc">
+      During the early stage of the project, the focus was on establishing a visual direction that
+      could balance Vietnamese nostalgic editorial aesthetics with net.art and data-poetic visuals.
+      Initial experiments explored typography inspired by Vietnamese student handwriting and early
+      layout tests using p5.js. I also began experimenting with image filters such as posterization
+      and pixelation to understand how memory images could be transformed into printable textures.
+    </p>
+
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">2. Week 3: Personal Reflection and Interaction Testing</h3>
+    <p class="intro-desc">
+      In Week 3, I began by reflecting on my own core memories through writing. This personal journaling process helped establish an emotional foundation for the project. At the same time, I conducted early interaction tests on the web, including simple sketching mechanics and paper fortune-teller print tests. These experiments revealed that freehand mouse drawing felt uncomfortable and did not encourage reflection.
+    </p>
+
+    <div style="background:#f9f9f9; border-left: 4px solid #f75397; padding:20px; margin:20px 0; font-style:italic; font-size:0.95em; line-height: 1.8;">
+        <p style="margin:0; white-space:pre-line;">One day I found myself drowning,
+        and I don’t know how to wake her up.
+        ⎯⎯⎯
+        It was as if we were strangers who shared a face.
+        She couldn’t recognize my voice, and I didn’t know how to reach her.
+        ⎯⎯⎯
+        I asked the Forgotten to help me wake that thing inside.
+        They refused. They carried the same resentments.
+
+        “Who are you?” they yelled.
+        “How can you ask us to help when we also needed help?
+        You threw us down here—and now you don’t know how to let us out?
+        We are dying together. You and us.”
+        ⎯⎯⎯
+        “What is the point of living such a damn life?” I wondered.
+
+        I love living when I lie on my grandmother’s legs and she sings the old lullaby.
+        The scorching air stings my skin, a humid heat I can’t find anywhere else.
+
+        I love living when I can still sleep in the same room as my dad.
+        Every night I kiss his cheek goodnight.
+        Morning birds weave a nest outside our window; their voices spark the urge to create—
+        to bring a little beauty into the world.
+
+        I love living when my brother carries me on his back.
+        I love that feeling—being loved, knowing it, being grateful.
+
+        I love living when I look up at the sky, chasing my friends around the corner of our neighborhood.
+        Wind threads through the leaves at just the right speed, drawing tiny patterns from below.
+        Sunlight hits my eyes so bright it still shines in memory.
+
+        It was a lot of things.
+
+        So I beg myself:
+        don’t rush to forget them.
+        Try to wake up again.
+
+        Please.
+
+        Even if it doesn’t work now, even if we fail many times,
+        remember: one day we will feel it again—
+        the swim against the current, the waking.
+
+        Keep going through every milestone of life.
+
+        I know I can.
+        I love you—
+        even if I didn’t realize how many hugs you needed.</p>
     </div>
-    <!-- Back to Top Button -->
-    <button id="btn-intro-top" class="btn-retro" style="position:fixed; bottom:40px; right:40px; width:auto; padding:12px; z-index:10005; display:none; box-shadow:4px 4px 0 rgba(0,0,0,0.2);">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230f3ebd' d='M5 0h2v2H5zM4 2h4v2H4zM3 4h6v2H3zM2 6h8v2H2zM5 8h2v4H5z'/%3E%3C/svg%3E" style="width:16px; height:16px; image-rendering:pixelated; display:block;">
-    </button>
+
+    <div class="divider"></div>
+
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">3. Week 4: Image Processing and Prototype Evaluation</h3>
+    <p class="intro-desc">
+      Week 4 focused on image-processing techniques and overall UX evaluation. I prototyped a print-emulation workflow where images were broken into shadow, midtone, and highlight layers mapped to CMYK or spot colors. Although watercolor-style effects were explored, performance constraints led to a softer, textured alternative. At this stage, I also critically reviewed the prototype and identified issues with visual noise and unclear user flow.
+    </p>
+
+    <div class="divider"></div>
+
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">4. Week 5: ASCII Filter and Visual Identity Refinement</h3>
+    <p class="intro-desc">
+      In Week 5, I discovered references that combined ASCII threshold techniques with marker-like textures, which strongly resonated with my childhood memories of using school markers. This inspired the development of a marker-like ASCII filter. I also conducted extensive visual mockups in Adobe Illustrator to strengthen the Vietnamese nostalgic identity and refine the balance between net.art aesthetics and cultural familiarity.
+    </p>
+
+    <div class="divider"></div>
+
+    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px;">5. Week 6: ASCII Painting Tool and Print Testing</h3>
+    <p class="intro-desc">
+      Week 6 marked the development of the ASCII painting tool. Instead of freehand drawing, users place ASCII characters into a grid, similar to building with LEGO. Informal user testing with friends showed that this interaction was calming and accessible. Finally, I conducted print tests on student notebook paper, handwriting practice paper, and traditional Vietnamese Dó paper. While Dó paper produced beautiful textures, student notebook paper provided the best balance between clarity and nostalgia.
+    </p>
+
+    <div class="divider"></div>
+
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">VI. Reflection and Conclusion</h2>
+    <p class="intro-desc">
+      The Memory Index does not attempt to solve emotional problems or provide guidance. Instead,
+      it offers a slow, playful system for observing memories. By transforming digital reflection
+      into printable objects, the project reconnects emotional reflection with touch, nostalgia,
+      and imperfection.
+    </p>
+
+    <div class="divider"></div>
+
+    <h2 style="color:#0072BC; font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px;">VII. References</h2>
+    <ul class="intro-desc" style="font-size:13px; line-height:1.6; padding-left: 20px; list-style-type: disc;">
+      <li style="margin-bottom: 8px;">Dunne, A & Raby, F 2013, Speculative Everything: Design, Fiction, and Social Dreaming, The MIT Press, Cambridge, MA.</li>
+      <li style="margin-bottom: 8px;">Lialina, O 1996, My Boyfriend Came Back from the War, online artwork, viewed 5 November 2025, http://www.teleportacia.org/war/.</li>
+      <li style="margin-bottom: 8px;">Lozano-Hemmer, R 2006– , Pulse series, installation, viewed 5 November 2025, https://www.lozano-hemmer.com/pulse_series.php.</li>
+      <li style="margin-bottom: 8px;">Lupi, G 2017, ‘Data Humanism: The Revolution will be Visualized’, Print Magazine, viewed 5 November 2025, https://www.printmag.com/featured/giorgia-lupi-data-humanism/.</li>
+      <li style="margin-bottom: 8px;">Lupton, D 2016, The Quantified Self, Polity Press, Cambridge.</li>
+      <li style="margin-bottom: 8px;">Picard, R W 1997, Affective Computing, The MIT Press, Cambridge, MA.</li>
+      <li style="margin-bottom: 8px;">Reas, C & Fry, B 2007, Processing: A Programming Handbook for Visual Designers and Artists, The MIT Press, Cambridge, MA.</li>
+      <li style="margin-bottom: 8px;">Sengers, P, Boehner, K, David, S & Kaye, J 2005, ‘Reflective design’, in Proceedings of the 4th Decennial Conference on Critical Computing: Between Sense and Sensibility (CC ’05), ACM Press, New York, pp. 49–58.</li>
+      <li style="margin-bottom: 8px;">JODI 1995– , JODI.org, online artworks, viewed 5 November 2025, http://wwwwwwwww.jodi.org/.</li>
+      <li style="margin-bottom: 8px;">MTAA (M.River & T.Whid Art Associates) 1997, ‘Simple Net Art Diagram’, Rhizome Anthology, viewed 5 November 2025, https://anthology.rhizome.org/simple-net-art-diagram.</li>
+      <li style="margin-bottom: 8px;">Connor, M 2015, ‘Notes on the Definition of Net Art’, Rhizome, 17 July, viewed 5 November 2025, https://rhizome.org/editorial/2015/jul/17/notes-definition-net-art/.</li>
+      <li style="margin-bottom: 8px;">Mogi, K 2017, The Little Book of Ikigai: The Essential Japanese Way to Finding Your Purpose in Life, Quercus, London.</li>
+      <li style="margin-bottom: 8px;">Winn, M 2014, ‘What is your ikigai?’, MarcWinn.com (blog), viewed 5 November 2025, https://marcwinn.com/ikigai/.</li>
+      <li style="margin-bottom: 8px;">Sài Gòn Giải Phóng (n.d.) ‘Zing Me – tự hào mạng xã hội Việt’, Sài Gòn Giải Phóng Online, viewed 20 November 2025, https://www.sggp.org.vn/zing-me-tu-hao-mang-xa-hoi-viet-post233795.html.</li>
+      <li style="margin-bottom: 8px;">MarketingAI (n.d.) ‘Zing Me: mạng xã hội chưa kịp tỏa sáng đã bị đối thủ “quật” cho không thể ngóc đầu’, MarketingAI, viewed 20 November 2025, https://marketingai.vn/zing-me-mang-xa-hoi-chua-kip-toa-sang-da-bi-doi-thu-quat-cho-khong-the-ngoc-dau-19467600.htm.</li>
+      <li style="margin-bottom: 8px;">Thế giới của Quỳnh (2018) ‘Sự sụp đổ của đế chế Zing Me’, WordPress blog, 13 July, viewed 20 November 2025, https://thegioicuaquynh.wordpress.com/2018/07/13/su-sup-do-cua-de-che-zing-me/.</li>
+      <li style="margin-bottom: 8px;">Marketing24h (n.d.) ‘Zing Me (tổng quan)’, Marketing24h, viewed 20 November 2025, https://marketing24h.vn/zing-me-2/.</li>
+      <li style="margin-bottom: 8px;">YouTube (n.d.) ‘[Video về Zing Me]’, YouTube video, viewed 20 November 2025, https://www.youtube.com/watch?v=1EkFFQ0Kd2I.</li>
+      <li style="margin-bottom: 8px;">YouTube (n.d.) ‘[Clip/Phóng sự liên quan Zing Me]’, YouTube video, viewed 20 November 2025, https://www.youtube.com/watch?v=QO_u2ip5-Dw&t=198s.</li>
+      <li style="margin-bottom: 8px;">Báo Quân đội Nhân dân (n.d.) ‘Đề cương văn hóa Việt Nam: Những giá trị cốt lõi’, QDND Online, viewed 19 November 2025, https://www.qdnd.vn/van-hoa/doi-song/de-cuong-van-hoa-viet-nam-nhung-gia-tri-cot-loi-719015.</li>
+      <li style="margin-bottom: 8px;">Tech in Asia (n.d.) ‘Zing Me vs Facebook in Vietnam’, Tech in Asia, viewed 20 November 2025, https://www.techinasia.com/zing-me-facebook-vietnam.</li>
+      <li style="margin-bottom: 8px;">Yootek (n.d.) ‘Zing Me – Mạng xã hội’, Yootek, viewed 20 November 2025, https://yootek.vn/zing-me-mang-xa-hoi/.</li>
+      <li style="margin-bottom: 8px;">Thương mại Trường Xưa (n.d.) ‘Thương mại Trường Xưa (trang chủ)’, website, viewed 18 November 2025, https://thuongmaitruongxua.vn/.</li>
+      <li style="margin-bottom: 8px;">OpenProcessing n.d., ‘Sketch 2655050’, OpenProcessing, viewed 15 November 2025, https://openprocessing.org/sketch/2655050</li>
+      <li style="margin-bottom: 8px;">Glyph Drawing Club n.d., ‘Amiga ASCII Art’, blog post, viewed 20 November 2025, https://blog.glyphdrawing.club/amiga-ascii-art/</li>
+      <li style="margin-bottom: 8px;">YouTube n.d., ‘Video (ID: W1zKu3fDQR8)’, YouTube, viewed 13 November 2025, https://www.youtube.com/watch?v=W1zKu3fDQR8</li>
+      <li style="margin-bottom: 8px;">HLNET n.d., ‘ASCII Automata’, Neocities, viewed 16 November 2025, https://hlnet.neocities.org/ascii-automata/</li>
+      <li style="margin-bottom: 8px;">Nicup n.d., ‘Works’, nicup.art, viewed 16 November 2025, https://nicup.art/works/</li>
+    </ul>
+
+    </div>
   </div>
+</div>
+
 
   </div>
 
@@ -371,6 +493,9 @@
     </div>
   </div>
 
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-notification" class="toast-notification">Saved</div>
+
 </div>
 
 <script src="sketch.js"></script>
@@ -451,6 +576,68 @@
         }, delay + 500);
       }
   });
+
+  // --- INTRO DARK MODE LOGIC ---
+  function setupIntroDarkMode() {
+    const content = document.querySelector('.intro-content');
+    if(!content) return;
+
+    let isDarkMode = false;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.innerText = 'DARK MODE';
+    Object.assign(toggleBtn.style, {
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        background: '#333',
+        color: '#fff',
+        border: 'none',
+        padding: '8px 15px',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        fontWeight: 'bold',
+        zIndex: '10'
+    });
+
+    toggleBtn.onclick = () => {
+        isDarkMode = !isDarkMode;
+        if(isDarkMode) {
+            content.style.backgroundColor = '#1a1a1a';
+            toggleBtn.innerText = 'LIGHT MODE';
+            toggleBtn.style.background = '#eee';
+            toggleBtn.style.color = '#111';
+            
+            const lines = content.querySelectorAll('.paper-lines, .margin-line');
+            lines.forEach(e => e.style.display = 'none');
+            
+            content.querySelectorAll('h1, h2').forEach(e => {
+                e.dataset.oc = e.style.color; e.style.color = '#66b3ff';
+                if(e.style.borderBottomColor) { e.dataset.ob = e.style.borderBottomColor; e.style.borderBottomColor = '#66b3ff'; }
+            });
+            content.querySelectorAll('h3').forEach(e => {
+                e.dataset.oc = e.style.color; e.style.color = '#ccc';
+            });
+            content.querySelectorAll('p, li, strong, .intro-desc').forEach(e => {
+                e.dataset.oc = e.style.color; e.style.color = '#ddd';
+            });
+        } else {
+            content.style.backgroundColor = '#fdfbf7';
+            toggleBtn.innerText = 'DARK MODE';
+            toggleBtn.style.background = '#333';
+            toggleBtn.style.color = '#fff';
+            
+            const lines = content.querySelectorAll('.paper-lines, .margin-line');
+            lines.forEach(e => e.style.display = '');
+            
+            content.querySelectorAll('h1, h2, h3, p, li, strong, .intro-desc').forEach(e => {
+                if(e.dataset.oc !== undefined) e.style.color = e.dataset.oc;
+                if(e.dataset.ob !== undefined) e.style.borderBottomColor = e.dataset.ob;
+            });
+        }
+    };
+
+    content.appendChild(toggleBtn);
+  }
 
   function playTypewriter() {
     const titleEl = document.getElementById('intro-title');
@@ -598,8 +785,11 @@
   document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize State (Intro Active, others disabled)
     switchSidebar('intro');
+    
+    // 2. Setup Dark Mode for Intro
+    setupIntroDarkMode();
 
-    // 2. Intro Scroll "Back to Top" Logic
+    // 3. Intro Scroll "Back to Top" Logic
     const introView = document.getElementById('intro-view');
     const btnIntroTop = document.getElementById('btn-intro-top');
     

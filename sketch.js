@@ -29,7 +29,7 @@ let selectedColor = "#FFFF00";
 let isColorEraser = false;
 let isShiftSelecting = false; 
 let showTemplateImg = true;
-let activePattern = null;
+let isDraggingPanel = false;
 
 // --- MOUSE OPTIMIZATION ---
 let prevGridX = -1, prevGridY = -1;
@@ -37,13 +37,13 @@ let prevGridX = -1, prevGridY = -1;
 // --- SLIDERS ---
 let bgScale = 1.0, bgX = 0, bgY = 0, bgRotate = 0; 
 let sliderScale, sliderX, sliderY, sliderRotate, sliderOpacity;   
-let userFontSize = 12, userOffX = 0, userOffY = 0;
+let userFontSize = 12;
 
 // --- HISTORY & CLIPBOARD (SKETCH) ---
 let history = [];
-let redoHistory = []; // Add redo for sketch if needed later
 const MAX_HISTORY = 50; 
 let selStart = null, selEnd = null;
+let sketchRedoHistory = [];
 let clipboard = null;
 
 // --- LAYOUT HISTORY & CLIPBOARD (TAB 3) ---
@@ -69,7 +69,6 @@ let sidebarDiv;
 let mainCanvas; 
 
 // --- PALETTE DATA ---
-let blockChars = ["█", "▓", "▒", "░", "■", "□", "▌", "▐", "▀", "▄"];
 let palette = [
   "SMART", "|", "-", "/", "\\", "_",
   "┌", "┐", "└", "┘", "─", "│", "┼", "┴", "┬", "┤", "├",
@@ -78,28 +77,15 @@ let palette = [
   "●", "○", "◆", "◇", "▲", "▼", "◄", "►", 
   "(", ")", "[", "]", "{", "}", "<", ">",
     "o", "*", "+", "x", ".", ",", ":", ";", "'", "`", "^", "~", "=",
-    "▚", "▞", "▦", "▩", "▤", "▥", "▧", "▨", "▩", "▪", "▫", "▬", "▭", "▮", "▯"
+    "▚", "▞", "▦", "▩", "▤", "▥", "▧", "▨", "▩", "▪", "▫", "▬", "▭", "▮", "▯",
+    "@", "#", "$", "%", "&", "8", "W", "M", "Q", "Z", "X", "O", "0", 
+    "?", "!", "I", "1", "i", "l", "÷", "×", "±", "∞", "≈", "≡", "♪", "♫"
 ];
 let colorPalette = [
   "#FFFF00", "#00FFFF", "#FF00FF", "#00FF00", 
   "#FF0000", "#0000FF", "#FFA500", "#800080",
   "#008000", "#808000", "#000080", "#808000",
   "#C0C0C0", "#808080", "#FFFFFF", "#000000"
-];
-let bitmapPatterns = [
-  {
-    name: "Mac Weave", w: 8, h: 8,
-    data: [
-      1, 1, 0, 1, 1, 1, 0, 1,
-      1, 1, 1, 1, 1, 1, 1, 1,
-      0, 1, 1, 1, 0, 1, 1, 1,
-      1, 1, 1, 1, 1, 1, 1, 1,
-      1, 1, 0, 1, 1, 1, 0, 1,
-      1, 1, 1, 1, 1, 1, 1, 1,
-      0, 1, 1, 1, 0, 1, 1, 1,
-      1, 1, 1, 1, 1, 1, 1, 1
-    ]
-  }
 ];
 
 // --- CORE: TAB SWITCHING ---
@@ -149,13 +135,14 @@ function resetImageProcessorState() {
 
 // --- SETUP ---
 function setup() {
-  frameRate(60); 
+  frameRate(30); // Optimized for performance
   pixelDensity(1); 
   templateImg = createImage(100, 100);
   
   mainCanvas = createCanvas(canvasW, canvasH);
   mainCanvas.id('myCanvas');
   mainCanvas.parent('sketch-canvas-holder'); 
+  mainCanvas.style('touch-action', 'none');
 
   // Prevent any CSS animation/transition on the main canvas
   try {
@@ -206,7 +193,7 @@ function setup() {
   pgTextLayer = createGraphics(width, height);
   pgTextLayer.pixelDensity(1);
   pgTextLayer.noSmooth(); // Ensure crisp pixel rendering
-  pgTextLayer.textFont("'KK7VCROSDMono', monospace"); 
+  pgTextLayer.textFont("Consolas, monospace"); 
   pgTextLayer.textAlign(CENTER, CENTER);
   pgTextLayer.noStroke();
 
@@ -289,6 +276,17 @@ function setup() {
   makePanelDraggable('sketch-ink-panel');
   makePanelDraggable('layout-tools-panel');
   makePanelDraggable('music-player-widget');
+
+  // --- AUTO-SAVE ON UNLOAD (TAB 3 & 4) ---
+  const performAutoSave = () => {
+      saveToLocalStorage(true); // Save Sketch state silently
+      saveLayoutToLocalStorage(true); // Save Layout state immediately
+  };
+  window.addEventListener('pagehide', performAutoSave);
+  window.addEventListener('beforeunload', performAutoSave);
+  document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') performAutoSave();
+  });
 
   window.switchTab('tab-thoughts');
   
@@ -421,7 +419,6 @@ function draw() {
   image(pgTextLayer, 0, 0); 
 
   drawUIOverlays();
-  drawStatusPanel();
 }
 
 // --- RENDER HELPERS ---
@@ -500,6 +497,7 @@ function setGridColor(x, y, col) {
 // --- INPUT HANDLING ---
 function mousePressed() {
   if (activeTab !== 'tab-sketch') return;
+  if (isDraggingPanel) return;
   prevGridX = -1; prevGridY = -1;
   let m = getCorrectedMouse();
   if (m.x < 0 || m.x > width || m.y < 0 || m.y > height) return;
@@ -516,6 +514,7 @@ function mousePressed() {
 
 function mouseDragged() {
   if (activeTab !== 'tab-sketch') return;
+  if (isDraggingPanel) return;
   let m = getCorrectedMouse();
   let mx = floor(constrain(m.x, 0, width-1) / cellW);
   let my = floor(constrain(m.y, 0, height-1) / cellH);
@@ -538,14 +537,6 @@ function mouseReleased() {
 function handleInput(x, y) {
   if (!isValidCell(x, y)) return;
   let m = getCorrectedMouse();
-
-  // Pattern Mask Check
-  if (activePattern && toolMode === "DRAW" && !isEraser) {
-      let px = x % activePattern.w;
-      let py = y % activePattern.h;
-      let idx = py * activePattern.w + px;
-      if (activePattern.data[idx] === 0) return; // Skip if pattern bit is 0
-  }
 
   if (mainMode === "ASCII") {
     if (toolMode === "FILL") {
@@ -647,12 +638,24 @@ function getCorrectedMouse() {
 // --- CLIPBOARD (SKETCH) ---
 function saveState() {
   let t = grid.map(r => [...r]); let c = colorGrid.map(r => [...r]);
-  history.push({ text: t, color: c }); if (history.length > MAX_HISTORY) history.shift();
+  history.push({ text: t, color: c }); 
+  if (history.length > MAX_HISTORY) history.shift();
+  sketchRedoHistory = []; // Clear redo history on new action
   saveToLocalStorage();
 }
 function undo() {
   if (history.length > 1) {
-    history.pop(); let s = history[history.length - 1];
+    let currentState = history.pop();
+    sketchRedoHistory.push(currentState);
+    let s = history[history.length - 1];
+    grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]);
+    updateLayerColorVisuals(); updateLayerTextVisuals();
+  }
+}
+function redo() {
+  if (sketchRedoHistory.length > 0) {
+    let s = sketchRedoHistory.pop();
+    history.push(s);
     grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]);
     updateLayerColorVisuals(); updateLayerTextVisuals();
   }
@@ -693,7 +696,12 @@ function keyPressed() {
   if (activeTab !== 'tab-sketch') return;
   let isCtrl = keyIsDown(CONTROL) || keyIsDown(91) || keyIsDown(224);
   if (isCtrl) {
-    if (key === 'z' || key === 'Z') { undo(); return false; }
+    if (key === 'z' || key === 'Z') { 
+        if (keyIsDown(SHIFT)) redo();
+        else undo(); 
+        return false; 
+    }
+    if (key === 'y' || key === 'Y') { redo(); return false; }
     if (key === 'c' || key === 'C') { copySelection(); return false; }
     if (key === 'x' || key === 'X') { cutSelection(); return false; }
     if (key === 'v' || key === 'V') { let m = getCorrectedMouse(); pasteClipboard(floor(m.x/cellW), floor(m.y/cellH)); return false; }
@@ -712,10 +720,13 @@ function mouseWheel(event) {
 }
 
 // --- AUTO SAVE ---
-function saveToLocalStorage() {
+let sketchSaveToastTimeout;
+function saveToLocalStorage(silent = false) {
   try {
-    localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
-    localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
+    if (typeof grid !== 'undefined' && typeof colorGrid !== 'undefined') {
+        localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
+        localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
+    }
   } catch(e) {}
 }
 function loadFromLocalStorage() {
@@ -775,6 +786,10 @@ function createUI() {
       if (sidebarNode && !sidebarNode.classList.contains('tools-grid')) {
           let toolsGroup = createDiv(''); toolsGroup.addClass('tools-grid'); sidebarNode.insertBefore(toolsGroup.elt, btnPencil.elt);
           btnPencil.parent(toolsGroup); btnEraser.parent(toolsGroup); btnFill.parent(toolsGroup); btnClear.parent(toolsGroup);
+          
+          // Add Undo/Redo Buttons
+          let btnUndo = createButton('UNDO').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(undo);
+          let btnRedo = createButton('REDO').parent(toolsGroup).class('btn-retro').style('font-size','10px').mousePressed(redo);
       }
   }
   if(btnPencil) btnPencil.mousePressed(() => { toolMode = "DRAW"; isEraser = false; mainMode = "ASCII"; });
@@ -813,11 +828,11 @@ function createUI() {
   if (!exportGroup && sidebarDiv) {
       createDiv('Files').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); exportGroup = createDiv('').parent(sidebarDiv).id('export-group');
       exportGroup.style('display','flex').style('flex-direction','column').style('gap','8px');
-      let btnPng = createButton('EXPORT PNG (NO GRID)').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as PNG image.'); btnPng.mousePressed(saveArtworkPNG);
+      let btnPng = createButton('EXPORT PNG').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as PNG image.'); btnPng.mousePressed(saveArtworkPNG);
       let btnTxt = createButton('EXPORT TXT').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as Text file.'); btnTxt.mousePressed(saveArtworkTXT);
-      let btnSvg = createButton('EXPORT SVG').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as SVG vector.'); btnSvg.mousePressed(exportSVG);
+      let btnSvg = createButton('EXPORT SVG (TO EDIT)').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as SVG vector.'); btnSvg.mousePressed(exportSVG);
       let importWrapper = createDiv('').parent(exportGroup).style('position','relative');
-      createButton('IMPORT SVG (EDIT)').parent(importWrapper).class('btn-retro').attribute('data-tooltip', 'Import SVG to edit.');
+      createButton('IMPORT SVG (TO EDIT)').parent(importWrapper).class('btn-retro').attribute('data-tooltip', 'Import SVG to edit.');
       let fileInp = createFileInput(handleSVGImport).parent(importWrapper); fileInp.style('position','absolute').style('top','0').style('left','0').style('opacity','0').style('width','100%').style('height','100%').style('cursor','pointer');
       createDiv('').parent(exportGroup).class('divider');
       let btnLib = createButton('ADD TO LIBRARY').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch to Memory Archive.');
@@ -833,7 +848,42 @@ function createUI() {
 // --- IO FUNCTIONS ---
 function handleFile(file) { if (file.type === 'image') loadImage(file.data, handleImageLoad); }
 function handleImageLoad(img) { templateImg = img; showTemplateImg = true; if(sliderScale) sliderScale.value(1.0); if(sliderX) sliderX.value(canvasW/2); }
-function saveArtworkPNG() { let pg = createGraphics(canvasW, canvasH); pg.pixelDensity(1); pg.background(255); pg.image(pgColorLayer, 0, 0); pg.image(pgTextLayer, 0, 0); save(pg, 'artwork.png'); pg.remove(); }
+
+// Helper to find content bounding box
+function getContentBounds() {
+    let minX = cols, minY = rows, maxX = -1, maxY = -1;
+    let hasContent = false;
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            if (grid[y][x] !== "" || colorGrid[y][x] !== null) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                hasContent = true;
+            }
+        }
+    }
+    if (!hasContent) return { x: 0, y: 0, w: canvasW, h: canvasH, minC: 0, minR: 0, maxC: cols-1, maxR: rows-1 };
+    
+    // Add 1 cell padding
+    minX = Math.max(0, minX - 1); minY = Math.max(0, minY - 1);
+    maxX = Math.min(cols - 1, maxX + 1); maxY = Math.min(rows - 1, maxY + 1);
+
+    return {
+        x: minX * cellW, y: minY * cellH,
+        w: (maxX - minX + 1) * cellW, h: (maxY - minY + 1) * cellH,
+        minC: minX, minR: minY, maxC: maxX, maxR: maxY
+    };
+}
+
+function saveArtworkPNG() { 
+    let b = getContentBounds();
+    let pg = createGraphics(b.w, b.h); pg.pixelDensity(1); pg.background(255); 
+    pg.image(pgColorLayer, -b.x, -b.y); pg.image(pgTextLayer, -b.x, -b.y); 
+    save(pg, 'artwork.png'); pg.remove(); 
+}
+
 function saveArtworkTXT() {
   let content = "";
   for(let y=0; y<rows; y++) {
@@ -853,10 +903,23 @@ function saveArtworkTXT() {
   a.click();
 }
 function exportSVG() {
-  let svg = `<?xml version="1.0" standalone="no"?><svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/>`;
-  for(let y=0; y<rows; y++) for(let x=0; x<cols; x++) if(colorGrid[y][x]) svg += `<rect x="${x*cellW}" y="${y*cellH}" width="${cellW}" height="${cellH}" fill="${colorGrid[y][x]}" stroke="none"/>`;
-  for(let y=0; y<rows; y++) for(let x=0; x<cols; x++) {
-      let char = grid[y][x]; if(char !== "") { let fill = inkColorHex; let safe = char.replace(/&/g, '&amp;').replace(/</g, '&lt;'); svg += `<text x="${x*cellW+cellW/2}" y="${y*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`; } 
+  let b = getContentBounds();
+  let svg = `<?xml version="1.0" standalone="no"?><svg width="${b.w}" height="${b.h}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="white"/>`;
+  
+  // Only loop through bounds
+  for(let y=b.minR; y<=b.maxR; y++) {
+      for(let x=b.minC; x<=b.maxC; x++) {
+          if(colorGrid[y][x]) svg += `<rect x="${(x - b.minC)*cellW}" y="${(y - b.minR)*cellH}" width="${cellW}" height="${cellH}" fill="${colorGrid[y][x]}" stroke="none"/>`;
+      }
+  }
+  for(let y=b.minR; y<=b.maxR; y++) {
+      for(let x=b.minC; x<=b.maxC; x++) {
+          let char = grid[y][x]; 
+          if(char !== "") { 
+              let fill = inkColorHex; let safe = char.replace(/&/g, '&amp;').replace(/</g, '&lt;'); 
+              svg += `<text x="${(x - b.minC)*cellW+cellW/2}" y="${(y - b.minR)*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`; 
+          } 
+      }
   }
   svg += `</svg>`; let blob = new Blob([svg], {type: "image/svg+xml"}); let url = URL.createObjectURL(blob); let a = document.createElement("a"); a.href = url; a.download = "drawing.svg"; a.click();
 }
@@ -1196,6 +1259,19 @@ function createLayoutUI() {
         }
     });
 
+    // Blend Mode
+    let blendRow = createDiv('').parent(group).class('mini-row').style('margin-top','6px');
+    createSpan('Blend:').parent(blendRow).style('font-size','14px');
+    let selBlend = createSelect().id('blend-mode-select').parent(blendRow).class('retro-input').style('width','60%').style('height','24px').style('padding','0');
+    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'difference', 'exclusion'].forEach(m => selBlend.option(m));
+    
+    selBlend.changed(() => {
+        if(selectedLayoutElement) {
+            selectedLayoutElement.style.mixBlendMode = selBlend.value();
+            saveLayoutState();
+        }
+    });
+
     // 4. Settings (Snap)
     createDiv('Settings').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let settingRow = createDiv('').parent(group).class('mini-row');
@@ -1203,12 +1279,18 @@ function createLayoutUI() {
     chkSnap.style('font-family', 'monospace').style('font-size', '14px');
     chkSnap.changed(() => { isSnapToGrid = chkSnap.checked(); });
 
+    // Export Tools (Moved Below Settings)
+    createDiv('Export').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    let expRow = createDiv('').parent(group).class('mini-row').style('gap','4px');
+    let btnPng = createButton('Save PNG').parent(expRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Export active artboard as PNG.');
+    let btnPdf = createButton('Save PDF').parent(expRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Export all artboards as PDF.');
+    btnPng.mousePressed(exportActiveArtboardPNG);
+    btnPdf.mousePressed(exportAllArtboardsPDF);
+
     // 5. Project (Save/Load)
     createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let projRow = createDiv('').parent(group).class('mini-row');
-    let btnSave = createButton('Save Layout').parent(projRow).class('btn-retro').attribute('data-tooltip', 'Save project to JSON.');
     let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro').attribute('data-tooltip', 'Load project from JSON.');
-    btnSave.mousePressed(saveLayoutProject);
     btnLoad.mousePressed(() => {
         let fi = select('#layout-load-input');
         if(fi) fi.elt.click();
@@ -1238,7 +1320,7 @@ function finalizeTextBox(tempBox) {
     ta.parent(wrapper);
     ta.style('width', '100%').style('height', '100%');
     ta.style('background', 'transparent').style('border', 'none').style('resize', 'none');
-    ta.style('font-family', "'FT88-School', monospace").style('font-size', '24px');
+    ta.style('font-family', "'KK7VCROSDMono', monospace").style('font-size', '24px');
     ta.style('outline', 'none').style('overflow', 'hidden');
 
     makeElementInteractive(wrapper.elt);
@@ -1276,6 +1358,12 @@ function selectLayoutElement(elmnt) {
                 let col = color(window.getComputedStyle(ta).color);
                 picker.value(col.toString('#rrggbb'));
             }
+        }
+
+        // Sync Blend Mode
+        let blendSel = select('#blend-mode-select');
+        if(blendSel) {
+            blendSel.value(window.getComputedStyle(selectedLayoutElement).mixBlendMode || 'normal');
         }
     }
 
@@ -1336,14 +1424,14 @@ function setupMusicPlayer() {
             if (url.includes('v=')) vId = url.split('v=')[1].split('&')[0];
             else if (url.includes('youtu.be/')) vId = url.split('youtu.be/')[1].split('?')[0];
             // Added autoplay=1
-            if (vId) embed = `<iframe width="100%" height="100" src="https://www.youtube.com/embed/${vId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            if (vId) embed = `<iframe width="100%" height="100" src="https://www.youtube.com/embed/${vId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; compute-pressure" allowfullscreen></iframe>`;
         } else if (url.includes('spotify.com')) {
             let cleanUrl = url.split('?')[0];
             let parts = cleanUrl.split('spotify.com/');
             if (parts.length > 1 && !parts[1].startsWith('embed')) {
-                embed = `<iframe style="border-radius:12px" src="https://open.spotify.com/embed/${parts[1]}" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+                embed = `<iframe style="border-radius:12px" src="https://open.spotify.com/embed/${parts[1]}" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; compute-pressure"></iframe>`;
             } else {
-                 embed = `<iframe style="border-radius:12px" src="${cleanUrl}" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+                 embed = `<iframe style="border-radius:12px" src="${cleanUrl}" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; compute-pressure"></iframe>`;
             }
         }
         
@@ -1520,8 +1608,15 @@ function makePanelDraggable(panelId) {
     handle.addEventListener('mousedown', (e) => {
         // Only drag on desktop (when position is absolute)
         if (window.getComputedStyle(panel).position !== 'absolute') return;
+
+        // Fix for bottom-anchored panels (like music player)
+        if (window.getComputedStyle(panel).bottom !== 'auto') {
+            panel.style.top = panel.offsetTop + 'px';
+            panel.style.bottom = 'auto';
+        }
         
         isDragging = true;
+        isDraggingPanel = true;
         startX = e.clientX; startY = e.clientY;
         initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
         document.body.style.cursor = 'move';
@@ -1536,6 +1631,7 @@ function makePanelDraggable(panelId) {
 
     window.addEventListener('mouseup', () => {
         isDragging = false;
+        isDraggingPanel = false;
         document.body.style.cursor = 'default';
     });
 }
@@ -1913,9 +2009,64 @@ function drawUIOverlays() {
   }
 }
 
-function drawStatusPanel() {
-    fill(50); noStroke(); textAlign(RIGHT, BOTTOM); textSize(13);
-    text(`MODE: ${mainMode} | TOOL: ${toolMode}`, width - 20, height - 20); textAlign(CENTER, CENTER);
+// --- EXPORT FUNCTIONS ---
+function exportActiveArtboardPNG() {
+    if (!activeArtboard) { alert("Please select an artboard first (click on its background)."); return; }
+    if (typeof html2canvas === 'undefined') { alert("html2canvas library not loaded."); return; }
+
+    // Hide UI elements
+    let handles = activeArtboard.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+    handles.forEach(h => h.style.display = 'none');
+    let originalBorder = activeArtboard.style.border;
+    activeArtboard.style.border = 'none';
+
+    html2canvas(activeArtboard, { scale: 2, useCORS: true, backgroundColor: null }).then(canvas => {
+        let link = document.createElement('a');
+        link.download = 'memory-diagram.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        // Restore UI
+        handles.forEach(h => h.style.display = '');
+        activeArtboard.style.border = originalBorder;
+    });
+}
+
+function exportAllArtboardsPDF() {
+    if (typeof window.jspdf === 'undefined') { alert("jspdf library not loaded."); return; }
+    const { jsPDF } = window.jspdf;
+
+    let artboards = document.querySelectorAll('.layout-page-bg');
+    if (artboards.length === 0) return;
+
+    let doc = new jsPDF('p', 'mm', 'a4');
+    let promises = [];
+
+    artboards.forEach((ab, index) => {
+        // Hide UI
+        let handles = ab.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+        handles.forEach(h => h.style.display = 'none');
+        let originalBorder = ab.style.border;
+        ab.style.border = 'none';
+
+        promises.push(
+            html2canvas(ab, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                handles.forEach(h => h.style.display = '');
+                ab.style.border = originalBorder;
+                return { index: index, canvas: canvas };
+            })
+        );
+    });
+
+    Promise.all(promises).then(results => {
+        results.sort((a, b) => a.index - b.index);
+        results.forEach((res, i) => {
+            if (i > 0) doc.addPage();
+            let imgData = res.canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 0, 0, 210, 297); // A4 dimensions
+        });
+        doc.save('memory-index.pdf');
+    });
 }
 
 // --- GLOBAL: ADD TO LIBRARY ---
@@ -2303,16 +2454,26 @@ function reorderDOMFromLayerList() {
 
 // --- LOCAL STORAGE LAYOUT PERSISTENCE ---
 let saveLayoutTimeout;
-function saveLayoutToLocalStorage() {
+function saveLayoutToLocalStorage(immediate = false) {
     clearTimeout(saveLayoutTimeout);
-    saveLayoutTimeout = setTimeout(() => {
-        const holder = select('#layout-canvas-holder');
+    const doSave = () => {
+        const holder = document.getElementById('layout-canvas-holder');
         if(holder) {
+            // Force sync textareas on immediate save (unload) to ensure latest text is captured
+            if (immediate) {
+                const textareas = holder.querySelectorAll('textarea');
+                textareas.forEach(ta => ta.innerHTML = ta.value);
+            }
+
             try {
-                localStorage.setItem('mem_idx_layout_content', holder.html());
+                localStorage.setItem('mem_idx_layout_content', holder.innerHTML);
+                // Silent save (no toast) as requested
             } catch(e) { console.error("Layout save failed", e); }
         }
-    }, 1000); // Debounce 1s
+    };
+
+    if (immediate) doSave();
+    else saveLayoutTimeout = setTimeout(doSave, 1000); // Debounce 1s
 }
 
 function loadLayoutFromLocalStorage() {
@@ -2337,27 +2498,22 @@ function loadLayoutFromLocalStorage() {
     }
 }
 
-// --- SAVE / LOAD LAYOUT ---
-function saveLayoutProject() {
-    let holder = select('#layout-canvas-holder');
-    if (!holder) return;
+// --- TOAST NOTIFICATION ---
+let toastTimeout;
+function showToast(msg) {
+    const toast = document.getElementById('toast-notification');
+    if(!toast) return;
     
-    // Deselect before saving to avoid saving selection UI
-    if (selectedLayoutElement) {
-        selectedLayoutElement.style.outline = 'none';
-        let handles = selectedLayoutElement.querySelectorAll('.resize-handle, .rotate-handle');
-        handles.forEach(h => h.style.display = 'none');
-        selectedLayoutElement = null;
-    }
-
-    let projectData = {
-        html: holder.html(),
-        snap: isSnapToGrid
-    };
+    toast.innerText = msg;
+    toast.classList.add('show');
     
-    saveJSON(projectData, 'layout-project.json');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2000);
 }
 
+// --- SAVE / LOAD LAYOUT ---
 function handleLayoutLoad(file) {
     if (file.subtype === 'json') {
         let data = file.data;
