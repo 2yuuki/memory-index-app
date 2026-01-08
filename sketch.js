@@ -94,7 +94,11 @@ let paletteStabilo = [
 
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
-  // Removed resetImageProcessorState() to prevent canvas destruction and allow persistence
+  // Reset Image Processor state when leaving Tab 2
+  if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
+      if (window.resetImageProcessor) window.resetImageProcessor();
+      resetImageProcessorState();
+  }
 
   activeTab = tabId;
   document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
@@ -110,8 +114,17 @@ window.switchTab = function(tabId) {
   
   if (tabId === 'tab-sketch') {
     cnv.style.display = 'block';
-  } else {
+    loop(); // Enable Sketch Loop
+    if(window.pauseImageProcessor) window.pauseImageProcessor(); // Disable Image Processor
+  } else if (tabId === 'tab-image-proc') {
     cnv.style.display = 'none';
+    noLoop(); // Disable Sketch Loop
+    if(window.resumeImageProcessor) window.resumeImageProcessor(); // Enable Image Processor
+  } else {
+    // Thoughts or Layout Tab
+    cnv.style.display = 'none';
+    noLoop(); // Disable Sketch Loop
+    if(window.pauseImageProcessor) window.pauseImageProcessor(); // Disable Image Processor
   }
 }
 
@@ -1109,7 +1122,7 @@ function setupLayoutTab() {
           viewport.elt.appendChild(layoutDiv.elt);
       }
       viewport.style('width', '100%').style('height', '100%');
-      viewport.style('overflow', 'auto').style('background', 'transparent');
+      viewport.style('overflow', 'auto').style('background', '#d0d0d0');
       viewport.style('display', 'flex').style('justify-content', 'center');
       viewport.style('padding', '40px').style('box-sizing', 'border-box');
   }
@@ -1121,7 +1134,10 @@ function setupLayoutTab() {
   layoutDiv.style('transform-origin', 'top center');
   // layoutDiv.style('transition', 'transform 0.2s ease');
   
-  if (layoutDiv.elt.querySelectorAll('.layout-page-bg').length === 0) createPageBackground(layoutDiv, 0, true);
+  if (layoutDiv.elt.querySelectorAll('.layout-page-bg').length === 0) {
+      createPageBackground(layoutDiv, 0, true);
+      recalculateLayoutPositions();
+  }
 
   layoutDiv.elt.addEventListener('dragover', (e) => e.preventDefault());
   layoutDiv.elt.addEventListener('drop', (e) => {
@@ -1497,6 +1513,23 @@ function setupThoughtsDateHeader() {
         createInput('').parent(container).class('date-input');
 
         panel.elt.insertBefore(container.elt, panel.elt.firstChild);
+        
+        // Add Instruction Text
+        let instr = createDiv('Write down your thought then go to the tab 2, tab 3...').parent(panel);
+        instr.style('font-size', '11px').style('color', '#666').style('font-style', 'italic').style('margin-bottom', '10px');
+        // Insert after the section title (which is usually the second child after date header)
+        let title = panel.elt.querySelector('.section-title');
+        if(title) {
+            panel.elt.insertBefore(instr.elt, title.nextSibling);
+        }
+
+        // Inject CSS for obvious blinking cursor
+        let style = document.createElement('style');
+        style.innerHTML = `
+            #inpThought { caret-color: #f75397; caret-shape: block; }
+            #inpThought:focus { outline: 2px solid #f75397; }
+        `;
+        document.head.appendChild(style);
     }
 }
 
@@ -1966,12 +1999,15 @@ function restoreLayoutState(htmlState) {
     let holder = select('#layout-canvas-holder');
     if(!holder) return;
     holder.html(htmlState);
+    
+    // Remove dead button to ensure listeners are re-attached by recalculateLayoutPositions
+    let oldBtn = holder.elt.querySelector('#btn-add-artboard-canvas');
+    if(oldBtn) oldBtn.remove();
+
     // Re-bind interactivity to all children
     let children = holder.elt.children;
     for (let el of children) {
-        makeElementInteractive(el);
-        
-        // Re-attach artboard logic
+        // FIX: Check for artboard BEFORE making interactive to prevent dragging
         if (el.classList.contains('layout-page-bg')) {
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -1979,6 +2015,7 @@ function restoreLayoutState(htmlState) {
             };
             continue; // Skip makeElementInteractive for bg
         }
+        makeElementInteractive(el);
 
         // Re-attach hover effects for text elements
         if (!el.querySelector('img') && !el.querySelector('textarea')) {
@@ -1991,6 +2028,8 @@ function restoreLayoutState(htmlState) {
     // Auto-select first artboard
     let firstBg = holder.elt.querySelector('.layout-page-bg');
     if(firstBg) setActiveArtboard(firstBg);
+    
+    recalculateLayoutPositions();
 }
 
 function copyLayoutSelection() {
@@ -2120,7 +2159,7 @@ function exportActiveArtboardPNG() {
     holder.style.transform = 'none';
 
     // 2. Hide UI Elements Globally
-    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label, #btn-add-artboard-canvas');
     handles.forEach(h => h.style.display = 'none');
     
     let bgs = holder.querySelectorAll('.layout-page-bg');
@@ -2173,7 +2212,7 @@ function exportAllArtboardsPDF() {
     holder.style.transform = 'none';
 
     // 2. Hide UI Elements Globally
-    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label');
+    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label, #btn-add-artboard-canvas');
     handles.forEach(h => h.style.display = 'none');
     
     let bgs = holder.querySelectorAll('.layout-page-bg');
@@ -2497,7 +2536,46 @@ function recalculateLayoutPositions() {
         let lbl = bg.querySelector('.artboard-label');
         if (lbl) lbl.innerText = `Artboard ${i + 1}`;
     });
-    holder.style('height', (bgs.length * (pageH + gap)) + 'px');
+    
+    let totalH = bgs.length * (pageH + gap);
+
+    // Add "+" Button
+    let btn = document.getElementById('btn-add-artboard-canvas');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btn-add-artboard-canvas';
+        btn.innerText = '+';
+        btn.className = 'btn-retro';
+        Object.assign(btn.style, {
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            fontSize: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: '100',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            padding: '0'
+        });
+        btn.setAttribute('data-tooltip', 'Add new Artboard');
+        btn.onclick = () => {
+             let target = activeArtboard;
+              if (!target) {
+                  let bgs = document.querySelectorAll('.layout-page-bg');
+                  if (bgs.length > 0) target = bgs[bgs.length-1];
+              }
+              if (target) addArtboardRelative(target);
+        };
+        holder.elt.appendChild(btn);
+    }
+    
+    btn.style.top = totalH + 'px';
+    holder.style('height', (totalH + 80) + 'px');
 }
 
 function setActiveArtboard(el) {

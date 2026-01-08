@@ -5,6 +5,7 @@ const cmykSketch = (p) => {
   let showImage = false;
   let isAnimated = false;
   let isJittering = false; // Trạng thái animation jitter
+  let needsUpdate = true; // OPTIMIZATION: Flag to only redraw when necessary
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
@@ -80,7 +81,7 @@ const cmykSketch = (p) => {
       cnv.style('mix-blend-mode', 'multiply');
     }
 
-    p.frameRate(60);
+    p.frameRate(30); // OPTIMIZATION: Reduce FPS to save resources
     p.pixelDensity(1);
     p.textFont("'ocr-a-std', monospace");
     p.textAlign(p.CENTER, p.CENTER);
@@ -154,9 +155,38 @@ const cmykSketch = (p) => {
       }
     });
     observer.observe(document.body, { childList: true });
+
+    // --- EXPOSE RESET FUNCTION GLOBALLY ---
+    window.resetImageProcessor = () => {
+      blobImg = null;
+      showImage = false;
+      isAnimated = false;
+      p.background(255); // Clear canvas
+      p.redraw(); // Force clear visual
+      
+      // Reset UI elements
+      const previewBox = p.select('#preview-area');
+      if(previewBox) previewBox.html('');
+      const fileIn = p.select('#fileIn');
+      if(fileIn) fileIn.elt.value = '';
+    };
+
+    // --- EXPOSE PAUSE/RESUME FOR PERFORMANCE ---
+    window.pauseImageProcessor = () => {
+      p.noLoop();
+    };
+    
+    window.resumeImageProcessor = () => {
+      p.loop();
+      needsUpdate = true; // Force one draw upon resume
+    };
   };
 
   p.draw = function() {
+    // OPTIMIZATION: Skip rendering if image is static and no settings changed
+    if (blobImg && !isAnimated && !isJittering && !needsUpdate) return;
+    needsUpdate = false; // Reset flag
+
     p.background(255);
 
     // FIX: Ngăn không cho vẽ hiệu ứng (gây nhiễu màu) khi chưa có ảnh
@@ -528,15 +558,25 @@ const cmykSketch = (p) => {
           p.loadImage(url, img => {
             blobImg = img;
             
-            // FIX: Resize canvas to match original image dimensions
-            p.resizeCanvas(img.width, img.height);
+            // FIX: Auto-rescale large images for performance
+            let w = img.width;
+            let h = img.height;
+            const MAX_DIM = 1000; // Limit max dimension to 1000px
+            if (w > MAX_DIM || h > MAX_DIM) {
+                let ratio = w / h;
+                if (w > h) { w = MAX_DIM; h = MAX_DIM / ratio; }
+                else { h = MAX_DIM; w = MAX_DIM * ratio; }
+                blobImg.resize(w, h); // Resize the p5 image object directly
+            }
+
+            p.resizeCanvas(w, h);
             
             // Recreate buffers with new size
-            gfxFrame = p.createGraphics(img.width, img.height);
+            gfxFrame = p.createGraphics(w, h);
             gfxFrame.pixelDensity(1);
             gfxFrame.elt.getContext('2d', { willReadFrequently: true });
             
-            imgBuffer = p.createGraphics(img.width, img.height);
+            imgBuffer = p.createGraphics(w, h);
             imgBuffer.pixelDensity(1);
             imgBuffer.elt.getContext('2d', { willReadFrequently: true });
             imgBuffer.clear();
@@ -552,8 +592,10 @@ const cmykSketch = (p) => {
 
             // Hide Spinner
             if(spinner) spinner.style.display = 'none';
+            needsUpdate = true; // Trigger redraw
           }, (e) => {
-            alert("Failed to load image.");
+            if(window.customAlert) window.customAlert("Failed to load image.");
+            else alert("Failed to load image.");
             if(spinner) spinner.style.display = 'none';
           });
         }
@@ -564,35 +606,40 @@ const cmykSketch = (p) => {
     const sColorMode = p.select('#selColorMode');
     if(sColorMode) sColorMode.changed(() => {
       colorMode = sColorMode.value();
+      needsUpdate = true;
     });
 
     // Map "Pattern" slider to Stroke Weight
     const sWeight = p.select('#cfgWeight');
-    if(sWeight) sWeight.input(() => cmykSettings.weight = parseFloat(sWeight.value()));
+    if(sWeight) sWeight.input(() => { cmykSettings.weight = parseFloat(sWeight.value()); needsUpdate = true; });
 
     // Map "Threshold" slider to Grid Density (Inverse logic: higher density = smaller grid)
     const sDensity = p.select('#cfgDensity');
     if(sDensity) sDensity.input(() => {
       grid = p.floor(8 / parseFloat(sDensity.value())); 
       if(grid < 2) grid = 2;
+      needsUpdate = true;
     });
     
     const sScale = p.select('#sldScale');
-    if(sScale) sScale.input(() => imgScale = parseFloat(sScale.value()));
+    if(sScale) sScale.input(() => { imgScale = parseFloat(sScale.value()); needsUpdate = true; });
 
     const sShowSource = p.select('#chkShowSrc');
-    if(sShowSource) sShowSource.changed(() => showImage = sShowSource.checked());
+    if(sShowSource) sShowSource.changed(() => { showImage = sShowSource.checked(); needsUpdate = true; });
 
     const sChars = p.select('#inpChars');
-    if(sChars) sChars.input(() => rampReplica = sChars.value());
+    if(sChars) sChars.input(() => { rampReplica = sChars.value(); needsUpdate = true; });
 
     // Map "Invert" checkbox
     const sInvert = p.select('#chkInvert');
-    if(sInvert) sInvert.changed(() => invertRamp = sInvert.checked());
+    if(sInvert) sInvert.changed(() => { invertRamp = sInvert.checked(); needsUpdate = true; });
 
     // Map "Animate" checkbox
     const sAnimate = p.select('#chkAnimate');
-    if(sAnimate) sAnimate.changed(() => isJittering = sAnimate.checked());
+    if(sAnimate) sAnimate.changed(() => { 
+      isJittering = sAnimate.checked(); 
+      needsUpdate = true; 
+    });
 
     // --- NEW: Preset Dropdown ---
     const sPreset = p.select('#selAsciiPreset');
@@ -605,6 +652,7 @@ const cmykSketch = (p) => {
       // Bind change event
       sPreset.changed(() => {
         rampReplica = rampPresets[sPreset.value()];
+        needsUpdate = true;
       });
     }
 
@@ -613,7 +661,8 @@ const cmykSketch = (p) => {
     if(btnSave) {
       btnSave.mousePressed(() => {
         if (!blobImg) {
-          alert("No image to save!");
+          if(window.customAlert) window.customAlert("No image to save!");
+          else alert("No image to save!");
           return;
         }
 
