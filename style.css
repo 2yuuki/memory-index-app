@@ -11,6 +11,24 @@
   font-family: 'BianzhidaiRing';
   src: url('fonts/bianzhidai-Ring.otf') format('opentype');
 }
+@font-face {
+  font-family: 'BianzhidaiBase';
+  src: url('fonts/bianzhidai-Base.otf') format('opentype');
+}
+/* Commenting out missing font to prevent export crash
+@font-face {
+  font-family: 'Indg Luara';
+  src: url('fonts/Indg-Luara.otf') format('opentype');
+}
+*/
+@font-face {
+  font-family: 'FT88';
+  src: url('fonts/FT88-School.otf') format('opentype');
+}
+@font-face {
+  font-family: 'HLHoctro';
+  src: url('fonts/HP001_b5h.ttf') format('truetype');
+}
 
 /* --- THEME --- */
 :root{

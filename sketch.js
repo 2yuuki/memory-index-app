@@ -65,6 +65,8 @@ let isDrawingTextBox = false;
 let drawStart = {x:0, y:0};
 let tempDrawBox = null;
 const MAX_PATTERNS = 4;
+let isLayoutExporting = false;
+const patternDataUrlCache = new Map();
 
 // --- UI REFS ---
 let sidebarDiv;
@@ -1160,20 +1162,23 @@ function setupLayoutTab() {
 
     let data = e.dataTransfer.getData("text/plain");
     if (data && data.startsWith("data:image")) {
-       saveLayoutState(); // Save before drop
-       let wrapper = createDiv(''); wrapper.parent(layoutDiv);
-       wrapper.style('position', 'absolute'); wrapper.style('width', '150px'); wrapper.style('cursor', 'move');
-       
-       let rect = layoutDiv.elt.getBoundingClientRect();
-       wrapper.style('left', ((e.clientX - rect.left) / layoutScale - 75) + 'px');
-       wrapper.style('top', ((e.clientY - rect.top) / layoutScale - 75) + 'px');
+       // OPTIMIZATION: Resize dropped image to save LocalStorage space
+       resizeBase64Img(data, 400, 0.6, (optimizedData) => {
+           saveLayoutState(); // Save before drop
+           let wrapper = createDiv(''); wrapper.parent(layoutDiv);
+           wrapper.style('position', 'absolute'); wrapper.style('width', '150px'); wrapper.style('cursor', 'move');
+           
+           let rect = layoutDiv.elt.getBoundingClientRect();
+           wrapper.style('left', ((e.clientX - rect.left) / layoutScale - 75) + 'px');
+           wrapper.style('top', ((e.clientY - rect.top) / layoutScale - 75) + 'px');
 
-       let img = createImg(data, ''); img.parent(wrapper);
-       img.style('width', '100%'); img.style('height', '100%');
-       img.style('display', 'block'); img.style('pointer-events', 'none');
-       
-       makeElementInteractive(wrapper.elt);
-       selectLayoutElement(wrapper.elt);
+           let img = createImg(optimizedData, ''); img.parent(wrapper);
+           img.style('width', '100%'); img.style('height', '100%');
+           img.style('display', 'block'); img.style('pointer-events', 'none');
+           
+           makeElementInteractive(wrapper.elt);
+           selectLayoutElement(wrapper.elt);
+       });
     }
   });
 
@@ -1296,6 +1301,30 @@ function setupLayoutTab() {
   }
 }
 
+function getBlendTarget(elmnt) {
+    if (!elmnt) return null;
+    return elmnt.querySelector('textarea, img') || elmnt;
+}
+
+function applyBlendMode(elmnt, mode) {
+    if (!elmnt) return;
+    let target = getBlendTarget(elmnt);
+    if (!target) return;
+    if (target !== elmnt) {
+        elmnt.style.mixBlendMode = 'normal';
+    }
+    target.style.mixBlendMode = mode;
+    elmnt.dataset.blendMode = mode;
+}
+
+function getBlendModeForElement(elmnt) {
+    if (!elmnt) return 'normal';
+    if (elmnt.dataset && elmnt.dataset.blendMode) return elmnt.dataset.blendMode;
+    let target = getBlendTarget(elmnt);
+    if (!target) return 'normal';
+    return window.getComputedStyle(target).mixBlendMode || 'normal';
+}
+
 function createLayoutUI() {
     // Ensure sidebar is available
     if (!layoutSidebarRef) {
@@ -1332,6 +1361,19 @@ function createLayoutUI() {
 
     btnNext.mousePressed(() => {
         changeActiveArtboardPattern(1);
+    });
+
+    // MOVED: Blend Mode (Above Text Tool)
+    let blendRow = createDiv('').parent(group).class('mini-row').style('margin-top','6px');
+    createSpan('Blend:').parent(blendRow).style('font-size','14px');
+    let selBlend = createSelect().id('blend-mode-select').parent(blendRow).class('retro-input').style('width','60%').style('height','24px').style('padding','0');
+    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'difference', 'exclusion'].forEach(m => selBlend.option(m));
+    
+    selBlend.changed(() => {
+        if(selectedLayoutElement) {
+            applyBlendMode(selectedLayoutElement, selBlend.value());
+            saveLayoutState();
+        }
     });
 
     // 2. Add Text Tool
@@ -1372,7 +1414,7 @@ function createLayoutUI() {
     
     // NEW: Font Family Selector
     let fontSelect = createSelect().id('text-font-select').parent(styleRow).class('retro-input').style('width','90px').style('margin-left','4px');
-    ['KK7VCROSDMono', 'ocr-a-std', 'Courier New', 'Arial', 'Times New Roman'].forEach(f => fontSelect.option(f));
+    ['KK7VCROSDMono', 'FT88', 'HLHoctro', 'BianzhidaiBase', 'ocr-a-std', 'Courier New'].forEach(f => fontSelect.option(f));
 
     let colorPicker = createColorPicker('#000000').id('text-color-picker').parent(styleRow).style('width','30px').style('height','30px').style('border','none').style('box-shadow','0 2px 5px rgba(0,0,0,0.1)');
 
@@ -1407,19 +1449,6 @@ function createLayoutUI() {
         }
     });
 
-    // Blend Mode
-    let blendRow = createDiv('').parent(group).class('mini-row').style('margin-top','6px');
-    createSpan('Blend:').parent(blendRow).style('font-size','14px');
-    let selBlend = createSelect().id('blend-mode-select').parent(blendRow).class('retro-input').style('width','60%').style('height','24px').style('padding','0');
-    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'difference', 'exclusion'].forEach(m => selBlend.option(m));
-    
-    selBlend.changed(() => {
-        if(selectedLayoutElement) {
-            selectedLayoutElement.style.mixBlendMode = selBlend.value();
-            saveLayoutState();
-        }
-    });
-
     // 4. Settings (Snap)
     createDiv('Settings').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let settingRow = createDiv('').parent(group).class('mini-row');
@@ -1438,10 +1467,24 @@ function createLayoutUI() {
     // 5. Project (Save/Load)
     createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let projRow = createDiv('').parent(group).class('mini-row');
-    let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro').attribute('data-tooltip', 'Load project from JSON.');
+    let btnLoad = createButton('Load Layout').parent(projRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Load project from JSON.');
     btnLoad.mousePressed(() => {
         let fi = select('#layout-load-input');
         if(fi) fi.elt.click();
+    });
+
+    let btnClearLayout = createButton('Reset').parent(projRow).class('btn-retro').style('flex','1').style('margin-left','4px').style('background','#e74c3c').style('color','white').attribute('data-tooltip', 'Clear layout and storage.');
+    btnClearLayout.mousePressed(() => {
+        if(confirm("Reset layout and clear saved data? This cannot be undone.")) {
+            let holder = select('#layout-canvas-holder');
+            if(holder) {
+                holder.html('');
+                localStorage.removeItem('mem_idx_layout_content');
+                createPageBackground(holder, 0, true);
+                recalculateLayoutPositions();
+                updateLayerPanel();
+            }
+        }
     });
 }
 
@@ -1533,7 +1576,7 @@ function selectLayoutElement(elmnt) {
         // Sync Blend Mode
         let blendSel = select('#blend-mode-select');
         if(blendSel) {
-            blendSel.value(window.getComputedStyle(selectedLayoutElement).mixBlendMode || 'normal');
+            blendSel.value(getBlendModeForElement(selectedLayoutElement));
         }
     }
 
@@ -2072,6 +2115,11 @@ function restoreLayoutState(htmlState) {
         }
         makeElementInteractive(el);
 
+        let storedBlend = (el.dataset && el.dataset.blendMode) || el.style.mixBlendMode;
+        if (storedBlend) {
+            applyBlendMode(el, storedBlend);
+        }
+
         // Re-attach hover effects for text elements
         if (!el.querySelector('img') && !el.querySelector('textarea')) {
              el.onmouseover = () => el.style.border = '1px dashed #0072BC';
@@ -2203,128 +2251,249 @@ function drawUIOverlays() {
 }
 
 // --- EXPORT FUNCTIONS ---
-function exportActiveArtboardPNG() {
-    if (!activeArtboard) { alert("Please select an artboard first (click on its background)."); return; }
-    if (typeof html2canvas === 'undefined') { alert("html2canvas library not loaded."); return; }
-    
-    let holder = document.getElementById('layout-canvas-holder');
-    
-    // 1. Save State & Reset Zoom
+function prepareLayoutExport(holder) {
+    isLayoutExporting = true;
     let savedTransform = holder.style.transform;
+    let savedTransformOrigin = holder.style.transformOrigin;
     holder.style.transform = 'none';
+    holder.style.transformOrigin = 'top left';
 
-    // 2. Hide UI Elements Globally
     let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label, #btn-add-artboard-canvas');
-    handles.forEach(h => h.style.display = 'none');
-    
-    let bgs = holder.querySelectorAll('.layout-page-bg');
-    let originalBorders = [];
-    bgs.forEach(bg => {
-        originalBorders.push(bg.style.border);
-        bg.style.border = 'none';
+    let handleStates = [];
+    handles.forEach(h => {
+        handleStates.push({ el: h, display: h.style.display });
+        h.style.display = 'none';
     });
 
-    // 3. Calculate Crop Region
-    let x = activeArtboard.offsetLeft;
-    let y = activeArtboard.offsetTop;
-    let w = activeArtboard.offsetWidth;
-    let h = activeArtboard.offsetHeight;
+    let bgs = holder.querySelectorAll('.layout-page-bg');
+    let bgBorders = [];
+    let bgZIndexes = [];
+    bgs.forEach(bg => {
+        bgBorders.push({ el: bg, border: bg.style.border });
+        bgZIndexes.push({ el: bg, zIndex: bg.style.zIndex });
+        bg.style.border = 'none';
+        bg.style.zIndex = '0';
+    });
 
-    html2canvas(holder, { 
-        scale: 2, 
-        useCORS: true, 
-        backgroundColor: null,
-        x: x, y: y, width: w, height: h
-    }).then(canvas => {
-        let link = document.createElement('a');
-        link.download = 'memory-diagram.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+    let outlineStates = [];
+    let children = Array.from(holder.children);
+    children.forEach(el => {
+        if (el.classList.contains('layout-page-bg')) return;
+        outlineStates.push({ el: el, outline: el.style.outline });
+        el.style.outline = 'none';
+    });
 
-        // 4. Restore State
-        handles.forEach(h => h.style.display = '');
-        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
+    let textareaStates = [];
+    let textareas = holder.querySelectorAll('textarea');
+    textareas.forEach(ta => {
+        let wrapper = ta.parentElement;
+        textareaStates.push({
+            ta,
+            taHeight: ta.style.height,
+            taOverflow: ta.style.overflow,
+            wrapper,
+            wrapperHeight: wrapper ? wrapper.style.height : null,
+            wrapperOverflow: wrapper ? wrapper.style.overflow : null
+        });
+
+        let scrollH = ta.scrollHeight;
+        if (scrollH > ta.clientHeight) {
+            ta.style.height = scrollH + 'px';
+            ta.style.overflow = 'visible';
+            if (wrapper) {
+                wrapper.style.height = scrollH + 'px';
+                wrapper.style.overflow = 'visible';
+            }
+        }
+    });
+
+    return function restoreLayoutExport() {
+        handles.forEach(h => { h.style.display = ''; });
+        handleStates.forEach(h => { h.el.style.display = h.display; });
+        bgBorders.forEach(bg => { bg.el.style.border = bg.border; });
+        bgZIndexes.forEach(bg => { bg.el.style.zIndex = bg.zIndex; });
+        outlineStates.forEach(state => { state.el.style.outline = state.outline; });
+        textareaStates.forEach(state => {
+            state.ta.style.height = state.taHeight;
+            state.ta.style.overflow = state.taOverflow;
+            if (state.wrapper) {
+                state.wrapper.style.height = state.wrapperHeight;
+                state.wrapper.style.overflow = state.wrapperOverflow;
+            }
+        });
         holder.style.transform = savedTransform;
-    }).catch(err => {
-        console.error("Export PNG failed:", err);
-        // Restore State on error to prevent UI from getting stuck
-        handles.forEach(h => h.style.display = '');
-        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
-        holder.style.transform = savedTransform;
+        holder.style.transformOrigin = savedTransformOrigin;
+        isLayoutExporting = false;
+    };
+}
+
+function extractCssUrl(value) {
+    if (!value || value === 'none') return '';
+    let match = value.match(/url\((['"]?)(.*?)\1\)/i);
+    return match ? match[2] : '';
+}
+
+function loadImageAsDataUrl(url) {
+    return new Promise((resolve, reject) => {
+        let img = new Image();
+        img.onload = () => {
+            let canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            try {
+                resolve(canvas.toDataURL('image/png'));
+            } catch (err) {
+                reject(err);
+            }
+        };
+        img.onerror = reject;
+        img.src = url;
     });
 }
 
-function exportAllArtboardsPDF() {
+function waitForImage(img) {
+    if (img.decode) {
+        return img.decode().catch(() => new Promise(resolve => {
+            if (img.complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+        }));
+    }
+    return new Promise(resolve => {
+        if (img.complete) return resolve();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+    });
+}
+
+async function addPatternImagesForExport(holder) {
+    let layers = Array.from(holder.querySelectorAll('.layout-pattern-layer'));
+    let added = [];
+
+    for (let layer of layers) {
+        let bg = layer.style.backgroundImage || window.getComputedStyle(layer).backgroundImage;
+        let url = extractCssUrl(bg);
+        if (!url) continue;
+
+        let img = document.createElement('img');
+        img.setAttribute('data-export-pattern', 'true');
+        Object.assign(img.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            pointerEvents: 'none'
+        });
+
+        let dataUrl = patternDataUrlCache.get(url);
+        if (!dataUrl) {
+            try {
+                dataUrl = await loadImageAsDataUrl(url);
+                patternDataUrlCache.set(url, dataUrl);
+            } catch (err) {
+                dataUrl = '';
+            }
+        }
+        img.src = dataUrl || url;
+        layer.appendChild(img);
+        await waitForImage(img);
+        added.push(img);
+    }
+
+    return function restorePatternImages() {
+        added.forEach(img => img.remove());
+    };
+}
+
+async function prepareLayoutExportAsync(holder) {
+    let restoreBase = prepareLayoutExport(holder);
+    let restorePatterns = await addPatternImagesForExport(holder);
+    return function restoreAll() {
+        restorePatterns();
+        restoreBase();
+    };
+}
+
+async function captureLayoutCanvas(holder) {
+    return htmlToImage.toCanvas(holder, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
+    });
+}
+
+function cropCanvasToArtboard(fullCanvas, holder, artboardBg) {
+    let scaleX = fullCanvas.width / holder.offsetWidth;
+    let scaleY = fullCanvas.height / holder.offsetHeight;
+    let x = Math.round(artboardBg.offsetLeft * scaleX);
+    let y = Math.round(artboardBg.offsetTop * scaleY);
+    let w = Math.round(artboardBg.offsetWidth * scaleX);
+    let h = Math.round(artboardBg.offsetHeight * scaleY);
+    let canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    let ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(fullCanvas, x, y, w, h, 0, 0, w, h);
+    return canvas;
+}
+
+async function exportActiveArtboardPNG() {
+    if (!activeArtboard) { alert("Please select an artboard first (click on its background)."); return; }
+    if (typeof htmlToImage === 'undefined') { alert("html-to-image library not loaded."); return; }
+
+    let holder = document.getElementById('layout-canvas-holder');
+    if (!holder) return;
+    let restoreExport = await prepareLayoutExportAsync(holder);
+    try {
+        let fullCanvas = await captureLayoutCanvas(holder);
+        let artCanvas = cropCanvasToArtboard(fullCanvas, holder, activeArtboard);
+        let link = document.createElement('a');
+        link.download = 'memory-diagram.png';
+        link.href = artCanvas.toDataURL('image/png');
+        link.click();
+    } catch (error) {
+        console.error('Export PNG failed:', error);
+    } finally {
+        restoreExport();
+    }
+}
+
+async function exportAllArtboardsPDF() {
     if (typeof window.jspdf === 'undefined') { alert("jspdf library not loaded."); return; }
+    if (typeof htmlToImage === 'undefined') { alert("html-to-image library not loaded."); return; }
     const { jsPDF } = window.jspdf;
     
     let holder = document.getElementById('layout-canvas-holder');
     let artboards = holder.querySelectorAll('.layout-page-bg');
     if (artboards.length === 0) return;
 
-    // 1. Save State & Reset Zoom
-    let savedTransform = holder.style.transform;
-    holder.style.transform = 'none';
-
-    // 2. Hide UI Elements Globally
-    let handles = holder.querySelectorAll('.resize-handle, .rotate-handle, .move-handle, .artboard-label, #btn-add-artboard-canvas');
-    handles.forEach(h => h.style.display = 'none');
-    
-    let bgs = holder.querySelectorAll('.layout-page-bg');
-    let originalBorders = [];
-    bgs.forEach(bg => {
-        originalBorders.push(bg.style.border);
-        bg.style.border = 'none';
-    });
-
     let doc = new jsPDF('p', 'mm', 'a4');
-    let promises = [];
-
-    artboards.forEach((ab, index) => {
-        let x = ab.offsetLeft;
-        let y = ab.offsetTop;
-        let w = ab.offsetWidth;
-        let h = ab.offsetHeight;
-
-        promises.push(
-            html2canvas(holder, { 
-                scale: 2, 
-                useCORS: true, 
-                backgroundColor: '#ffffff',
-                x: x, y: y, width: w, height: h
-            }).then(canvas => {
-                return { index: index, canvas: canvas };
-            })
-        );
-    });
-
-    Promise.all(promises).then(results => {
-        // 3. Restore State
-        handles.forEach(h => h.style.display = '');
-        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
-        holder.style.transform = savedTransform;
-
-        results.sort((a, b) => a.index - b.index);
-        results.forEach((res, i) => {
+    let restoreExport = await prepareLayoutExportAsync(holder);
+    try {
+        let fullCanvas = await captureLayoutCanvas(holder);
+        for (let i = 0; i < artboards.length; i++) {
             if (i > 0) doc.addPage();
-            let imgData = res.canvas.toDataURL('image/png');
+            let artCanvas = cropCanvasToArtboard(fullCanvas, holder, artboards[i]);
+            let imgData = artCanvas.toDataURL('image/png');
             doc.addImage(imgData, 'PNG', 0, 0, 210, 297); // A4 dimensions
-        });
+        }
         doc.save('memory-index.pdf');
-    }).catch(err => {
+    } catch (err) {
         console.error("Export PDF failed:", err);
-        // Restore State on error to prevent UI from getting stuck
-        handles.forEach(h => h.style.display = '');
-        bgs.forEach((bg, i) => bg.style.border = originalBorders[i]);
-        holder.style.transform = savedTransform;
-    });
+    } finally {
+        restoreExport();
+    }
 }
 
 // --- GLOBAL: ADD TO LIBRARY ---
 window.addToLibrary = function(p5Img, name, extraData) {
   // Optimization: Resize image to prevent LocalStorage Quota Exceeded
   // Original canvas is large (1600x2400), we scale it down for the library.
-  let targetW = 400; 
+  let targetW = 300; // Reduced from 400 to save space
   let scaleFactor = targetW / p5Img.width;
   if (scaleFactor > 1) scaleFactor = 1; 
   
@@ -2341,9 +2510,10 @@ window.addToLibrary = function(p5Img, name, extraData) {
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, w, h);
   
-  ctx.drawImage(p5Img.canvas, 0, 0, w, h);
+  let src = p5Img.canvas || p5Img.elt || p5Img;
+  ctx.drawImage(src, 0, 0, w, h);
   
-  let dataURL = tempCanvas.toDataURL('image/jpeg', 0.5);
+  let dataURL = tempCanvas.toDataURL('image/jpeg', 0.3); // Reduced quality from 0.5 to 0.3
   
   let newItem = {
       id: Date.now(),
@@ -2357,6 +2527,7 @@ window.addToLibrary = function(p5Img, name, extraData) {
   try {
       saveLibrary();
       createLibraryItemDOM(newItem);
+      updateStorageIndicator(); // Update UI
       // Animation feedback on Global Library Button
       let btn = document.getElementById('global-lib-btn');
       if(btn) {
@@ -2391,6 +2562,7 @@ function loadLibrary() {
             let libGrid = document.getElementById('lib-grid');
             if(libGrid) libGrid.innerHTML = ''; // Clear existing
             libraryItems.forEach(item => createLibraryItemDOM(item));
+            updateStorageIndicator();
         }
         
         // Add Clear Button if not exists
@@ -2411,10 +2583,45 @@ function loadLibrary() {
                     localStorage.removeItem('mem_idx_library');
                     let libGrid = document.getElementById('lib-grid');
                     if (libGrid) libGrid.innerHTML = '';
+                    updateStorageIndicator();
                 }
             });
         }
     } catch(e) { console.error("Library load failed", e); }
+}
+
+function updateStorageIndicator() {
+    let panel = document.getElementById('global-lib-panel');
+    if (!panel) return;
+    
+    // Calculate usage in MB
+    let used = 0;
+    for(let key in localStorage) {
+        if(localStorage.hasOwnProperty(key)) {
+            used += ((localStorage[key].length * 2) / 1024 / 1024);
+        }
+    }
+    let total = 5; // Approx 5MB limit for LocalStorage
+    let pct = Math.min(100, (used / total) * 100);
+    
+    let barContainer = document.getElementById('lib-storage-container');
+    if (!barContainer) {
+        barContainer = createDiv('').id('lib-storage-container').parent(panel).style('margin-top','15px').style('width','100%');
+        let labelRow = createDiv('').parent(barContainer).style('display','flex').style('justify-content','space-between');
+        createDiv('Storage Usage').parent(labelRow).style('font-size','10px').style('color','#666');
+        createDiv('0 / 5 MB').id('storage-text').parent(labelRow).style('font-size','10px').style('color','#666');
+        
+        let track = createDiv('').parent(barContainer).style('width','100%').style('height','6px').style('background','#eee').style('border','1px solid #ccc').style('margin-top','2px');
+        createDiv('').id('storage-bar').parent(track).style('height','100%').style('background','#0072BC').style('width','0%').style('transition','width 0.3s');
+    }
+    
+    let bar = document.getElementById('storage-bar');
+    let txt = document.getElementById('storage-text');
+    if(bar) {
+        bar.style.width = pct + '%';
+        bar.style.background = pct > 90 ? '#e74c3c' : '#0072BC';
+    }
+    if(txt) txt.innerText = used.toFixed(2) + ' / 5.0 MB';
 }
 
 function createLibraryItemDOM(item) {
@@ -2479,6 +2686,7 @@ function openLibraryModal(item) {
                     let libGrid = document.getElementById('lib-grid');
                     if(libGrid) libGrid.innerHTML = ''; 
                     libraryItems.forEach(i => createLibraryItemDOM(i));
+                    updateStorageIndicator();
                     
                     modal.style.display = 'none';
                 }
@@ -2800,6 +3008,7 @@ let saveLayoutTimeout;
 function saveLayoutToLocalStorage(immediate = false) {
     clearTimeout(saveLayoutTimeout);
     const doSave = () => {
+        if (isLayoutExporting) return;
         const holder = document.getElementById('layout-canvas-holder');
         if(holder) {
             // Force sync textareas on immediate save (unload) to ensure latest text is captured
@@ -2810,8 +3019,18 @@ function saveLayoutToLocalStorage(immediate = false) {
 
             try {
                 localStorage.setItem('mem_idx_layout_content', holder.innerHTML);
-                // Silent save (no toast) as requested
-            } catch(e) { console.error("Layout save failed", e); }
+            } catch(e) { 
+                if (e.name === 'QuotaExceededError') {
+                    // Storage full: Log warning but don't crash or spam alerts
+                    console.warn("LocalStorage is full. Layout auto-save skipped.");
+                    if (!window.hasWarnedQuota) {
+                        showToast("Storage Full! Some changes may not save.");
+                        window.hasWarnedQuota = true;
+                    }
+                } else {
+                    console.error("Layout save failed", e);
+                }
+            }
         }
     };
 
@@ -2876,4 +3095,95 @@ function handleLayoutLoad(file) {
             setTimeout(() => createLayoutUI(), 10);
         }
     }
+}
+
+// --- HELPER: Resize Base64 Image ---
+function resizeBase64Img(base64, maxWidth, quality, callback) {
+    let img = new Image();
+    img.src = base64;
+    img.onload = function() {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+            h = Math.floor(h * (maxWidth / w));
+            w = maxWidth;
+        }
+        let canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = function() {
+        callback(base64); // Fallback to original if load fails
+    };
+}
+
+// --- HELPER: Create Temp Artboard Container for Export ---
+function createTempArtboardContainer(artboardBg) {
+    let holder = document.getElementById('layout-canvas-holder');
+    let abTop = artboardBg.offsetTop;
+    let abLeft = artboardBg.offsetLeft;
+    let abW = artboardBg.offsetWidth;
+    let abH = artboardBg.offsetHeight;
+
+    // Create container
+    let container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = abW + 'px';
+    container.style.height = abH + 'px';
+    container.style.backgroundColor = 'white'; 
+    container.style.overflow = 'hidden'; // Clip content outside artboard
+    container.style.zIndex = '-9999'; 
+    
+    // Clone Background
+    let bgClone = artboardBg.cloneNode(true);
+    bgClone.style.top = '0px';
+    bgClone.style.left = '0px';
+    bgClone.style.border = 'none'; 
+    bgClone.style.pointerEvents = 'none';
+    bgClone.querySelectorAll('.artboard-label').forEach(l => l.remove());
+    container.appendChild(bgClone);
+
+    // Clone Content
+    let children = holder.children;
+    for (let el of children) {
+        if (el.classList.contains('layout-page-bg') || el.id === 'layout-viewport' || el.tagName === 'BUTTON' || el.id === 'layout-ui-group') continue;
+        
+        let elTop = parseInt(el.style.top || 0);
+        let elLeft = parseInt(el.style.left || 0);
+        let elH = el.offsetHeight;
+        
+        // Check overlap with artboard
+        if (elTop + elH > abTop && elTop < abTop + abH) {
+            let clone = el.cloneNode(true);
+            clone.style.top = (elTop - abTop) + 'px';
+            clone.style.left = (elLeft - abLeft) + 'px';
+            clone.style.outline = 'none';
+            clone.querySelectorAll('.resize-handle, .rotate-handle, .move-handle').forEach(h => h.remove());
+            
+            // Fix Textarea values
+            let origTa = el.querySelector('textarea');
+            let cloneTa = clone.querySelector('textarea');
+            if (origTa && cloneTa) {
+                cloneTa.value = origTa.value;
+                cloneTa.innerHTML = origTa.value; 
+                
+                // AUTO-EXPAND: Resize text box to fit content for export
+                // This prevents text from being cropped if it overflows on screen
+                cloneTa.style.height = 'auto';
+                cloneTa.style.overflow = 'visible';
+                clone.style.height = 'auto';
+                if (origTa.scrollHeight > origTa.clientHeight) {
+                    cloneTa.style.height = origTa.scrollHeight + 'px';
+                    clone.style.height = origTa.scrollHeight + 'px';
+                }
+            }
+            container.appendChild(clone);
+        }
+    }
+    return container;
 }
