@@ -6,6 +6,8 @@ const cmykSketch = (p) => {
   let isAnimated = false;
   let isJittering = false; // Trạng thái animation jitter
   let needsUpdate = true; // OPTIMIZATION: Flag to only redraw when necessary
+  let gifLength = 30; // Frames for seamless GIF loop
+  let currentFile = null; // Store current file for re-processing
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
@@ -190,6 +192,7 @@ const cmykSketch = (p) => {
     // --- EXPOSE RESET FUNCTION GLOBALLY ---
     window.resetImageProcessor = () => {
       blobImg = null;
+      currentFile = null;
       showImage = false;
       isAnimated = false;
       p.background(255); // Clear canvas
@@ -265,6 +268,15 @@ const cmykSketch = (p) => {
     gfxFrame.clear();
     gfxFrame.image(imgBuffer, 0, 0);
 
+    // --- SEAMLESS ANIMATION SEEDING ---
+    // Ensure random values loop perfectly for GIF export
+    let seed = 12345;
+    if (isJittering) {
+      let loopFrame = p.frameCount % gifLength;
+      seed += p.floor(loopFrame / 6); // Change seed every 6 frames
+    }
+    p.randomSeed(seed);
+
     // --- DITHER MODE ---
     if (colorMode === 'dither') {
       drawDither();
@@ -313,13 +325,6 @@ const cmykSketch = (p) => {
     p.strokeWeight(cmykSettings.weight);
     p.textSize(baseFont);
     
-    // Jitter Animation Logic
-    let seed = 12345;
-    if (isJittering) {
-      seed += p.floor(p.frameCount / 6); // Thay đổi seed mỗi 6 frame (10fps jitter)
-    }
-    p.randomSeed(seed);
-
     p.textAlign(p.CENTER, p.CENTER);
 
     // OPTIMIZATION: Define offsets outside the loop to avoid GC churn
@@ -568,6 +573,76 @@ const cmykSketch = (p) => {
     }
   }
 
+  function loadAndProcessImage(file) {
+    if (!file) return;
+    currentFile = file;
+
+    // Show Spinner
+    const spinner = document.getElementById('loading-spinner');
+    if(spinner) spinner.style.display = 'block';
+
+    isAnimated = (file.type === 'image/gif');
+    // Toggle Speed Slider
+    const rowSpeed = p.select('#rowSpeed');
+    if(rowSpeed) rowSpeed.style('display', isAnimated ? 'flex' : 'none');
+
+    const url = URL.createObjectURL(file);
+    p.loadImage(url, img => {
+      blobImg = img;
+      
+      // Check Low Quality Setting
+      const sLowQuality = p.select('#chkLowQuality');
+      const isLowQuality = sLowQuality ? sLowQuality.checked() : false;
+
+      // FIX: Auto-rescale large images for performance
+      let w = img.width;
+      let h = img.height;
+      
+      // Resize based on dimensions to prevent canvas crashes with large images
+      const MAX_DIM = isLowQuality ? 600 : 1200; 
+      if (w > MAX_DIM || h > MAX_DIM) {
+          let ratio = w / h;
+          if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
+          else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
+          blobImg.resize(w, h); 
+      }
+
+      p.resizeCanvas(w, h);
+      
+      // Recreate buffers with new size
+      gfxFrame = createOptimizedGraphics(w, h);
+      
+      if (imgBuffer) imgBuffer.remove(); // Prevent memory leak
+      imgBuffer = p.createGraphics(w, h);
+      imgBuffer.pixelDensity(1);
+      imgBuffer.elt.getContext('2d', { willReadFrequently: true });
+      imgBuffer.clear();
+
+      // Show preview in sidebar
+      const previewBox = p.select('#preview-area');
+      if(previewBox) {
+        previewBox.html('');
+        let domImg = p.createImg(url, 'preview');
+        domImg.parent(previewBox);
+        domImg.style('max-width','100%'); domImg.style('max-height','100%');
+      }
+
+      // Auto enable animate for seamless experience
+      isJittering = true;
+      const sAnimate = p.select('#chkAnimate');
+      if(sAnimate) sAnimate.checked(true);
+
+      // Hide Spinner
+      if(spinner) spinner.style.display = 'none';
+      needsUpdate = true; // Trigger redraw
+      p.redraw(); // Force draw immediately
+    }, (e) => {
+      if(window.customAlert) window.customAlert("Failed to load image.");
+      else alert("Failed to load image.");
+      if(spinner) spinner.style.display = 'none';
+    });
+  }
+
   // --- UI BINDING (Connects to index.html controls) ---
   function bindExistingUI() {
     // 1. Image Loading
@@ -577,65 +652,7 @@ const cmykSketch = (p) => {
     if (btnLoad && fileIn) {
       btnLoad.mousePressed(() => { fileIn.elt.click(); });
       fileIn.changed((e) => {
-        const file = e.target.files[0];
-        if (file) {
-          // Show Spinner
-          const spinner = document.getElementById('loading-spinner');
-          if(spinner) spinner.style.display = 'block';
-
-          isAnimated = (file.type === 'image/gif');
-          // Toggle Speed Slider
-          const rowSpeed = p.select('#rowSpeed');
-          if(rowSpeed) rowSpeed.style('display', isAnimated ? 'flex' : 'none');
-
-          const url = URL.createObjectURL(file);
-          p.loadImage(url, img => {
-            blobImg = img;
-            
-            // FIX: Auto-rescale large images for performance
-            let w = img.width;
-            let h = img.height;
-            
-            // Only resize if file size > 2MB
-            if (file.size > 2 * 1024 * 1024) {
-                const MAX_DIM = 1000; // Limit max dimension to 1000px
-                if (w > MAX_DIM || h > MAX_DIM) {
-                    let ratio = w / h;
-                    if (w > h) { w = MAX_DIM; h = MAX_DIM / ratio; }
-                    else { h = MAX_DIM; w = MAX_DIM * ratio; }
-                    blobImg.resize(w, h); // Resize the p5 image object directly
-                }
-            }
-
-            p.resizeCanvas(w, h);
-            
-            // Recreate buffers with new size
-            gfxFrame = createOptimizedGraphics(w, h);
-            
-            imgBuffer = p.createGraphics(w, h);
-            imgBuffer.pixelDensity(1);
-            imgBuffer.elt.getContext('2d', { willReadFrequently: true });
-            imgBuffer.clear();
-
-            // Show preview in sidebar
-            const previewBox = p.select('#preview-area');
-            if(previewBox) {
-              previewBox.html('');
-              let domImg = p.createImg(url, 'preview');
-              domImg.parent(previewBox);
-              domImg.style('max-width','100%'); domImg.style('max-height','100%');
-            }
-
-            // Hide Spinner
-            if(spinner) spinner.style.display = 'none';
-            needsUpdate = true; // Trigger redraw
-            p.redraw(); // Force draw immediately
-          }, (e) => {
-            if(window.customAlert) window.customAlert("Failed to load image.");
-            else alert("Failed to load image.");
-            if(spinner) spinner.style.display = 'none';
-          });
-        }
+        loadAndProcessImage(e.target.files[0]);
       });
     }
 
@@ -677,6 +694,12 @@ const cmykSketch = (p) => {
       needsUpdate = true; 
     });
 
+    // Map "Low Quality" checkbox
+    const sLowQuality = p.select('#chkLowQuality');
+    if(sLowQuality) sLowQuality.changed(() => {
+      if(currentFile) loadAndProcessImage(currentFile);
+    });
+
     // --- NEW: Preset Dropdown ---
     const sPreset = p.select('#selAsciiPreset');
     if(sPreset) {
@@ -708,6 +731,7 @@ const cmykSketch = (p) => {
         
         // --- RESET STATE TO REDUCE LAG ---
         blobImg = null; // Quan trọng: Ngắt vòng lặp xử lý ảnh nặng
+        currentFile = null;
         showImage = false;
         isAnimated = false;
         
@@ -729,7 +753,7 @@ const cmykSketch = (p) => {
       btnDownload.mousePressed(() => {
         if (isJittering) {
           // Save GIF 30 frames (faster) instead of 120. 30 frames @ 30fps = 1 second loop.
-          p.saveGif("memory_jitter.gif", 30, { units: 'frames' });
+          p.saveGif("memory_jitter.gif", gifLength, { units: 'frames' });
         } else {
           p.save("memory_static.png");
           showStatus("IMAGE SAVED");
