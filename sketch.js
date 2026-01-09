@@ -2768,6 +2768,7 @@ function openLibraryModal(item) {
         // Setup Delete Button Logic
         let btnDelete = document.getElementById('btn-delete-card');
         if (btnDelete) {
+            btnDelete.style.display = ''; // Ensure visible for library items
             // Clone button to remove old event listeners from previous opens
             let newBtn = btnDelete.cloneNode(true);
             btnDelete.parentNode.replaceChild(newBtn, btnDelete);

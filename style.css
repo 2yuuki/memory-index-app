@@ -246,11 +246,7 @@ body::after {
   position: relative;
   z-index: 10000;
   overflow-y: auto;
-  background-color: var(--panel-bg);
-  background-image: url('assets/ASCII%20images/memory_jitter.gif');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #000;
 }
 
 .intro-content {
