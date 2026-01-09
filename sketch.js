@@ -14,6 +14,7 @@ let inkColorHex = "#000000";
 // --- DATA & BUFFERS ---
 let grid = [];      
 let colorGrid = []; 
+let textColorGrid = []; // Store text color per cell
 let pgColorLayer;   
 let pgTextLayer;    
 let pgGridLayer; 
@@ -86,7 +87,7 @@ let palette = [
     "?", "!", "I", "1", "i", "l", "÷", "×", "±", "∞", "≈", "≡", "♪", "♫"
 ];
 let paletteCMYK = [
-  "#00FFFF", "#FF00FF", "#FFFF00", "#000000"
+  "#00FFFF", "#FF00FF", "#FFFF00", "#000000", "#FFFFFF"
 ];
 let paletteStabilo = [
   "#FFFF00", "#FFCC00", "#FF9900", "#FF3333",
@@ -466,8 +467,7 @@ function drawSingleCellText(x, y) {
   let char = grid[y][x];
   if (char !== "") {
       pgTextLayer.textSize(userFontSize);
-      let purpleColor = color(inkColorHex);
-      let displayColor = purpleColor;
+      let displayColor = color(textColorGrid[y][x] || "#000000");
       let posX = cx + cellW/2; let posY = cy + cellH/2;
 
       pgTextLayer.noStroke();
@@ -479,13 +479,12 @@ function drawSingleCellText(x, y) {
 function updateLayerTextVisuals() {
   pgTextLayer.clear();
   pgTextLayer.textSize(userFontSize);
-  let purpleColor = color(inkColorHex);
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       let char = grid[y][x];
       if (char !== "") {
           let cx = x * cellW; let cy = y * cellH;
-          let displayColor = purpleColor;
+          let displayColor = color(textColorGrid[y][x] || "#000000");
           let posX = cx + cellW/2; let posY = cy + cellH/2;
           pgTextLayer.noStroke();
           pgTextLayer.fill(displayColor);
@@ -523,6 +522,11 @@ function mousePressed() {
   
   let mx = floor(constrain(m.x, 0, width-1) / cellW);
   let my = floor(constrain(m.y, 0, height-1) / cellH);
+
+  if (toolMode === "MAGIC_WAND") {
+      magicWandSelect(mx, my);
+      return;
+  }
 
   if (keyIsDown(SHIFT)) { toolMode = "SELECT"; selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; isShiftSelecting = true; return; }
   if (toolMode === "PASTE" && clipboard) { pasteClipboard(mx, my); saveState(); return; }
@@ -573,6 +577,7 @@ function handleInput(x, y) {
            }
       }
       grid[y][x] = charToDraw;
+      if (!isEraser) textColorGrid[y][x] = inkColorHex;
       drawSingleCellText(x, y);
     }
   } else if (mainMode === "COLOR") {
@@ -589,18 +594,48 @@ function handleInput(x, y) {
 
 // --- FLOOD FILL ---
 function floodFillAscii(x, y, newChar) {
-  let target = grid[y][x]; if (target === newChar) return;
-  let stack = [[x, y]];
-  while(stack.length > 0) {
-    let [cx, cy] = stack.pop();
-    if (grid[cy][cx] !== target) continue;
-    let lx = cx; while (lx > 0 && grid[cy][lx - 1] === target) lx--;
-    let rx = cx; while (rx < cols - 1 && grid[cy][rx + 1] === target) rx++;
-    for (let i = lx; i <= rx; i++) { grid[cy][i] = newChar; }
-    if (cy > 0) scanLine(lx, rx, cy - 1, target, stack);
-    if (cy < rows - 1) scanLine(lx, rx, cy + 1, target, stack);
+  let target = grid[y][x];
+  
+  // Case 1: Changing Character (Standard)
+  if (target !== newChar) {
+      let stack = [[x, y]];
+      while(stack.length > 0) {
+        let [cx, cy] = stack.pop();
+        if (grid[cy][cx] !== target) continue;
+        let lx = cx; while (lx > 0 && grid[cy][lx - 1] === target) lx--;
+        let rx = cx; while (rx < cols - 1 && grid[cy][rx + 1] === target) rx++;
+        for (let i = lx; i <= rx; i++) { grid[cy][i] = newChar; if(newChar !== "") textColorGrid[cy][i] = inkColorHex; }
+        if (cy > 0) scanLine(lx, rx, cy - 1, target, stack);
+        if (cy < rows - 1) scanLine(lx, rx, cy + 1, target, stack);
+      }
+      updateLayerTextVisuals(); saveState();
   }
-  updateLayerTextVisuals(); saveState();
+  // Case 2: Same Character, Different Color (Recolor)
+  else if (newChar !== "" && target === newChar) {
+      let stack = [[x, y]];
+      let visited = new Set();
+      const key = (c, r) => `${c},${r}`;
+      
+      while(stack.length > 0) {
+          let [cx, cy] = stack.pop();
+          if (visited.has(key(cx, cy))) continue;
+          
+          let lx = cx; while (lx > 0 && grid[cy][lx - 1] === target && !visited.has(key(lx - 1, cy))) lx--;
+          let rx = cx; while (rx < cols - 1 && grid[cy][rx + 1] === target && !visited.has(key(rx + 1, cy))) rx++;
+          
+          for (let i = lx; i <= rx; i++) { visited.add(key(i, cy)); textColorGrid[cy][i] = inkColorHex; }
+          
+          const scan = (row) => {
+              let spanAdded = false;
+              for (let i = lx; i <= rx; i++) {
+                  if (grid[row][i] === target && !visited.has(key(i, row))) { if (!spanAdded) { stack.push([i, row]); spanAdded = true; } } else spanAdded = false;
+              }
+          };
+          if (cy > 0) scan(cy - 1);
+          if (cy < rows - 1) scan(cy + 1);
+      }
+      updateLayerTextVisuals(); saveState();
+  }
 }
 function scanLine(lx, rx, y, target, stack) {
   let spanAdded = false;
@@ -622,6 +657,40 @@ function floodFillColor(x, y, newColor) {
   }
   updateLayerColorVisuals(); saveState();
 }
+
+function magicWandSelect(x, y) {
+  if (!isValidCell(x, y)) return;
+  let target = grid[y][x];
+  let minX = x, maxX = x, minY = y, maxY = y;
+  let stack = [[x, y]];
+  let visited = new Set();
+  const key = (c, r) => `${c},${r}`;
+  visited.add(key(x, y));
+
+  while(stack.length > 0) {
+    let [cx, cy] = stack.pop();
+    
+    if (cx < minX) minX = cx;
+    if (cx > maxX) maxX = cx;
+    if (cy < minY) minY = cy;
+    if (cy > maxY) maxY = cy;
+
+    let neighbors = [[cx+1, cy], [cx-1, cy], [cx, cy+1], [cx, cy-1]];
+    for(let n of neighbors) {
+        let nx = n[0], ny = n[1];
+        if(isValidCell(nx, ny) && !visited.has(key(nx, ny))) {
+            if(grid[ny][nx] === target) {
+                visited.add(key(nx, ny));
+                stack.push([nx, ny]);
+            }
+        }
+    }
+  }
+  selStart = {x: minX, y: minY};
+  selEnd = {x: maxX, y: maxY};
+  // We stay in MAGIC_WAND mode, but the selection overlay will appear
+}
+
 function scanLineColor(lx, rx, y, target, stack) {
   let spanAdded = false;
   for (let i = lx; i <= rx; i++) {
@@ -632,11 +701,11 @@ function scanLineColor(lx, rx, y, target, stack) {
 // --- UTILS ---
 function isValidCell(x, y) { return x >= 0 && x < cols && y >= 0 && y < rows; }
 function resetAllGrids() {
-  grid = []; colorGrid = [];
+  grid = []; colorGrid = []; textColorGrid = [];
   for (let y = 0; y < rows; y++) {
-    let r1 = []; let r2 = [];
-    for(let x=0; x<cols; x++) { r1.push(""); r2.push(null); }
-    grid.push(r1); colorGrid.push(r2);
+    let r1 = []; let r2 = []; let r3 = [];
+    for(let x=0; x<cols; x++) { r1.push(""); r2.push(null); r3.push("#000000"); }
+    grid.push(r1); colorGrid.push(r2); textColorGrid.push(r3);
   }
   if(pgColorLayer) pgColorLayer.clear(); if(pgTextLayer) pgTextLayer.clear();
 }
@@ -656,8 +725,8 @@ function getCorrectedMouse() {
 
 // --- CLIPBOARD (SKETCH) ---
 function saveState() {
-  let t = grid.map(r => [...r]); let c = colorGrid.map(r => [...r]);
-  history.push({ text: t, color: c }); 
+  let t = grid.map(r => [...r]); let c = colorGrid.map(r => [...r]); let tc = textColorGrid.map(r => [...r]);
+  history.push({ text: t, color: c, textColor: tc }); 
   if (history.length > MAX_HISTORY) history.shift();
   sketchRedoHistory = []; // Clear redo history on new action
   saveToLocalStorage();
@@ -667,7 +736,7 @@ function undo() {
     let currentState = history.pop();
     sketchRedoHistory.push(currentState);
     let s = history[history.length - 1];
-    grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]);
+    grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]); textColorGrid = s.textColor.map(r => [...r]);
     updateLayerColorVisuals(); updateLayerTextVisuals();
   }
 }
@@ -675,7 +744,7 @@ function redo() {
   if (sketchRedoHistory.length > 0) {
     let s = sketchRedoHistory.pop();
     history.push(s);
-    grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]);
+    grid = s.text.map(r => [...r]); colorGrid = s.color.map(r => [...r]); textColorGrid = s.textColor.map(r => [...r]);
     updateLayerColorVisuals(); updateLayerTextVisuals();
   }
 }
@@ -683,20 +752,20 @@ function copySelection() {
   if(!selStart || !selEnd) return;
   let x1 = min(selStart.x, selEnd.x); let y1 = min(selStart.y, selEnd.y);
   let x2 = max(selStart.x, selEnd.x); let y2 = max(selStart.y, selEnd.y);
-  let ct = [], cc = [];
+  let ct = [], cc = [], ctc = [];
   for (let y = y1; y <= y2; y++) {
-    let rt = [], rc = [];
-    for (let x = x1; x <= x2; x++) { rt.push(grid[y][x]); rc.push(colorGrid[y][x]); }
-    ct.push(rt); cc.push(rc);
+    let rt = [], rc = [], rtc = [];
+    for (let x = x1; x <= x2; x++) { rt.push(grid[y][x]); rc.push(colorGrid[y][x]); rtc.push(textColorGrid[y][x]); }
+    ct.push(rt); cc.push(rc); ctc.push(rtc);
   }
-  clipboard = { text: ct, color: cc };
+  clipboard = { text: ct, color: cc, textColor: ctc };
   let btn = select('#btnCopy'); if(btn) { btn.style('background', '#69f0ae'); setTimeout(()=>btn.style('background','#fff'),300); }
 }
 function cutSelection() {
   copySelection();
   let x1 = min(selStart.x, selEnd.x); let y1 = min(selStart.y, selEnd.y);
   let x2 = max(selStart.x, selEnd.x); let y2 = max(selStart.y, selEnd.y);
-  for (let y = y1; y <= y2; y++) { for (let x = x1; x <= x2; x++) { grid[y][x] = ""; setGridColor(x, y, null); } }
+  for (let y = y1; y <= y2; y++) { for (let x = x1; x <= x2; x++) { grid[y][x] = ""; textColorGrid[y][x] = "#000000"; setGridColor(x, y, null); } }
   updateLayerTextVisuals(); saveState(); toolMode="DRAW"; selStart=null;
 }
 function pasteClipboard(sx, sy) {
@@ -704,9 +773,9 @@ function pasteClipboard(sx, sy) {
   let cr = clipboard.text.length; let cc = clipboard.text[0].length;
   for(let r = 0; r < cr; r++) {
     for(let c = 0; c < cc; c++) {
-      let char = clipboard.text[r][c]; let col = clipboard.color[r][c];
+      let char = clipboard.text[r][c]; let col = clipboard.color[r][c]; let tcol = clipboard.textColor[r][c];
       let tx = sx + c; let ty = sy + r;
-      if (isValidCell(tx, ty)) { if (char !== "") grid[ty][tx] = char; setGridColor(tx, ty, col); }
+      if (isValidCell(tx, ty)) { if (char !== "") { grid[ty][tx] = char; textColorGrid[ty][tx] = tcol; } setGridColor(tx, ty, col); }
     }
   }
   updateLayerTextVisuals(); saveState();
@@ -745,15 +814,21 @@ function saveToLocalStorage(silent = false) {
     if (typeof grid !== 'undefined' && typeof colorGrid !== 'undefined') {
         localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
         localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
+        localStorage.setItem('mem_idx_textcolor', JSON.stringify(textColorGrid));
     }
   } catch(e) {}
 }
 function loadFromLocalStorage() {
   try {
-    let g = localStorage.getItem('mem_idx_grid'); let c = localStorage.getItem('mem_idx_color');
+    let g = localStorage.getItem('mem_idx_grid'); let c = localStorage.getItem('mem_idx_color'); let tc = localStorage.getItem('mem_idx_textcolor');
     if(g && c) {
-      let lg = JSON.parse(g); let lc = JSON.parse(c);
-      if(lg.length === rows && lg[0].length === cols) { grid = lg; colorGrid = lc; updateLayerTextVisuals(); updateLayerColorVisuals(); }
+      let lg = JSON.parse(g); let lc = JSON.parse(c); let ltc = tc ? JSON.parse(tc) : null;
+      if(lg.length === rows && lg[0].length === cols) { 
+          grid = lg; colorGrid = lc; 
+          if(ltc && ltc.length === rows && ltc[0].length === cols) textColorGrid = ltc;
+          else { textColorGrid = []; for(let y=0; y<rows; y++) { let r=[]; for(let x=0; x<cols; x++) r.push("#000000"); textColorGrid.push(r); } }
+          updateLayerTextVisuals(); updateLayerColorVisuals(); 
+      }
     }
   } catch(e) {}
 }
@@ -800,10 +875,11 @@ function createAlignControls() {
 
 function createUI() {
   let btnPencil = select('#btnPencil'); let btnEraser = select('#btnEraser'); let btnFill = select('#btnFill'); let btnClear = select('#btnClearSketch');
+  let btnMagicWand = select('#btnMagicWand');
   
   // --- VISUAL UPDATE HELPER FOR TOOLS ---
   const updateToolVisuals = () => {
-      [btnPencil, btnEraser, btnFill].forEach(b => {
+      [btnPencil, btnEraser, btnFill, btnMagicWand].forEach(b => {
           if(b) {
               b.style('background', '');
               b.style('color', '');
@@ -812,6 +888,7 @@ function createUI() {
       });
       let activeBtn = null;
       if (toolMode === "FILL") activeBtn = btnFill;
+      else if (toolMode === "MAGIC_WAND") activeBtn = btnMagicWand;
       else if (toolMode === "DRAW") {
           if (isEraser) activeBtn = btnEraser;
           else activeBtn = btnPencil;
@@ -824,12 +901,12 @@ function createUI() {
   };
   // --------------------------------------
 
-  if (btnPencil && btnEraser && btnFill && btnClear) {
+  if (btnPencil && btnEraser && btnFill && btnClear && btnMagicWand) {
       let sidebarNode = btnPencil.parent();
       let toolsGroup = sidebarNode;
       if (sidebarNode && !sidebarNode.classList.contains('tools-grid')) {
           toolsGroup = createDiv(''); toolsGroup.addClass('tools-grid'); sidebarNode.insertBefore(toolsGroup.elt, btnPencil.elt);
-          btnPencil.parent(toolsGroup); btnEraser.parent(toolsGroup); btnFill.parent(toolsGroup); btnClear.parent(toolsGroup);
+          btnPencil.parent(toolsGroup); btnEraser.parent(toolsGroup); btnFill.parent(toolsGroup); btnMagicWand.parent(toolsGroup); btnClear.parent(toolsGroup);
       }
 
       // Add Undo/Redo Buttons if not present
@@ -843,10 +920,20 @@ function createUI() {
   if(btnPencil) btnPencil.mousePressed(() => { toolMode = "DRAW"; isEraser = false; mainMode = "ASCII"; updateToolVisuals(); });
   if(btnEraser) btnEraser.mousePressed(() => { toolMode = "DRAW"; isEraser = true; updateToolVisuals(); });
   if(btnFill) btnFill.mousePressed(() => { toolMode = "FILL"; updateToolVisuals(); });
+  if(btnMagicWand) btnMagicWand.mousePressed(() => { toolMode = "MAGIC_WAND"; updateToolVisuals(); });
   if(btnClear) btnClear.mousePressed(() => { resetAllGrids(); saveState(); });
   
   // Initial call
   updateToolVisuals();
+
+  // --- BIND CUSTOM INK INPUT ---
+  let customInkInput = select('#customInkColor');
+  if(customInkInput) {
+      customInkInput.input(() => {
+          inkColorHex = customInkInput.value();
+          selectedColor = inkColorHex;
+      });
+  }
 
   let divAscii = select('#sketch-palette');
   if (!divAscii && sidebarDiv) { createDiv('2. Patterns').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); divAscii = createDiv('').parent(sidebarDiv).id('sketch-palette').class('palette-grid'); }
@@ -889,7 +976,7 @@ function createUI() {
 
     // CMYK Section
     createDiv('CMYK').parent(divColor).style('font-size','12px').style('font-weight','bold').style('margin-bottom','4px').style('margin-top','0px');
-    let cmykGrid = createDiv('').parent(divColor).class('palette-grid palette-ink').style('grid-template-columns', 'repeat(4, 1fr)').style('gap', '4px').style('margin-bottom', '10px');
+    let cmykGrid = createDiv('').parent(divColor).class('palette-grid palette-ink').style('grid-template-columns', 'repeat(5, 1fr)').style('gap', '4px').style('margin-bottom', '10px');
     paletteCMYK.forEach(col => {
       let btn = createButton('').parent(cmykGrid).style('width', '100%').style('height', '28px').style('background', col).style('border', '1px solid #ccc');
       btn.attribute('data-tooltip', `Select CMYK ${col}`);
@@ -898,10 +985,14 @@ function createUI() {
       if(col === selectedColor) setTimeout(() => highlightColorBtn(btn.elt), 0);
 
       btn.mousePressed(() => { 
-          selectedColor = col; 
+          selectedColor = col;
+          inkColorHex = col; // Update text color
+          if(customInkInput) customInkInput.value(col); // Sync input
+
           isColorEraser = false; 
-          if (toolMode !== "FILL") toolMode = "DRAW"; 
-          mainMode = "COLOR"; 
+          if (toolMode !== "FILL") toolMode = "DRAW";
+          // Note: We switch to COLOR mode for blocks, but text color is also updated.
+          mainMode = "ASCII"; 
           highlightColorBtn(btn.elt);
           updateToolVisuals();
       });
@@ -918,10 +1009,14 @@ function createUI() {
       if(col === selectedColor) setTimeout(() => highlightColorBtn(btn.elt), 0);
 
       btn.mousePressed(() => { 
-          selectedColor = col; 
+          selectedColor = col;
+          inkColorHex = col; // Update text color
+          if(customInkInput) customInkInput.value(col); // Sync input
+
           isColorEraser = false; 
           if (toolMode !== "FILL") toolMode = "DRAW"; 
-          mainMode = "COLOR"; 
+          // Note: We switch to COLOR mode for blocks, but text color is also updated.
+          mainMode = "ASCII"; 
           highlightColorBtn(btn.elt);
           updateToolVisuals();
       });

@@ -358,6 +358,10 @@
         </select>
       </div>
       <div class="mini-row">
+        <span>Char Color</span>
+        <input type="color" id="cfgCharColor" value="#000000" style="width:120px; height:24px; padding:0; border:none;">
+      </div>
+      <div class="mini-row">
         <span>Pattern</span>
         <input type="range" id="cfgWeight" min="0.5" max="3" step="0.1" value="2.5">
       </div>
@@ -402,6 +406,7 @@
           <button class="btn-retro" id="btnPencil" data-tooltip="Draw with selected character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMTEgMkwxMyA0TDEwIDdMNyA1TDExIDJaTTYgNkw5IDlMNCAxNEgyVjEyTDYgNloiLz48L3N2Zz4=" class="pixel-icon"> Pencil</button>
           <button class="btn-retro" id="btnEraser" data-tooltip="Erase characters."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAyTDExIDhMMTQuNSA0LjVMOC41IDJINVpNNSA0TDggN0w2IDlMMyA2TDUgNFoiLz48L3N2Zz4=" class="pixel-icon"> Eraser</button>
           <button class="btn-retro" id="btnFill" data-tooltip="Fill area with character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMSA0TDMgMTJIOS41TDEyIDRIMVpNMiA1SDExTDkuNSAxMUgzLjVMMiA1WiIvPjwvc3ZnPg==" class="pixel-icon"> Bucket</button>
+          <button class="btn-retro" id="btnMagicWand" data-tooltip="Select connected area of same character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNOSA1TDExIDdMNCAxNEwyIDEyTDkgNVpNMTIgNEwxMyA1TDE0IDRMMTMgM0wxMiA0Wk0xMCAyTDExIDNMMTIIDJMMTEgMUwxMCAyWk0xNCA2TDE1IDdMMTYgNkwxNSA1TDE0IDZaIi8+PC9zdmc+" class="pixel-icon"> Wand</button>
           <button class="btn-retro" id="btnClearSketch" data-tooltip="Clear the entire canvas."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAxSDExVjJIMUMxVjNIMVYySDVWMVpNMiA0SDE0VjE1SDJWNFpNMCA1VjEwSDFWNUgwWk0xNSA1VjEwSDE2VjVIMTVaIi8+PC9zdmc+" class="pixel-icon"> Clear</button>
         </div>
       </div>
@@ -425,6 +430,10 @@
         <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div style="margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-size:12px;">Custom Ink:</span>
+          <input type="color" id="customInkColor" value="#000000" style="width:60px; height:20px; border:none; padding:0;">
+        </div>
         <div id="sketch-colors" class="palette-grid palette-ink"></div>
       </div>
     </div>
