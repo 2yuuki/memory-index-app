@@ -44,10 +44,10 @@
 
   <!-- INTRO VIEW -->
   <div id="intro-view" class="intro-container">
-    <video autoplay loop muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; z-index: 0; pointer-events: none;">
+    <video autoplay loop muted playsinline class="intro-video-bg">
       <source src="assets/UI%20items/M2U00209_1.mp4" type="video/mp4">
     </video>
-      <div class="intro-content" style="position: relative; background-color: #fdfbf7; border: 2px solid #var(--text-pink); font-family: 'KK7VCROSDMono', monospace; z-index: 1;">
+      <div class="intro-content intro-paper-content">
         <div class="paper-lines"></div>
         <div class="margin-line"></div>
         <div style="position: relative; z-index: 1;">
@@ -68,7 +68,7 @@
   <div class="divider"></div>
 
   <div style="max-width:1200px; margin:0 auto;">
-    <h2 style="color: var(--text-pink); font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h2 class="intro-heading-2">
       <!-- <span class="lang-vi">Lời nói đầu</span> -->
       <span class="lang-en">Foreword</span>
     </h2>
@@ -115,17 +115,17 @@
     </div>
   </div>
 
-  <div style="display:flex; flex-direction:column; gap:20px; margin: 30px auto; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
-    <div style="display:flex; flex-wrap:wrap; justify-content:center; align-items: flex-end; gap:20px;">
-      <img src="assets/document/image%20(1).png" style="width: 30%; height: auto; border: 2px solid #0072BC; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);">
-      <img src="assets/document/image.png" style="width: 30%; height: auto; border: 2px solid #0072BC; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);">
-      <div style="width: 30%; font-family: 'KK7VCROSDMono', monospace; font-size: 14px; color: #0072BC;">Users' using The Memory Index Tools to create ASCII drawings</div>
+  <div class="user-results-container">
+    <div class="user-result-row">
+      <img src="assets/document/image%20(1).png" class="user-result-img">
+      <img src="assets/document/image.png" class="user-result-img">
+      <div class="user-result-caption">Users' using The Memory Index Tools to create ASCII drawings</div>
     </div>
     
-    <div style="display:flex; flex-wrap:wrap; justify-content:center; align-items: flex-end; gap:20px;">
-      <img src="assets/document/IMG_2591.jpg" style="width: 30%; height: auto; border: 2px solid #0072BC; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);">
-      <img src="assets/document/IMG_2593.jpg" style="width: 30%; height: auto; border: 2px solid #0072BC; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);">
-      <div style="width: 30%; font-family: 'KK7VCROSDMono', monospace; font-size: 14px; color: #0072BC;">Then the results will be printed out by Nguyen Thu Trang (yuuki) to display at the RMIT Major Project Showcase</div>
+    <div class="user-result-row">
+      <img src="assets/document/IMG_2591.jpg" class="user-result-img">
+      <img src="assets/document/IMG_2593.jpg" class="user-result-img">
+      <div class="user-result-caption">Then the results will be printed out by Nguyen Thu Trang (yuuki) to display at the RMIT Major Project Showcase</div>
     </div>
   </div>
 
@@ -133,12 +133,12 @@
 
   <div style="max-width:1200px; margin:0 auto;"> <!-- Main Content Container -->
 
-    <h2 style="color: var(--text-pink); font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h2 class="intro-heading-2">
       <span class="lang-vi hidden">I. Tổng quan dự án</span>
       <span class="lang-en">I. Project Overview</span>
     </h2>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">1. Tuyên ngôn ý tưởng</span>
       <span class="lang-en">1. Concept Statement</span>
     </h3>
@@ -156,7 +156,7 @@
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">2. Tóm tắt</span>
       <span class="lang-en">2. Abstract</span>
     </h3>
@@ -177,7 +177,7 @@
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">3. Câu hỏi dự án</span>
       <span class="lang-en">3. Project Question</span>
     </h3>
@@ -200,7 +200,7 @@
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">4. Khán giả mục tiêu</span>
       <span class="lang-en">4. Target Audience</span>
     </h3>
@@ -219,12 +219,12 @@
 
     <div class="divider"></div>
 
-    <h2 style="color: var(--text-pink); font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h2 class="intro-heading-2">
       <span class="lang-vi hidden">II. Thực hành sáng tạo và Phát triển </span>
       <span class="lang-en">II. Creative Practice and Iterative Development</span>
     </h2>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">1. Tuần 0–2: Định hướng hình ảnh và Thử nghiệm ban đầu</span>
       <span class="lang-en">1. Week 0–2: Visual Direction and Early Experiments</span>
     </h3>
@@ -241,7 +241,7 @@
       </span>
     </p>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h3 class="intro-heading-3">
       <span class="lang-vi hidden">2. Tuần 3: Phản ánh cá nhân và Thử nghiệm tương tác</span>
       <span class="lang-en">2. Week 3: Personal Reflection and Interaction Testing</span>
     </h3>
@@ -361,36 +361,47 @@
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'Bianzhidai', monospace;">3. Week 4: Image Processing and Prototype Evaluation</h3>
+    <h3 class="intro-heading-3" style="font-family: 'Bianzhidai', monospace;">3. Week 4: Image Processing and Prototype Evaluation</h3>
     <p class="intro-desc">
       Week 4 focused on image-processing techniques and overall UX evaluation. I prototyped a print-emulation workflow where images were broken into shadow, midtone, and highlight layers mapped to CMYK or spot colors. Although watercolor-style effects were explored, performance constraints led to a softer, textured alternative. At this stage, I also critically reviewed the prototype and identified issues with visual noise and unclear user flow.
     </p>
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'Bianzhidai', monospace;">4. Week 5: ASCII Filter and Visual Identity Refinement</h3>
+    <h3 class="intro-heading-3" style="font-family: 'Bianzhidai', monospace;">4. Week 5: ASCII Filter and Visual Identity Refinement</h3>
     <p class="intro-desc">
       In Week 5, I discovered references that combined ASCII threshold techniques with marker-like textures, which strongly resonated with my childhood memories of using school markers. This inspired the development of a marker-like ASCII filter. I also conducted extensive visual mockups in Adobe Illustrator to strengthen the Vietnamese nostalgic identity and refine the balance between net.art aesthetics and cultural familiarity.
     </p>
 
     <div class="divider"></div>
 
-    <h3 style="color:#333; font-size:18px; margin-top:20px; margin-bottom:5px; font-family: 'Bianzhidai', monospace;">5. Week 6: ASCII Painting Tool and Print Testing</h3>
+    <h3 class="intro-heading-3" style="font-family: 'Bianzhidai', monospace;">5. Week 6: ASCII Painting Tool and Print Testing</h3>
     <p class="intro-desc">
       Week 6 marked the development of the ASCII painting tool. Instead of freehand drawing, users place ASCII characters into a grid, similar to building with LEGO. Informal user testing with friends showed that this interaction was calming and accessible. Finally, I conducted print tests on student notebook paper, handwriting practice paper, and traditional Vietnamese Dó paper. While Dó paper produced beautiful textures, student notebook paper provided the best balance between clarity and nostalgia.
     </p>
 
     <div class="divider"></div>
 
-    <h2 style="color: var(--text-pink); font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px; font-family: 'Bianzhidai', monospace;">VI. Users' Results</h2>
+    <h2 class="intro-heading-2" style="font-family: 'Bianzhidai', monospace;">VI. Users' Results</h2>
     <p class="intro-desc">
       A collection of memory artifacts generated by users.
     </p>
     
-    <div id="users-results-gallery" style="position:relative; width:100%; height:600px; border: 1px dashed #0072BC; overflow:hidden; margin-top:20px; background-color: #f4f4f4; border-radius: 4px;">
-      <!-- Images will be injected here by JS -->
-      <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#999; font-size:12px; pointer-events:none;">
-        (The Users' Memories Gallery)
+    <!-- Controls for Upload -->
+    <div class="upload-controls">
+        <input type="file" id="gallery-upload-input" accept="image/*" style="display: none;">
+        <button class="btn-retro" onclick="document.getElementById('gallery-upload-input').click()" style="width: auto; display: inline-block; padding: 6px 12px;">+ Upload Your Result</button>
+    </div>
+
+    <div id="users-results-gallery" class="gallery-container">
+      <button id="gallery-prev" class="btn-retro gallery-nav-btn gallery-prev">&lt;</button>
+      <div id="gallery-image-container" class="gallery-image-wrapper">
+          <img id="gallery-current-img" class="gallery-img" src="">
+          <div id="gallery-placeholder" class="gallery-placeholder">(Loading Gallery...)</div>
+      </div>
+      <button id="gallery-next" class="btn-retro gallery-nav-btn gallery-next">&gt;</button>
+      <div class="gallery-counter-box">
+        <span id="gallery-counter"></span>
       </div>
     </div>
 
@@ -398,12 +409,12 @@
 
     <div class="divider"></div>
 
-    <h2 style="color: var(--text-pink); font-size:22px; margin-top:30px; margin-bottom:10px; border-bottom:2px solid #0072BC; padding-bottom:5px; font-family: 'KK7VCROSDMono', monospace;">
+    <h2 class="intro-heading-2">
       <span class="lang-vi hidden">III. Tài liệu tham khảo</span>
       <span class="lang-en">V. References</span>
       <!-- <span class="lang-vi">III. Tài liệu tham khảo</span> -->
     </h2>
-    <ul class="intro-desc" style="font-size:13px; line-height:1.6; padding-left: 20px; list-style-type: disc;">
+    <ul class="intro-desc intro-list">
       <li style="margin-bottom: 8px;">Dunne, A & Raby, F 2013, Speculative Everything: Design, Fiction, and Social Dreaming, The MIT Press, Cambridge, MA.</li>
       <li style="margin-bottom: 8px;">Lialina, O 1996, My Boyfriend Came Back from the War, online artwork, viewed 5 November 2025, http://www.teleportacia.org/war/.</li>
       <li style="margin-bottom: 8px;">Lozano-Hemmer, R 2006– , Pulse series, installation, viewed 5 November 2025, https://www.lozano-hemmer.com/pulse_series.php.</li>
@@ -718,10 +729,17 @@
       }
   });
 
-  // --- Users' Results Gallery Logic ---
+  // --- Users' Results Gallery Logic (Carousel) ---
   document.addEventListener('DOMContentLoaded', () => {
     const gallery = document.getElementById('users-results-gallery');
     if(!gallery) return;
+
+    const container = document.getElementById('gallery-image-container');
+    const placeholder = document.getElementById('gallery-placeholder');
+    const counter = document.getElementById('gallery-counter');
+    const btnPrev = document.getElementById('gallery-prev');
+    const btnNext = document.getElementById('gallery-next');
+    const uploadInput = document.getElementById('gallery-upload-input');
 
     // Static list of known assets to avoid 404 spam in the console.
     const basePath = "assets/users' results/";
@@ -745,105 +763,107 @@
       "stabilo_universal (4).png"
     ];
 
-    potentialFiles.forEach((filename) => {
-      const img = document.createElement('img');
-      img.src = encodeURI(basePath + filename);
-      img.style.position = 'absolute';
-      img.style.width = '180px'; 
-      img.style.height = 'auto';
-      img.style.border = '4px solid #fff';
-      img.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-      img.style.cursor = 'grab';
-      img.style.transition = 'transform 0.3s ease, z-index 0s';
-      img.style.display = 'none'; // Hidden until loaded
-      
-      img.onload = () => {
-          img.style.display = 'block';
-          // Random Position
-          const rLeft = Math.random() * 80; // 0-80%
-          const rTop = Math.random() * 70;  // 0-70%
-          const rRot = Math.random() * 40 - 20; // -20 to 20 deg
-          
-          img.style.left = rLeft + '%';
-          img.style.top = rTop + '%';
-          img.style.transform = `rotate(${rRot}deg)`;
-          img.style.zIndex = Math.floor(Math.random() * 50);
-          
-          // Interaction
-          let isDragging = false;
+    let images = potentialFiles.map(f => encodeURI(basePath + f));
+    let currentIndex = 0;
 
-          img.onmouseenter = () => { 
-              if(isDragging) return;
-              img.style.zIndex = 999; 
-              img.style.transform = 'scale(1.2) rotate(0deg)'; 
-          };
-          img.onmouseleave = () => { 
-              if(isDragging) return;
-              img.style.zIndex = Math.floor(Math.random() * 50); 
-              img.style.transform = `rotate(${rRot}deg)`; 
-          };
-          
-          img.onmousedown = (e) => {
-              e.preventDefault();
-              isDragging = false;
-              const startX = e.clientX;
-              const startY = e.clientY;
-              const startLeft = img.offsetLeft;
-              const startTop = img.offsetTop;
-              
-              img.style.cursor = 'grabbing';
-              img.style.transition = 'none'; // Disable transition for smooth drag
-              img.style.zIndex = 1000;
+    // Track the currently visible image element
+    let currentActiveImg = document.getElementById('gallery-current-img');
+    
+    function updateGallery(direction = 1) {
+        if (images.length === 0) {
+            if(placeholder) placeholder.style.display = 'block';
+            if(currentActiveImg) currentActiveImg.style.display = 'none';
+            if(counter) counter.innerText = "0 / 0";
+            return;
+        }
 
-              const onMouseMove = (ev) => {
-                  const dx = ev.clientX - startX;
-                  const dy = ev.clientY - startY;
-                  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
-                  img.style.left = (startLeft + dx) + 'px';
-                  img.style.top = (startTop + dy) + 'px';
-              };
+        if(placeholder) placeholder.style.display = 'none';
+        
+        // 1. Create New Image
+        const nextImg = document.createElement('img');
+        nextImg.src = images[currentIndex];
+        nextImg.className = 'gallery-img';
+        
+        // Position off-screen based on direction
+        // direction 1 (Next): Enter from Right (translate 150%), Exit to Left
+        // direction -1 (Prev): Enter from Left (translate -250%), Exit to Right
+        const startX = direction > 0 ? '150%' : '-250%';
+        const endX = direction > 0 ? '-250%' : '150%';
+        
+        nextImg.style.transform = `translate(${startX}, -50%)`;
+        nextImg.style.opacity = '0';
+        
+        container.appendChild(nextImg);
+        
+        // 2. Animate In (Next Frame)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                nextImg.style.transform = 'translate(-50%, -50%)';
+                nextImg.style.opacity = '1';
+                
+                // 3. Animate Out (Old Image)
+                if (currentActiveImg) {
+                    const oldImg = currentActiveImg;
+                    oldImg.style.transform = `translate(${endX}, -50%)`;
+                    oldImg.style.opacity = '0';
+                    setTimeout(() => { if(oldImg.parentNode) oldImg.remove(); }, 500);
+                }
+                currentActiveImg = nextImg;
+            });
+        });
 
-              const onMouseUp = (ev) => {
-                  document.removeEventListener('mousemove', onMouseMove);
-                  document.removeEventListener('mouseup', onMouseUp);
-                  img.style.cursor = 'grab';
-                  img.style.transition = 'transform 0.3s ease, z-index 0s';
+        if(counter) counter.innerText = `${currentIndex + 1} / ${images.length}`;
+    }
 
-                  if (!isDragging) {
-                      // Click action
-                      const modal = document.getElementById('thought-card-modal');
-                      const modalImg = document.getElementById('thought-card-img');
-                      const modalHtml = document.getElementById('thought-card-html');
-                      const btnDelete = document.getElementById('btn-delete-card');
-                      if(modal && modalImg) {
-                          modalImg.src = img.src;
-                          modalImg.style.display = 'block';
-                          if(modalHtml) modalHtml.style.display = 'none';
-                          if(btnDelete) btnDelete.style.display = 'none';
-                          modal.style.display = 'flex';
-                      }
-                  }
-                  
-                  isDragging = false;
-                  
-                  // Check if mouse left element during drag
-                  const rect = img.getBoundingClientRect();
-                  if (ev.clientX < rect.left || ev.clientX > rect.right || ev.clientY < rect.top || ev.clientY > rect.bottom) {
-                      img.style.zIndex = Math.floor(Math.random() * 50); 
-                      img.style.transform = `rotate(${rRot}deg)`;
-                  }
-              };
+    if(btnPrev) btnPrev.onclick = () => {
+        if (images.length > 0) {
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            updateGallery(-1);
+        }
+    };
 
-              document.addEventListener('mousemove', onMouseMove);
-              document.addEventListener('mouseup', onMouseUp);
-          };
-          gallery.appendChild(img);
-      };
-      
-      img.onerror = () => { 
-          // File doesn't exist, do nothing (img is not appended)
-      };
-    });
+    if(btnNext) btnNext.onclick = () => {
+        if (images.length > 0) {
+            currentIndex = (currentIndex + 1) % images.length;
+            updateGallery(1);
+        }
+    };
+
+    // Auto-play
+    let autoPlay = setInterval(() => {
+        if(images.length > 0 && document.getElementById('intro-view').style.display !== 'none') {
+             currentIndex = (currentIndex + 1) % images.length;
+             updateGallery(1);
+        }
+    }, 3000);
+
+    gallery.onmouseenter = () => clearInterval(autoPlay);
+    gallery.onmouseleave = () => {
+        autoPlay = setInterval(() => {
+            if(images.length > 0 && document.getElementById('intro-view').style.display !== 'none') {
+                 currentIndex = (currentIndex + 1) % images.length;
+                 updateGallery(1);
+            }
+        }, 3000);
+    };
+
+    if(uploadInput) {
+        uploadInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    images.unshift(ev.target.result);
+                    currentIndex = 0;
+                    updateGallery(1);
+                    alert("Image uploaded to gallery view!");
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+
+    updateGallery(1);
   });
 
   // --- LANGUAGE TOGGLE LOGIC ---
