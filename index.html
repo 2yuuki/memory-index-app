@@ -473,6 +473,7 @@
           <option value="mono">Monochrome</option>
           <option value="dither">Dither</option>
           <option value="image">Original</option>
+          <option value="brightness">Brightness</option>
         </select>
       </div>
       <div class="mini-row">
@@ -492,7 +493,6 @@
         <label class="chk"><input type="checkbox" id="chkInvert" checked> Invert Chars</label>
         <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
         <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
-        <label class="chk"><input type="checkbox" id="chkLowQuality"> Low Quality</label>
       </div>
 
       <button class="btn-retro" id="cmykSaveBtn" style="margin-top:10px;" data-tooltip="Save processed image to library.">+ add to library</button>
@@ -595,7 +595,7 @@
   <!-- GLOBAL LIBRARY (Pinned) -->
   <div id="global-lib-btn" onclick="toggleGlobalLibrary()" data-tooltip="Open Memory Archive.">LIBRARY</div>
   <div id="global-lib-panel">
-    <div class="section-title">Memories Archieve</div>
+    <div class="section-title">Memories Archive</div>
     <div id="lib-grid" class="lib-grid"></div>
   </div>
 
@@ -739,10 +739,10 @@
       "ty_pic02.svg",
       "ty_pic03.svg",
       "ty_pic04.jpeg",
-      "../memory_static (1).png",
-      "../memory_static.png",
-      "../stabilo_universal (2).png",
-      "../stabilo_universal (4).png"
+      "memory_static (1).png",
+      "memory_static.png",
+      "stabilo_universal (2).png",
+      "stabilo_universal (4).png"
     ];
 
     potentialFiles.forEach((filename) => {

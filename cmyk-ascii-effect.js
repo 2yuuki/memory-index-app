@@ -16,6 +16,7 @@ const cmykSketch = (p) => {
   // Colors
   let cMono, cDark, cLight, bgColor;
   let stabiloPalette, cmykPalette;
+  let cHeat1, cHeat2, cHeat3;
   
   // CMYK Stroke Settings
   let cmykSettings = {
@@ -135,6 +136,11 @@ const cmykSketch = (p) => {
     cLight = p.color(255, 255, 255);
     bgColor = p.color("#ffffff");
     
+    // Heatmap Colors for Brightness Mode
+    cHeat1 = p.color(20, 0, 50);    // Dark Purple
+    cHeat2 = p.color(220, 20, 60);  // Crimson
+    cHeat3 = p.color(255, 220, 0);  // Gold
+
     // Color Presets
     stabiloPalette = [
       p.color(60, 190, 185),   // Turquoise
@@ -433,6 +439,14 @@ const cmykSketch = (p) => {
               p.stroke(0, finalAlpha); // Black ink
             } else if (colorMode === 'image') {
               p.stroke(rr, gg, bb, finalAlpha); // Original pixel color
+            } else if (colorMode === 'brightness') {
+              // Dynamic color based on luminance (Heatmap style)
+              let t = lum / 255;
+              let c;
+              if (t < 0.5) c = p.lerpColor(cHeat1, cHeat2, t * 2);
+              else c = p.lerpColor(cHeat2, cHeat3, (t - 0.5) * 2);
+              c.setAlpha(finalAlpha);
+              p.stroke(c);
             } else {
               p.stroke(palette[layer]); // CMYK/Stabilo ink
             }
@@ -590,16 +604,12 @@ const cmykSketch = (p) => {
     p.loadImage(url, img => {
       blobImg = img;
       
-      // Check Low Quality Setting
-      const sLowQuality = p.select('#chkLowQuality');
-      const isLowQuality = sLowQuality ? sLowQuality.checked() : false;
-
       // FIX: Auto-rescale large images for performance
       let w = img.width;
       let h = img.height;
       
       // Resize based on dimensions to prevent canvas crashes with large images
-      const MAX_DIM = isLowQuality ? 600 : 1200; 
+      const MAX_DIM = 800; // Automatic compression for performance
       if (w > MAX_DIM || h > MAX_DIM) {
           let ratio = w / h;
           if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
@@ -692,12 +702,6 @@ const cmykSketch = (p) => {
     if(sAnimate) sAnimate.changed(() => { 
       isJittering = sAnimate.checked(); 
       needsUpdate = true; 
-    });
-
-    // Map "Low Quality" checkbox
-    const sLowQuality = p.select('#chkLowQuality');
-    if(sLowQuality) sLowQuality.changed(() => {
-      if(currentFile) loadAndProcessImage(currentFile);
     });
 
     // --- NEW: Preset Dropdown ---

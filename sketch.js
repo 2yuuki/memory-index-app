@@ -22,6 +22,69 @@ let templateImg;
 let libraryItems = []; // Store library data
 let draggedLibItem = null; // Track dragged library item
 
+// --- INDEXEDDB HELPERS ---
+const DB_NAME = 'MemoryIndexDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'library';
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = (event) => reject("IndexedDB error: " + event.target.error);
+    request.onsuccess = (event) => resolve(event.target.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+  });
+}
+
+async function addItemToDB(item) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.add(item);
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function getAllItemsFromDB() {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function deleteItemFromDB(id) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearDB() {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.clear();
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
 // --- STATE ---
 let mainMode = "ASCII"; 
 let toolMode = "DRAW";    
@@ -2585,10 +2648,10 @@ async function exportAllArtboardsPDF() {
 }
 
 // --- GLOBAL: ADD TO LIBRARY ---
-window.addToLibrary = function(p5Img, name, extraData) {
-  // Optimization: Resize image to prevent LocalStorage Quota Exceeded
-  // Original canvas is large (1600x2400), we scale it down for the library.
-  let targetW = 300; // Reduced from 400 to save space
+window.addToLibrary = async function(p5Img, name, extraData) {
+  // Use IndexedDB, so we can store higher resolution images
+  // Increase target width significantly or use original if reasonable
+  let targetW = 2400; 
   let scaleFactor = targetW / p5Img.width;
   if (scaleFactor > 1) scaleFactor = 1; 
   
@@ -2608,7 +2671,7 @@ window.addToLibrary = function(p5Img, name, extraData) {
   let src = p5Img.canvas || p5Img.elt || p5Img;
   ctx.drawImage(src, 0, 0, w, h);
   
-  let dataURL = tempCanvas.toDataURL('image/jpeg', 0.3); // Reduced quality from 0.5 to 0.3
+  let dataURL = tempCanvas.toDataURL('image/jpeg', 0.95); // High quality
   
   let newItem = {
       id: Date.now(),
@@ -2620,9 +2683,8 @@ window.addToLibrary = function(p5Img, name, extraData) {
   libraryItems.push(newItem);
   
   try {
-      saveLibrary();
+      await addItemToDB(newItem);
       createLibraryItemDOM(newItem);
-      updateStorageIndicator(); // Update UI
       // Animation feedback on Global Library Button
       let btn = document.getElementById('global-lib-btn');
       if(btn) {
@@ -2635,30 +2697,23 @@ window.addToLibrary = function(p5Img, name, extraData) {
       // If save failed, remove from memory to keep state consistent
       libraryItems.pop();
       console.error("Failed to add to library:", e);
-      alert("Failed to save to library. Storage might be full.");
+      alert("Failed to save to library.");
   }
 };
 
 function saveLibrary() {
-    try {
-        localStorage.setItem('mem_idx_library', JSON.stringify(libraryItems));
-    } catch(e) { 
-        console.error("Library save failed (quota exceeded?)", e); 
-        alert("Memory Archive is full! Please delete some items to save new ones.");
-        throw e; // Propagate error to caller
-    }
+    // Deprecated: We now save per item using addItemToDB
+    // Kept empty to prevent errors if called elsewhere
 }
 
-function loadLibrary() {
+async function loadLibrary() {
     try {
-        let data = localStorage.getItem('mem_idx_library');
-        if (data) {
-            libraryItems = JSON.parse(data);
-            let libGrid = document.getElementById('lib-grid');
-            if(libGrid) libGrid.innerHTML = ''; // Clear existing
-            libraryItems.forEach(item => createLibraryItemDOM(item));
-            updateStorageIndicator();
-        }
+        // Load from IndexedDB
+        libraryItems = await getAllItemsFromDB();
+        
+        let libGrid = document.getElementById('lib-grid');
+        if(libGrid) libGrid.innerHTML = ''; // Clear existing
+        libraryItems.forEach(item => createLibraryItemDOM(item));
         
         // Add Clear Button if not exists
         let panel = document.getElementById('global-lib-panel');
@@ -2675,48 +2730,14 @@ function loadLibrary() {
             btn.mousePressed(() => {
                 if (confirm('Delete all saved memories? This cannot be undone.')) {
                     libraryItems = [];
-                    localStorage.removeItem('mem_idx_library');
-                    let libGrid = document.getElementById('lib-grid');
-                    if (libGrid) libGrid.innerHTML = '';
-                    updateStorageIndicator();
+                    clearDB().then(() => {
+                        let libGrid = document.getElementById('lib-grid');
+                        if (libGrid) libGrid.innerHTML = '';
+                    });
                 }
             });
         }
     } catch(e) { console.error("Library load failed", e); }
-}
-
-function updateStorageIndicator() {
-    let panel = document.getElementById('global-lib-panel');
-    if (!panel) return;
-    
-    // Calculate usage in MB
-    let used = 0;
-    for(let key in localStorage) {
-        if(localStorage.hasOwnProperty(key)) {
-            used += ((localStorage[key].length * 2) / 1024 / 1024);
-        }
-    }
-    let total = 5; // Approx 5MB limit for LocalStorage
-    let pct = Math.min(100, (used / total) * 100);
-    
-    let barContainer = document.getElementById('lib-storage-container');
-    if (!barContainer) {
-        barContainer = createDiv('').id('lib-storage-container').parent(panel).style('margin-top','15px').style('width','100%');
-        let labelRow = createDiv('').parent(barContainer).style('display','flex').style('justify-content','space-between');
-        createDiv('Storage Usage').parent(labelRow).style('font-size','10px').style('color','#666');
-        createDiv('0 / 5 MB').id('storage-text').parent(labelRow).style('font-size','10px').style('color','#666');
-        
-        let track = createDiv('').parent(barContainer).style('width','100%').style('height','6px').style('background','#eee').style('border','1px solid #ccc').style('margin-top','2px');
-        createDiv('').id('storage-bar').parent(track).style('height','100%').style('background','#0072BC').style('width','0%').style('transition','width 0.3s');
-    }
-    
-    let bar = document.getElementById('storage-bar');
-    let txt = document.getElementById('storage-text');
-    if(bar) {
-        bar.style.width = pct + '%';
-        bar.style.background = pct > 90 ? '#e74c3c' : '#0072BC';
-    }
-    if(txt) txt.innerText = used.toFixed(2) + ' / 5.0 MB';
 }
 
 function createLibraryItemDOM(item) {
@@ -2728,6 +2749,20 @@ function createLibraryItemDOM(item) {
   
   div.elt.onclick = () => { 
       openLibraryModal(item);
+  };
+  
+  div.elt.oncontextmenu = (e) => {
+      e.preventDefault();
+      let downloadLink = document.createElement('a');
+      downloadLink.href = item.dataURL;
+      let fileName = item.name || 'memory_item';
+      if (!/\.(jpg|jpeg|png|gif)$/i.test(fileName)) {
+          fileName += '.jpg';
+      }
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
   };
   
   div.elt.draggable = true;
@@ -2776,15 +2811,14 @@ function openLibraryModal(item) {
             newBtn.onclick = () => {
                 if(confirm("Are you sure you want to delete this memory?")) {
                     libraryItems = libraryItems.filter(i => i.id !== item.id);
-                    saveLibrary();
-                    
-                    // Refresh Grid
-                    let libGrid = document.getElementById('lib-grid');
-                    if(libGrid) libGrid.innerHTML = ''; 
-                    libraryItems.forEach(i => createLibraryItemDOM(i));
-                    updateStorageIndicator();
-                    
-                    modal.style.display = 'none';
+                    deleteItemFromDB(item.id).then(() => {
+                        // Refresh Grid
+                        let libGrid = document.getElementById('lib-grid');
+                        if(libGrid) libGrid.innerHTML = ''; 
+                        libraryItems.forEach(i => createLibraryItemDOM(i));
+                        
+                        modal.style.display = 'none';
+                    });
                 }
             };
         }
