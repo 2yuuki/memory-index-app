@@ -1179,11 +1179,14 @@ function exportSVG() {
   }
   for(let y=b.minR; y<=b.maxR; y++) {
       for(let x=b.minC; x<=b.maxC; x++) {
-          let char = grid[y][x]; 
-          if(char !== "") { 
-              let fill = inkColorHex; let safe = char.replace(/&/g, '&amp;').replace(/</g, '&lt;'); 
-              svg += `<text x="${(x - b.minC)*cellW+cellW/2}" y="${(y - b.minR)*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`; 
-          } 
+          let char = grid[y][x];
+          if (char !== "") {
+              // use per-cell text color when available, otherwise fallback to current ink color
+              let fill = (textColorGrid[y] && textColorGrid[y][x]) ? textColorGrid[y][x] : inkColorHex;
+              // escape common XML entities
+              let safe = String(char).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              svg += `<text x="${(x - b.minC)*cellW+cellW/2}" y="${(y - b.minR)*cellH+cellH/2}" font-family="monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${fill}">${safe}</text>`;
+          }
       }
   }
   svg += `</svg>`; let blob = new Blob([svg], {type: "image/svg+xml"}); let url = URL.createObjectURL(blob); let a = document.createElement("a"); a.href = url; a.download = "drawing.svg"; a.click();
