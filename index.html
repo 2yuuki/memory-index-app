@@ -39,7 +39,9 @@
         <div class="tab-btn" onclick="switchSidebar('tools')" data-tooltip="Click to enter Tool System">II. Tool Tab</div>
       </div>
 
-      <div class="top-right-controls"></div>
+      <div class="top-right-controls">
+        <button class="btn-retro btn-small-save" onclick="document.getElementById('instruction-modal').style.display='flex'" style="margin-right: 10px;">Instruction Sheet</button>
+      </div>
     </div>
 
   <!-- INTRO VIEW -->
@@ -640,6 +642,15 @@
     </div>
   </div>
 
+  <!-- INSTRUCTION MODAL -->
+  <div id="instruction-modal" class="modal-overlay" style="display:none; z-index: 20001;" onclick="this.style.display='none'">
+    <div class="modal-content" style="width: auto; height: auto; padding: 0; display: flex; flex-direction: column; background: #dcdcdc; border: 2px solid #0072BC; box-shadow: 8px 8px 0 rgba(0,0,0,0.2);" onclick="event.stopPropagation()">
+       <div style="height: 85vh; aspect-ratio: 16 / 9; max-width: 90vw; max-height: 90vh; background: #fff; overflow: hidden; display: flex; justify-content: center; align-items: center;">
+         <img src="assets/UI%20items/instruction%20sheet.png" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+       </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toast-notification" class="toast-notification">Saved</div>
 
@@ -724,6 +735,10 @@
             bootScreen.style.opacity = '0';
             setTimeout(() => {
                 bootScreen.style.display = 'none';
+                
+                // Show Instruction Modal after boot
+                const instrModal = document.getElementById('instruction-modal');
+                if(instrModal) instrModal.style.display = 'flex';
             }, 500);
         }, delay + 500);
       }
