@@ -11,6 +11,7 @@ const cmykSketch = (p) => {
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
+  let renderMode = "ascii"; // ascii, dither
   let colorMode = "cmyk"; // Default to CMYK
   
   // Colors
@@ -66,6 +67,7 @@ const cmykSketch = (p) => {
   
   // Buffers
   let imgBuffer; 
+  let smallBuffer; // Optimization: Downsampled buffer for ASCII analysis
   let lastSampleTime = 0; 
   let baseFPS = 15; 
   let minSamplePeriod = 1000 / 60; 
@@ -247,8 +249,6 @@ const cmykSketch = (p) => {
 
       if (shouldUpdateBuffer) {
         imgBuffer.clear();
-        imgBuffer.push();
-        imgBuffer.imageMode(p.CENTER);
         
         // FIX: Giữ nguyên tỉ lệ khung hình (Aspect Ratio) của ảnh gốc
         let aspect = blobImg.width / blobImg.height;
@@ -258,21 +258,27 @@ const cmykSketch = (p) => {
         if (aspect > canvasAspect) { drawW = p.width * imgScale; drawH = drawW / aspect; } 
         else { drawH = p.height * imgScale; drawW = drawH * aspect; }
 
-        imgBuffer.image(blobImg, p.width/2, p.height/2, drawW, drawH);
-        imgBuffer.pop();
+        // Use native context to avoid p5.image type errors
+        const ctx = imgBuffer.drawingContext;
+        const dx = (p.width - drawW) / 2;
+        const dy = (p.height - drawH) / 2;
+        const src = blobImg.canvas || blobImg.elt;
+        if(src) ctx.drawImage(src, dx, dy, drawW, drawH);
       }
 
       if (showImage) {
-        p.tint(255, imgOpacity);
-        p.imageMode(p.CENTER);
-        p.image(imgBuffer, p.width/2, p.height/2); 
-        p.noTint();
+        p.drawingContext.save();
+        p.drawingContext.globalAlpha = imgOpacity / 255;
+        p.drawingContext.drawImage(imgBuffer.elt, 0, 0, p.width, p.height);
+        p.drawingContext.restore();
       }
     }
 
-    // Copy frame for sampling
-    gfxFrame.clear();
-    gfxFrame.image(imgBuffer, 0, 0);
+    // Copy frame for sampling (Only needed for Dither or Track modes)
+    if (renderMode === 'dither' || mode === 'track') {
+      gfxFrame.clear();
+      gfxFrame.image(imgBuffer, 0, 0);
+    }
 
     // --- SEAMLESS ANIMATION SEEDING ---
     // Ensure random values loop perfectly for GIF export
@@ -284,7 +290,7 @@ const cmykSketch = (p) => {
     p.randomSeed(seed);
 
     // --- DITHER MODE ---
-    if (colorMode === 'dither') {
+    if (renderMode === 'dither') {
       drawDither();
       return; // Skip ASCII rendering
     }
@@ -300,8 +306,6 @@ const cmykSketch = (p) => {
 
   /* ---------------- Replica / Mask ---------------- */
   function drawAsciiReplicaOrMask() {
-    gfxFrame.loadPixels();
-    
     const cell = asciiGrid;
     const cols = p.floor(p.width / cell);
     const rows = p.floor(p.height / cell);
@@ -311,6 +315,16 @@ const cmykSketch = (p) => {
       _lumPrev = new Array(n).fill(255); _rPrev = new Array(n).fill(255);
       _gPrev = new Array(n).fill(255); _bPrev = new Array(n).fill(255);
     }
+
+    // OPTIMIZATION: Downsample image to grid size for faster pixel access
+    if (!smallBuffer || smallBuffer.width !== cols || smallBuffer.height !== rows) {
+      if (smallBuffer) smallBuffer.remove();
+      smallBuffer = p.createGraphics(cols, rows);
+      smallBuffer.pixelDensity(1);
+    }
+    smallBuffer.clear();
+    smallBuffer.image(imgBuffer, 0, 0, cols, rows);
+    smallBuffer.loadPixels();
 
     // Animation smoothing
     const alphaT = p.constrain(p.map(speed, 0.2, 2.0, 0.18, 0.95), 0.08, 0.98);
@@ -349,15 +363,13 @@ const cmykSketch = (p) => {
 
         let r=255,g=255,b=255,a=0; 
         if (haveImg) {
-          // FIX: Use integer coordinates for pixel array access to avoid undefined values
-          const sx = p.floor(cx);
-          const sy = p.floor(cy);
-          const i = 4 * (sy * gfxFrame.width + sx);
-          if (i >= 0 && i < gfxFrame.pixels.length - 3) {
-            r = gfxFrame.pixels[i];
-            g = gfxFrame.pixels[i+1];
-            b = gfxFrame.pixels[i+2];
-            a = gfxFrame.pixels[i+3];
+          // OPTIMIZATION: Read from downsampled buffer (1 pixel = 1 cell)
+          const i = 4 * (y * cols + x);
+          if (i >= 0 && i < smallBuffer.pixels.length - 3) {
+            r = smallBuffer.pixels[i];
+            g = smallBuffer.pixels[i+1];
+            b = smallBuffer.pixels[i+2];
+            a = smallBuffer.pixels[i+3];
           }
         }
 
@@ -496,9 +508,10 @@ const cmykSketch = (p) => {
         if (isJittering) noise = p.random(-20, 20);
 
         // Quantize (Thresholding)
-        const newR = (oldR + noise < 128) ? 0 : 255;
-        const newG = (oldG + noise < 128) ? 0 : 255;
-        const newB = (oldB + noise < 128) ? 0 : 255;
+        const thresh = cmykSettings.threshold;
+        const newR = (oldR + noise < thresh) ? 0 : 255;
+        const newG = (oldG + noise < thresh) ? 0 : 255;
+        const newB = (oldB + noise < thresh) ? 0 : 255;
         
         // Set new pixel color
         gfxFrame.pixels[idx] = newR;     // R
@@ -527,7 +540,8 @@ const cmykSketch = (p) => {
     }
     
     gfxFrame.updatePixels();
-    p.image(gfxFrame.canvas, 0, 0);
+    // FIX: Use native drawImage to avoid p5.js type checking errors with raw canvas
+    p.drawingContext.drawImage(gfxFrame.canvas, 0, 0);
   }
 
   /* ---------------- Track ---------------- */
@@ -667,6 +681,16 @@ const cmykSketch = (p) => {
     }
 
     // --- Mapped Controls ---
+    const sRenderMode = p.select('#selRenderMode');
+    const asciiControls = p.select('#ascii-controls');
+    if(sRenderMode) {
+      sRenderMode.changed(() => {
+        renderMode = sRenderMode.value();
+        if(asciiControls) asciiControls.style('display', renderMode === 'ascii' ? 'block' : 'none');
+        needsUpdate = true;
+      });
+    }
+
     const sColorMode = p.select('#selColorMode');
     if(sColorMode) sColorMode.changed(() => {
       colorMode = sColorMode.value();
@@ -684,6 +708,12 @@ const cmykSketch = (p) => {
       needsUpdate = true;
     });
     
+    const sSrcOpacity = p.select('#cfgSrcOpacity');
+    if(sSrcOpacity) sSrcOpacity.input(() => {
+      imgOpacity = parseFloat(sSrcOpacity.value());
+      needsUpdate = true;
+    });
+
     const sScale = p.select('#sldScale');
     if(sScale) sScale.input(() => { imgScale = parseFloat(sScale.value()); needsUpdate = true; });
 

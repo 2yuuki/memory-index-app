@@ -16,6 +16,11 @@
 
 <div id="boot-screen"></div>
 <div class="noise-overlay"></div>
+<div id="mobile-warning">
+  <span class="lang-en">For the best experience, please use a Tablet or Desktop device.</span>
+  <span class="lang-vi hidden">Vui lòng sử dụng Tablet hoặc Desktop để có trải nghiệm tốt nhất.</span>
+  <button onclick="this.parentElement.style.display='none'" style="margin-left:10px; background:none; border:1px solid #000; cursor:pointer; font-family:inherit;">✕</button>
+</div>
 <div id="app-container">
 
   <div class="app-sidebar">
@@ -56,8 +61,8 @@
 
   <img src="assets/UI items/logo.svg" class="intro-logo" alt="Logo">
 
-  <h1 id="intro-title" class="section-title" style="text-align:center; font-family: 'KK7VCROSDMono', monospace;">
-    The Memory Index
+  <h1 id="intro-title" class="section-title" style="text-align:center; font-family: 'Bianzhidai', monospace;">
+    The Index of Memory
   </h1>
 
   <p style="text-align:center; font-family:'KK7VCROSDMono'; color:#182983; line-height:1.6;">
@@ -70,71 +75,6 @@
   <div class="divider"></div>
 
   <div style="max-width:1200px; margin:0 auto;">
-    <h2 class="intro-heading-2">
-      <!-- <span class="lang-vi">Lời nói đầu</span> -->
-      <span class="lang-en">Foreword</span>
-    </h2>
-    <div class="intro-desc">
-      <!-- <span class="lang-vi">
-        Thật sự thì những năm gần đây tôi đã có 1 đời sống tinh thần khá tệ hại. Kiểu, sợ phải buồn nên không cho phép bản thân dùng cảm xúc quá nhiều? Không bận tâm quá mức tới cái gì cả.<br><br>
-        lâu dần, việc đó làm tôi hoàn toàn trống rỗng. tôi không quá buồn hay quá hưng phấn về chuyện gì. và dần dần tôi quên luôn cả những kí ức yêu quý của tôi ngày xưa đó. thực ra cũng không hẳn là “yêu quý” tới vậy. có nhiều chuyện vẫn là những chuyện thật kinh khủng so với tôi vào thời điểm đó. chỉ là bây giờ, tôi đã quá tách biệt với chính cảm xúc của mình đến mức không còn nhớ về ký ức của bản thân như 1 thứ mình đã từng trải qua. tôi đã nghĩ:”mình có gặp chuyện này như vậy sao? Nhưng sao mình không có cảm giác gì về chuyện đó nữa vậy? cứ như mình đang nhìn vào mảnh kí ức của ai đó xa lạ khác, và bản thân thì là 1 vị khách vô tình được nghe kể về chuyện đó.”<br><br>
-        thật buồn. tôi cũng đã nghĩ vậy. những điều mình đã trải qua- khi đó nó lớn lao như vậy, vui có, buồn có, tràn trề hạnh phúc và tận cùng đớn đau, tôi nghĩ tôi cũng đã thử nếm từng vị đắng cay ngọt bùi như thế. Nhưng sao bây giờ mọi thứ trông giống nhau, làm ký ức của tôi trở nên vô nghĩa.<br><br>
-        như vậy tôi cũng không còn cái lõi để vận hành con người vốn lúc đó đang rệu rã giữa cuộc sống nữa.<br><br>
-        như vậy tôi sợ vượt qua không nổi cái cuộc sống đôi lúc lại nhàm chán, đôi lúc lại khó khăn, và tôi cũng sợ sống không hết món quà mà chính cái cuộc sống nhàm chán khó khăn ấy đôi khi có thể ném cho tôi 1 lúc nào đó.<br><br>
-        tôi sợ, nên tôi quyết định phải soi lại vào bên trong mình thôi. tôi thực sự nghĩ gì, đã cảm thấy như nào, và những người xung quanh tôi cũng đã sống những cuộc sống ra sao. tôi nghĩ tôi cần kiểm kê lại lần lượt từng trải nghiệm tôi đã trải qua, để tôi có thể 1 lúc nào đó sau này bật xa hơn nữa. đó là lí do mà tôi bắt tay vào làm dự án này.<br><br>
-        tôi muốn tri ân mọi người, những người luôn giúp đỡ tôi đến tận bây giờ, dù tôi biết tôi đã luôn khá vô tâm. tôi cũng muốn thay đổi bản thân, vậy nên càng phải làm dự án này thôi.<br><br>
-        Lúc mới đầu, tôi định sẽ kể 1 câu chuyện về 1 toán quân các kí ức bị bỏ rơi trồi lên đi diễu hành để đòi lại công bằng cho chúng. đó sẽ là 1 cuộc viễn chinh của những thứ bị lãng quên và đích đến của chúng là người chủ nhân của những kí ức đó. kiểu đến nơi chắc là sẽ đập cho thằng đó hay nhỏ đó 1 trận vì dám quên tụi này. Nhưng làm 1 bộ phim hoạt hình ngắn với mình tôi thì hơi khó để hoàn thành trong vòng 1 khoá học 3 tháng, vậy nên mentor của tôi gợi ý nếu chỉ làm 1 nhân vật 3D tương tác được trên web platform thì sao? mọi người có thể tương tác với nó bằng cách vẽ những hình dung của họ khi còn nhỏ vào giấy và sau đó tôi sẽ project lên nhân vật 3D đó như 1 lớp skin bên ngoài custom theo từng bản vẽ của người dùng. Và sau đó họ cũng có thể thay cả bối cảnh nhân vật như đồng quê bắc bộ hay sông nước miền Tây,… và cả những bản nhạc hát ru theo từng vùng miền mà người dùng đã được lớn lên cùng chúng.<br><br>
-        Nhưng sau đó tôi thấy ý tưởng đó hơi thiếu tính thú vị để tương tác. tự dưng bảo người dùng vẽ về hình dung tuổi thơ của họ thì quá khó để mời gọi mọi người cùng thực hiện. và cũng thiếu tính soi chiếu lại bên trong như mục đích mà tôi muốn cho dự án. chỉ qua 1 tương tác đó thì tính soi chiếu sẽ khá là nông. vậy nên tôi muốn nghĩ thêm cách để tạo ra 1 sản phẩm hay tác phẩm mà cho phép mọi người có 1 khoảnh khắc nhỏ có thể nghĩ lại về những điều đã qua của họ 1 cách trung thực. tôi nghĩ tới việc journaling. Thực ra bình thường tôi vốn không phải là 1 người thường xuyên ghi chép lại những điều đã qua. vậy nên tôi đã phải trả giá bằng việc tôi đã xem nhẹ phần lớn cuộc đời của tôi như tôi có nêu bên trên.<br><br>
-        tôi nghĩ bây giờ tôi nên thử viết lại những gì tôi thực sự đã và đang cảm thấy. nên tôi tạo 1 trang web để ghi chép và vẽ lại những kí ức đã qua. Trong đó, người dùng có thể viết lại những suy nghĩ của họ, cũng có thể lưu lại những hình ảnh về những thứ đã xảy ra, hoặc nếu không có hình ảnh, họ có thể vẽ.<br><br>
-        tôi cảm thấy journaling bằng note bình thường cũng quá nhàm rồi, nên có khi web của tôi cũng là 1 lựa chọn mới lạ cho những hôm khó ngủ của ai đó cũng được. ít ra với tôi thì cũng oke.<br><br>
-        Do vậy tôi nghĩ phải làm trang web có concept thú vị để làm unique selling point. tôi chỉ là muốn quay về cái thời tiểu học của mình, lúc tôi chỉ là 1 đứa bé, không nghĩ gì nhiều, tự tin với những gì mình có, chấp nhận bản thân là bản thân, và yêu thích những gì mình sẽ làm và đang làm. lúc đó mọi thứ thật rõ ràng, như tôi có được mọi câu trả lời cho bản thân vậy. vậy nên tôi chọn những aesthetic thuộc về thời 2010s, những trò chơi, những cuốn tập kẻ ô ly, bút mực tím, zingme, những thứ thực sự quen thuộc với mọi đứa trẻ cũng lớn lên ở thời đó. đó là 1 cách để tôi gợi lại những kí ức rủ nhau đi về với mình. Song song đó, tôi cũng muốn 1 thứ gì đó rõ ràng và hệ thống cùng xảy ra lúc đang ôm ấp những cảm xúc như vậy. làm vậy thì tôi sẽ không bị quá cảm tính và cũng soi chiếu tốt hơn. vậy nên tôi nghĩ tới những biểu đồ, những hệ thống, những con số và báo cáo,… và tôi nghĩ tới 1 bản biểu đồ cực kì phức tạp mô tả lại 1 thứ vô cùng cảm tính và cảm xúc đó là the net.art diagram. Vậy nên tôi thử đem làn sóng net.art- 1 loại hình nghệ thuật trên máy tính thời internet thô sơ kết hợp với sự hoài niệm của lứa học sinh 2010s Việt Nam xem sao.
-      </span> -->
-      <span class="lang-en">
-        Honestly, over the past few years, my inner life has been in a pretty bad place. It’s like—I became afraid of feeling sad, so I stopped allowing myself to feel too much of anything at all. I tried not to care too deeply about anything.<br><br>
-        Over time, that left me completely hollow. I wasn’t deeply sad, but I wasn’t excited either. And gradually, I began to forget my own memories. Not all of them were exactly “precious” memories—some of them were terrifying to me at the time. But now, I feel so detached from my own emotions that I no longer remember those memories as things I once lived through.<br><br>
-        I would catch myself thinking:<br>
-        “Did this really happen to me?”<br>
-        “But why don’t I feel anything about it anymore?”<br><br>
-        It feels as if I’m looking at someone else’s memories—like a stranger’s fragments—and I’m just a guest who happened to overhear their story.<br><br>
-        That realization made me sad. The things I went through once felt so intense—joy, sorrow, overflowing happiness, and the deepest pain. I truly believe I tasted every bitter and sweet flavor of life. And yet now, everything looks the same, as if my memories have lost their meaning.<br><br>
-        Without them, I feel like I no longer have a core holding me together—like a person already worn down by life, trying to keep moving without anything inside to anchor them.<br><br>
-        I’m afraid I won’t be able to endure a life that is sometimes boring, sometimes difficult. I’m also afraid I won’t fully live the gift that this dull, exhausting life occasionally throws my way.<br><br>
-        Because of that fear, I decided to turn inward. To look closely at what I really think, what I have actually felt, and how the people around me are living their lives. I realized I needed to carefully take inventory of my experiences—one by one—so that someday, I might be able to leap further forward. That is why I started this project.<br><br>
-        I want to thank the people who have supported me until now, even though I know I’ve often been careless toward them. I also want to change myself. And for that reason, I felt I had to make this project.<br><br>
-        —<br><br>
-        At the beginning, I wanted to tell a story about a group of abandoned memories rising up and marching together to demand justice. It would have been an expedition of forgotten things, with their destination being the person who owned those memories. I imagined that once they arrived, they’d probably beat that person up for daring to forget them.<br><br>
-        But making a short animated film on my own felt unrealistic to finish within a three-month course. My mentor suggested a different approach: what if I created a single interactive 3D character on a web platform instead? People could interact with it by drawing their childhood imaginations on paper, and I would project those drawings onto the 3D character as a custom skin. Users could also change the character’s environment—like Northern Vietnamese countryside scenes or Southern river landscapes—and even choose regional lullabies they grew up with.<br><br>
-        Eventually, I realized this idea wasn’t very engaging. Asking users to immediately draw their childhood imagination felt too demanding, and the interaction didn’t encourage the kind of inward reflection I wanted. With only one interaction, the reflection felt shallow.<br><br>
-        So I started looking for another way to create a work that would allow people a small, honest moment to think back on their past. That’s when I thought about journaling.<br><br>
-        I’m not someone who naturally journals. And because of that, I think I paid the price—I ended up trivializing a large part of my life, just like I described earlier.<br><br>
-        I realized I needed to try writing down what I was truly feeling. So I created a website where people can write and redraw their memories. Users can write their thoughts, save images of things that happened, or—if they don’t have images—draw instead.<br><br>
-        Traditional note-based journaling feels boring to me. So maybe this website could be a more interesting option for someone on a sleepless night. At least, it works for me.<br><br>
-        Because of that, I wanted the website to have a strong concept as its unique selling point. I wanted to return to my elementary school years—when I was just a kid who didn’t overthink, who felt confident with what they had, who accepted themselves as they were, and who loved what they were doing. Back then, everything felt clear, as if I already had all the answers.<br><br>
-        That’s why I chose aesthetics from the 2010s: childhood games, grid-lined notebooks, purple ink pens, Zing Me—things deeply familiar to kids who grew up in that era. It’s my way of inviting those memories to come back to me.<br><br>
-        At the same time, I wanted something structured to exist alongside those emotions—something systematic and clear. That way, I wouldn’t drown in sentimentality, and I could reflect more clearly. I began thinking about charts, systems, numbers, and reports. That led me to net.art diagrams—complex visual systems used to describe something deeply emotional and subjective.<br><br>
-        So I decided to combine net.art—a form of computer-based art from the early internet—with the nostalgic memories of Vietnamese students from the 2010s, and see what would happen.
-      </span>
-    </div>
-  </div>
-
-  <div class="user-results-container">
-    <div class="user-result-row">
-      <img src="assets/document/image%20(1).png" class="user-result-img">
-      <img src="assets/document/image.png" class="user-result-img">
-      <div class="user-result-caption">Users' using The Memory Index Tools to create ASCII drawings</div>
-    </div>
-    
-    <div class="user-result-row">
-      <img src="assets/document/IMG_2591.jpg" class="user-result-img">
-      <img src="assets/document/IMG_2593.jpg" class="user-result-img">
-      <div class="user-result-caption">Then the results will be printed out by Nguyen Thu Trang (yuuki) to display at the RMIT Major Project Showcase</div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div style="max-width:1200px; margin:0 auto;"> <!-- Main Content Container -->
-
     <h2 class="intro-heading-2">
       <span class="lang-vi hidden">I. Tổng quan dự án</span>
       <span class="lang-en">I. Project Overview</span>
@@ -220,6 +160,96 @@
     </p>
 
     <div class="divider"></div>
+
+    <h2 class="intro-heading-2" style="font-family: 'Bianzhidai', monospace;"></h2>
+    <div class="gallery-grid">
+      <img src="assets/social photos/DSC08452_2.gif" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010007.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010008.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010010.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010017.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010019.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010020.JPG" class="gallery-grid-img" loading="lazy">
+      <img src="assets/social photos/P1010029.JPG" class="gallery-grid-img" loading="lazy">
+    </div>
+
+    <div class="divider"></div>
+
+    <h2 class="intro-heading-2" style="font-family: 'Bianzhidai', monospace;">Users' Results</h2>
+    <p class="intro-desc">
+      A collection of memory artifacts generated by users.
+    </p>
+
+    <div id="users-results-gallery" class="gallery-grid">
+      <div id="gallery-placeholder" class="gallery-placeholder">(Loading Gallery...)</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2 class="intro-heading-2">
+      <!-- <span class="lang-vi">Lời nói đầu</span> -->
+      <span class="lang-en">Foreword</span>
+    </h2>
+    <div class="intro-desc">
+      <!-- <span class="lang-vi">
+        Thật sự thì những năm gần đây tôi đã có 1 đời sống tinh thần khá tệ hại. Kiểu, sợ phải buồn nên không cho phép bản thân dùng cảm xúc quá nhiều? Không bận tâm quá mức tới cái gì cả.<br><br>
+        lâu dần, việc đó làm tôi hoàn toàn trống rỗng. tôi không quá buồn hay quá hưng phấn về chuyện gì. và dần dần tôi quên luôn cả những kí ức yêu quý của tôi ngày xưa đó. thực ra cũng không hẳn là “yêu quý” tới vậy. có nhiều chuyện vẫn là những chuyện thật kinh khủng so với tôi vào thời điểm đó. chỉ là bây giờ, tôi đã quá tách biệt với chính cảm xúc của mình đến mức không còn nhớ về ký ức của bản thân như 1 thứ mình đã từng trải qua. tôi đã nghĩ:”mình có gặp chuyện này như vậy sao? Nhưng sao mình không có cảm giác gì về chuyện đó nữa vậy? cứ như mình đang nhìn vào mảnh kí ức của ai đó xa lạ khác, và bản thân thì là 1 vị khách vô tình được nghe kể về chuyện đó.”<br><br>
+        thật buồn. tôi cũng đã nghĩ vậy. những điều mình đã trải qua- khi đó nó lớn lao như vậy, vui có, buồn có, tràn trề hạnh phúc và tận cùng đớn đau, tôi nghĩ tôi cũng đã thử nếm từng vị đắng cay ngọt bùi như thế. Nhưng sao bây giờ mọi thứ trông giống nhau, làm ký ức của tôi trở nên vô nghĩa.<br><br>
+        như vậy tôi cũng không còn cái lõi để vận hành con người vốn lúc đó đang rệu rã giữa cuộc sống nữa.<br><br>
+        như vậy tôi sợ vượt qua không nổi cái cuộc sống đôi lúc lại nhàm chán, đôi lúc lại khó khăn, và tôi cũng sợ sống không hết món quà mà chính cái cuộc sống nhàm chán khó khăn ấy đôi khi có thể ném cho tôi 1 lúc nào đó.<br><br>
+        tôi sợ, nên tôi quyết định phải soi lại vào bên trong mình thôi. tôi thực sự nghĩ gì, đã cảm thấy như nào, và những người xung quanh tôi cũng đã sống những cuộc sống ra sao. tôi nghĩ tôi cần kiểm kê lại lần lượt từng trải nghiệm tôi đã trải qua, để tôi có thể 1 lúc nào đó sau này bật xa hơn nữa. đó là lí do mà tôi bắt tay vào làm dự án này.<br><br>
+        tôi muốn tri ân mọi người, những người luôn giúp đỡ tôi đến tận bây giờ, dù tôi biết tôi đã luôn khá vô tâm. tôi cũng muốn thay đổi bản thân, vậy nên càng phải làm dự án này thôi.<br><br>
+        Lúc mới đầu, tôi định sẽ kể 1 câu chuyện về 1 toán quân các kí ức bị bỏ rơi trồi lên đi diễu hành để đòi lại công bằng cho chúng. đó sẽ là 1 cuộc viễn chinh của những thứ bị lãng quên và đích đến của chúng là người chủ nhân của những kí ức đó. kiểu đến nơi chắc là sẽ đập cho thằng đó hay nhỏ đó 1 trận vì dám quên tụi này. Nhưng làm 1 bộ phim hoạt hình ngắn với mình tôi thì hơi khó để hoàn thành trong vòng 1 khoá học 3 tháng, vậy nên mentor của tôi gợi ý nếu chỉ làm 1 nhân vật 3D tương tác được trên web platform thì sao? mọi người có thể tương tác với nó bằng cách vẽ những hình dung của họ khi còn nhỏ vào giấy và sau đó tôi sẽ project lên nhân vật 3D đó như 1 lớp skin bên ngoài custom theo từng bản vẽ của người dùng. Và sau đó họ cũng có thể thay cả bối cảnh nhân vật như đồng quê bắc bộ hay sông nước miền Tây,… và cả những bản nhạc hát ru theo từng vùng miền mà người dùng đã được lớn lên cùng chúng.<br><br>
+        Nhưng sau đó tôi thấy ý tưởng đó hơi thiếu tính thú vị để tương tác. tự dưng bảo người dùng vẽ về hình dung tuổi thơ của họ thì quá khó để mời gọi mọi người cùng thực hiện. và cũng thiếu tính soi chiếu lại bên trong như mục đích mà tôi muốn cho dự án. chỉ qua 1 tương tác đó thì tính soi chiếu sẽ khá là nông. vậy nên tôi muốn nghĩ thêm cách để tạo ra 1 sản phẩm hay tác phẩm mà cho phép mọi người có 1 khoảnh khắc nhỏ có thể nghĩ lại về những điều đã qua của họ 1 cách trung thực. tôi nghĩ tới việc journaling. Thực ra bình thường tôi vốn không phải là 1 người thường xuyên ghi chép lại những điều đã qua. vậy nên tôi đã phải trả giá bằng việc tôi đã xem nhẹ phần lớn cuộc đời của tôi như tôi có nêu bên trên.<br><br>
+        tôi nghĩ bây giờ tôi nên thử viết lại những gì tôi thực sự đã và đang cảm thấy. nên tôi tạo 1 trang web để ghi chép và vẽ lại những kí ức đã qua. Trong đó, người dùng có thể viết lại những suy nghĩ của họ, cũng có thể lưu lại những hình ảnh về những thứ đã xảy ra, hoặc nếu không có hình ảnh, họ có thể vẽ.<br><br>
+        tôi cảm thấy journaling bằng note bình thường cũng quá nhàm rồi, nên có khi web của tôi cũng là 1 lựa chọn mới lạ cho những hôm khó ngủ của ai đó cũng được. ít ra với tôi thì cũng oke.<br><br>
+        Do vậy tôi nghĩ phải làm trang web có concept thú vị để làm unique selling point. tôi chỉ là muốn quay về cái thời tiểu học của mình, lúc tôi chỉ là 1 đứa bé, không nghĩ gì nhiều, tự tin với những gì mình có, chấp nhận bản thân là bản thân, và yêu thích những gì mình sẽ làm và đang làm. lúc đó mọi thứ thật rõ ràng, như tôi có được mọi câu trả lời cho bản thân vậy. vậy nên tôi chọn những aesthetic thuộc về thời 2010s, những trò chơi, những cuốn tập kẻ ô ly, bút mực tím, zingme, những thứ thực sự quen thuộc với mọi đứa trẻ cũng lớn lên ở thời đó. đó là 1 cách để tôi gợi lại những kí ức rủ nhau đi về với mình. Song song đó, tôi cũng muốn 1 thứ gì đó rõ ràng và hệ thống cùng xảy ra lúc đang ôm ấp những cảm xúc như vậy. làm vậy thì tôi sẽ không bị quá cảm tính và cũng soi chiếu tốt hơn. vậy nên tôi nghĩ tới những biểu đồ, những hệ thống, những con số và báo cáo,… và tôi nghĩ tới 1 bản biểu đồ cực kì phức tạp mô tả lại 1 thứ vô cùng cảm tính và cảm xúc đó là the net.art diagram. Vậy nên tôi thử đem làn sóng net.art- 1 loại hình nghệ thuật trên máy tính thời internet thô sơ kết hợp với sự hoài niệm của lứa học sinh 2010s Việt Nam xem sao.
+      </span> -->
+      <span class="lang-en">
+        Honestly, over the past few years, my inner life has been in a pretty bad place. It’s like—I became afraid of feeling sad, so I stopped allowing myself to feel too much of anything at all. I tried not to care too deeply about anything.<br><br>
+        Over time, that left me completely hollow. I wasn’t deeply sad, but I wasn’t excited either. And gradually, I began to forget my own memories. Not all of them were exactly “precious” memories—some of them were terrifying to me at the time. But now, I feel so detached from my own emotions that I no longer remember those memories as things I once lived through.<br><br>
+        I would catch myself thinking:<br>
+        “Did this really happen to me?”<br>
+        “But why don’t I feel anything about it anymore?”<br><br>
+        It feels as if I’m looking at someone else’s memories—like a stranger’s fragments—and I’m just a guest who happened to overhear their story.<br><br>
+        That realization made me sad. The things I went through once felt so intense—joy, sorrow, overflowing happiness, and the deepest pain. I truly believe I tasted every bitter and sweet flavor of life. And yet now, everything looks the same, as if my memories have lost their meaning.<br><br>
+        Without them, I feel like I no longer have a core holding me together—like a person already worn down by life, trying to keep moving without anything inside to anchor them.<br><br>
+        I’m afraid I won’t be able to endure a life that is sometimes boring, sometimes difficult. I’m also afraid I won’t fully live the gift that this dull, exhausting life occasionally throws my way.<br><br>
+        Because of that fear, I decided to turn inward. To look closely at what I really think, what I have actually felt, and how the people around me are living their lives. I realized I needed to carefully take inventory of my experiences—one by one—so that someday, I might be able to leap further forward. That is why I started this project.<br><br>
+        I want to thank the people who have supported me until now, even though I know I’ve often been careless toward them. I also want to change myself. And for that reason, I felt I had to make this project.<br><br>
+        —<br><br>
+        At the beginning, I wanted to tell a story about a group of abandoned memories rising up and marching together to demand justice. It would have been an expedition of forgotten things, with their destination being the person who owned those memories. I imagined that once they arrived, they’d probably beat that person up for daring to forget them.<br><br>
+        But making a short animated film on my own felt unrealistic to finish within a three-month course. My mentor suggested a different approach: what if I created a single interactive 3D character on a web platform instead? People could interact with it by drawing their childhood imaginations on paper, and I would project those drawings onto the 3D character as a custom skin. Users could also change the character’s environment—like Northern Vietnamese countryside scenes or Southern river landscapes—and even choose regional lullabies they grew up with.<br><br>
+        Eventually, I realized this idea wasn’t very engaging. Asking users to immediately draw their childhood imagination felt too demanding, and the interaction didn’t encourage the kind of inward reflection I wanted. With only one interaction, the reflection felt shallow.<br><br>
+        So I started looking for another way to create a work that would allow people a small, honest moment to think back on their past. That’s when I thought about journaling.<br><br>
+        I’m not someone who naturally journals. And because of that, I think I paid the price—I ended up trivializing a large part of my life, just like I described earlier.<br><br>
+        I realized I needed to try writing down what I was truly feeling. So I created a website where people can write and redraw their memories. Users can write their thoughts, save images of things that happened, or—if they don’t have images—draw instead.<br><br>
+        Traditional note-based journaling feels boring to me. So maybe this website could be a more interesting option for someone on a sleepless night. At least, it works for me.<br><br>
+        Because of that, I wanted the website to have a strong concept as its unique selling point. I wanted to return to my elementary school years—when I was just a kid who didn’t overthink, who felt confident with what they had, who accepted themselves as they were, and who loved what they were doing. Back then, everything felt clear, as if I already had all the answers.<br><br>
+        That’s why I chose aesthetics from the 2010s: childhood games, grid-lined notebooks, purple ink pens, Zing Me—things deeply familiar to kids who grew up in that era. It’s my way of inviting those memories to come back to me.<br><br>
+        At the same time, I wanted something structured to exist alongside those emotions—something systematic and clear. That way, I wouldn’t drown in sentimentality, and I could reflect more clearly. I began thinking about charts, systems, numbers, and reports. That led me to net.art diagrams—complex visual systems used to describe something deeply emotional and subjective.<br><br>
+        So I decided to combine net.art—a form of computer-based art from the early internet—with the nostalgic memories of Vietnamese students from the 2010s, and see what would happen.
+      </span>
+    </div>
+  </div>
+
+  <div class="user-results-container">
+    <div class="user-result-row">
+      <img src="assets/document/image%20(1).png" class="user-result-img" loading="lazy">
+      <img src="assets/document/image.png" class="user-result-img" loading="lazy">
+      <div class="user-result-caption">Users' using The Memory Index Tools to create ASCII drawings</div>
+    </div>
+    
+    <div class="user-result-row">
+      <img src="assets/document/IMG_2591.jpg" class="user-result-img" loading="lazy">
+      <img src="assets/document/IMG_2593.jpg" class="user-result-img" loading="lazy">
+      <div class="user-result-caption">Then the results will be printed out by Nguyen Thu Trang (yuuki) to display at the RMIT Major Project Showcase</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="max-width:1200px; margin:0 auto;"> <!-- Main Content Container -->
 
     <h2 class="intro-heading-2">
       <span class="lang-vi hidden">II. Thực hành sáng tạo và Phát triển </span>
@@ -384,33 +414,6 @@
 
     <div class="divider"></div>
 
-    <h2 class="intro-heading-2" style="font-family: 'Bianzhidai', monospace;">VI. Users' Results</h2>
-    <p class="intro-desc">
-      A collection of memory artifacts generated by users.
-    </p>
-    
-    <!-- Controls for Upload -->
-    <div class="upload-controls">
-        <input type="file" id="gallery-upload-input" accept="image/*" style="display: none;">
-        <button class="btn-retro" onclick="document.getElementById('gallery-upload-input').click()" style="width: auto; display: inline-block; padding: 6px 12px;">+ Upload Your Result</button>
-    </div>
-
-    <div id="users-results-gallery" class="gallery-container">
-      <button id="gallery-prev" class="btn-retro gallery-nav-btn gallery-prev">&lt;</button>
-      <div id="gallery-image-container" class="gallery-image-wrapper">
-          <img id="gallery-current-img" class="gallery-img" src="">
-          <div id="gallery-placeholder" class="gallery-placeholder">(Loading Gallery...)</div>
-      </div>
-      <button id="gallery-next" class="btn-retro gallery-nav-btn gallery-next">&gt;</button>
-      <div class="gallery-counter-box">
-        <span id="gallery-counter"></span>
-      </div>
-    </div>
-
-    
-
-    <div class="divider"></div>
-
     <h2 class="intro-heading-2">
       <span class="lang-vi hidden">III. Tài liệu tham khảo</span>
       <span class="lang-en">V. References</span>
@@ -477,14 +480,22 @@
       <button id="btnLoadImage" style="display:none;"></button>
       <input type="file" id="fileIn" hidden data-tooltip="Upload an image to process." />
 
-      <div class="section-title">ASCII Options</div>
+      <div class="section-title">Processor Options</div>
+      <div class="mini-row">
+        <span>Mode</span>
+        <select id="selRenderMode" class="retro-input" style="width:120px; height:24px; padding:0;">
+          <option value="ascii">ASCII</option>
+          <option value="dither">Dither</option>
+        </select>
+      </div>
+
+      <div id="ascii-controls">
       <div class="mini-row">
         <span>Ink Type</span>
         <select id="selColorMode" class="retro-input" style="width:120px; height:24px; padding:0;">
           <option value="cmyk">CMYK Marker</option>
           <option value="stabilo">Stabilo Marker</option>
           <option value="mono">Monochrome</option>
-          <option value="dither">Dither</option>
           <option value="image">Original</option>
           <option value="brightness">Brightness</option>
         </select>
@@ -497,9 +508,15 @@
         <span>Preset</span>
         <select id="selAsciiPreset" class="retro-input" style="width:120px; height:24px; padding:0;"></select>
       </div>
+      </div>
+
       <div class="mini-row">
         <span>Threshold</span>
-        <input type="range" id="cfgThreshold" min="0" max="200" step="5" value="120">
+        <input type="range" id="cfgThreshold" min="0" max="255" step="5" value="120">
+      </div>
+      <div class="mini-row">
+        <span>Src Opacity</span>
+        <input type="range" id="cfgSrcOpacity" min="0" max="255" step="5" value="255">
       </div>
       
       <div class="mini-row">
@@ -625,6 +642,9 @@
     </div>
   </div>
 
+</div> <!-- END APP CONTAINER -->
+
+  <!-- MODALS MOVED OUTSIDE APP-CONTAINER TO FIX Z-INDEX/TRANSFORM ISSUES -->
   <!-- THOUGHT CARD MODAL -->
   <div id="thought-card-modal" class="modal-overlay" style="display:none;" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -653,8 +673,6 @@
 
   <!-- TOAST NOTIFICATION -->
   <div id="toast-notification" class="toast-notification">Saved</div>
-
-</div>
 
 <script src="sketch.js"></script>
 <script src="cmyk-ascii-effect.js"></script>
@@ -749,136 +767,97 @@
     const gallery = document.getElementById('users-results-gallery');
     if(!gallery) return;
 
-    const container = document.getElementById('gallery-image-container');
     const placeholder = document.getElementById('gallery-placeholder');
-    const counter = document.getElementById('gallery-counter');
-    const btnPrev = document.getElementById('gallery-prev');
-    const btnNext = document.getElementById('gallery-next');
-    const uploadInput = document.getElementById('gallery-upload-input');
 
     // Static list of known assets to avoid 404 spam in the console.
     const basePath = "assets/users' results/";
     const potentialFiles = [
       "artwork (2).png",
       "drawing (1).svg",
+      "memory_jitter (3) 2.gif",
+      "memory_jitter (3).gif",
+      "memory_jitter (4) copy.gif",
+      "memory_jitter (4).gif",
+      "memory_jitter (5) copy.gif",
+      "memory_jitter (5).gif",
+      "memory_jitter (6).gif",
+      "memory_jitter (8).gif",
+      "memory_jitter (9).gif",
       "memory_jitter.gif",
-      "tải xuống (1).jpg",
-      "tải xuống (2).jpg",
-      "tải xuống (3).jpg",
-      "tải xuống (4).jpg",
-      "tải xuống (5).jpg",
-      "tải xuống.jpg",
+      "memory_static.png",
+      "stabilo_universal (2).png",
+      "stabilo_universal (4).png",
+      "tải xuống (1).jpg",
+      "tải xuống (2).jpg",
+      "tải xuống (3).jpg",
+      "tải xuống (4).jpg",
+      "tải xuống (5).jpg",
+      "tải xuống.jpg",
       "ty_pic01_svg.svg",
       "ty_pic02.svg",
       "ty_pic03.svg",
-      "ty_pic04.jpeg",
-      "memory_static (1).png",
-      "memory_static.png",
-      "stabilo_universal (2).png",
-      "stabilo_universal (4).png"
+      "ty_pic04.jpeg"
     ];
 
     let images = potentialFiles.map(f => encodeURI(basePath + f));
-    let currentIndex = 0;
-
-    // Track the currently visible image element
-    let currentActiveImg = document.getElementById('gallery-current-img');
     
-    function updateGallery(direction = 1) {
+    function renderGallery() {
+        gallery.innerHTML = ''; // Clear existing content
+        
         if (images.length === 0) {
-            if(placeholder) placeholder.style.display = 'block';
-            if(currentActiveImg) currentActiveImg.style.display = 'none';
-            if(counter) counter.innerText = "0 / 0";
+            if(placeholder) {
+              placeholder.style.display = 'block';
+              gallery.appendChild(placeholder);
+            }
             return;
         }
 
-        if(placeholder) placeholder.style.display = 'none';
-        
-        // 1. Create New Image
-        const nextImg = document.createElement('img');
-        nextImg.src = images[currentIndex];
-        nextImg.className = 'gallery-img';
-        
-        // Position off-screen based on direction
-        // direction 1 (Next): Enter from Right (translate 150%), Exit to Left
-        // direction -1 (Prev): Enter from Left (translate -250%), Exit to Right
-        const startX = direction > 0 ? '150%' : '-250%';
-        const endX = direction > 0 ? '-250%' : '150%';
-        
-        nextImg.style.transform = `translate(${startX}, -50%)`;
-        nextImg.style.opacity = '0';
-        
-        container.appendChild(nextImg);
-        
-        // 2. Animate In (Next Frame)
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                nextImg.style.transform = 'translate(-50%, -50%)';
-                nextImg.style.opacity = '1';
-                
-                // 3. Animate Out (Old Image)
-                if (currentActiveImg) {
-                    const oldImg = currentActiveImg;
-                    oldImg.style.transform = `translate(${endX}, -50%)`;
-                    oldImg.style.opacity = '0';
-                    setTimeout(() => { if(oldImg.parentNode) oldImg.remove(); }, 500);
+        images.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'gallery-grid-img';
+            img.loading = 'lazy';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => {
+                const modal = document.getElementById('gallery-modal');
+                const modalImg = document.getElementById('gallery-modal-img');
+                if(modal && modalImg) {
+                    modalImg.src = src;
+                    modal.style.display = 'flex';
                 }
-                currentActiveImg = nextImg;
             });
+            gallery.appendChild(img);
         });
-
-        if(counter) counter.innerText = `${currentIndex + 1} / ${images.length}`;
     }
 
-    if(btnPrev) btnPrev.onclick = () => {
-        if (images.length > 0) {
-            currentIndex = (currentIndex - 1 + images.length) % images.length;
-            updateGallery(-1);
-        }
-    };
+    renderGallery();
 
-    if(btnNext) btnNext.onclick = () => {
-        if (images.length > 0) {
-            currentIndex = (currentIndex + 1) % images.length;
-            updateGallery(1);
-        }
-    };
-
-    // Auto-play
-    let autoPlay = setInterval(() => {
-        if(images.length > 0 && document.getElementById('intro-view').style.display !== 'none') {
-             currentIndex = (currentIndex + 1) % images.length;
-             updateGallery(1);
-        }
-    }, 3000);
-
-    gallery.onmouseenter = () => clearInterval(autoPlay);
-    gallery.onmouseleave = () => {
-        autoPlay = setInterval(() => {
-            if(images.length > 0 && document.getElementById('intro-view').style.display !== 'none') {
-                 currentIndex = (currentIndex + 1) % images.length;
-                 updateGallery(1);
+    // Attach lightbox to static user result images
+    const userResultsContainer = document.querySelector('.user-results-container');
+    if (userResultsContainer) {
+        userResultsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('user-result-img')) {
+                const modal = document.getElementById('gallery-modal');
+                const modalImg = document.getElementById('gallery-modal-img');
+                if(modal && modalImg) {
+                    modalImg.src = e.target.src;
+                    modal.style.display = 'flex';
+                }
             }
-        }, 3000);
-    };
-
-    if(uploadInput) {
-        uploadInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    images.unshift(ev.target.result);
-                    currentIndex = 0;
-                    updateGallery(1);
-                    alert("Image uploaded to gallery view!");
-                };
-                reader.readAsDataURL(file);
-            }
-        };
+        });
     }
 
-    updateGallery(1);
+    // Attach lightbox to static gallery grid images (Social Photos)
+    document.querySelectorAll('.gallery-grid-img').forEach(img => {
+        img.addEventListener('click', () => {
+            const modal = document.getElementById('gallery-modal');
+            const modalImg = document.getElementById('gallery-modal-img');
+            if(modal && modalImg) {
+                modalImg.src = img.src;
+                modal.style.display = 'flex';
+            }
+        });
+    });
   });
 
   // --- LANGUAGE TOGGLE LOGIC ---
@@ -985,7 +964,7 @@
     // Reset cursor visibility at start
     titleEl.classList.add('typewriter-cursor');
 
-    const text = "Index of Remembering";
+    const text = "The Index of Memory";
     titleEl.innerText = ""; // Clear initial text
     
     let i = 0;
