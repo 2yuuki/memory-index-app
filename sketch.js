@@ -872,14 +872,18 @@ function mouseWheel(event) {
 
 // --- AUTO SAVE ---
 let sketchSaveToastTimeout;
+let sketchStorageTimeout; // Debounce timer
 function saveToLocalStorage(silent = false) {
-  try {
-    if (typeof grid !== 'undefined' && typeof colorGrid !== 'undefined') {
-        localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
-        localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
-        localStorage.setItem('mem_idx_textcolor', JSON.stringify(textColorGrid));
-    }
-  } catch(e) {}
+  clearTimeout(sketchStorageTimeout);
+  sketchStorageTimeout = setTimeout(() => {
+    try {
+      if (typeof grid !== 'undefined' && typeof colorGrid !== 'undefined') {
+          localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
+          localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
+          localStorage.setItem('mem_idx_textcolor', JSON.stringify(textColorGrid));
+      }
+    } catch(e) {}
+  }, 1000); // Save only after 1 second of inactivity
 }
 function loadFromLocalStorage() {
   try {

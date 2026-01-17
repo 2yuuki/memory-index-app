@@ -321,6 +321,7 @@ const cmykSketch = (p) => {
       if (smallBuffer) smallBuffer.remove();
       smallBuffer = p.createGraphics(cols, rows);
       smallBuffer.pixelDensity(1);
+      smallBuffer.elt.getContext('2d', { willReadFrequently: true });
     }
     smallBuffer.clear();
     smallBuffer.image(imgBuffer, 0, 0, cols, rows);
