@@ -108,6 +108,7 @@ let userFontSize = 12;
 let history = [];
 const MAX_HISTORY = 20; 
 let selStart = null, selEnd = null;
+let selectionMask = null;
 let sketchRedoHistory = [];
 let clipboard = null;
 
@@ -591,9 +592,9 @@ function mousePressed() {
       return;
   }
 
-  if (keyIsDown(SHIFT)) { toolMode = "SELECT"; selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; isShiftSelecting = true; return; }
+  if (keyIsDown(SHIFT)) { toolMode = "SELECT"; selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; selectionMask = null; isShiftSelecting = true; return; }
   if (toolMode === "PASTE" && clipboard) { pasteClipboard(mx, my); saveState(); return; }
-  if (toolMode === "SELECT" && !isShiftSelecting) { selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; }
+  if (toolMode === "SELECT" && !isShiftSelecting) { selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; selectionMask = null; }
 
   handleInput(mx, my);
 }
@@ -626,6 +627,36 @@ function handleInput(x, y) {
 
   if (mainMode === "ASCII") {
     if (toolMode === "FILL") {
+        // Nếu có vùng chọn Magic Wand
+        if (selectionMask && selectionMask.size > 0) {
+             const k = `${x},${y}`;
+             if (selectionMask.has(k)) {
+                 let fillChar = (selectedChar === "SMART") ? "." : selectedChar;
+                 if (isEraser) fillChar = "";
+                 selectionMask.forEach(key => {
+                     let [cx, cy] = key.split(',').map(Number);
+                     grid[cy][cx] = fillChar;
+                     if(fillChar !== "") textColorGrid[cy][cx] = inkColorHex;
+                 });
+                 updateLayerTextVisuals(); saveState(); return;
+             }
+        }
+        // Nếu có vùng chọn và click chuột nằm trong vùng chọn -> Đổ màu cả vùng
+        if (selStart && selEnd) {
+            let x1 = min(selStart.x, selEnd.x), y1 = min(selStart.y, selEnd.y);
+            let x2 = max(selStart.x, selEnd.x), y2 = max(selStart.y, selEnd.y);
+            if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+                let fillChar = (selectedChar === "SMART") ? "." : selectedChar;
+                if (isEraser) fillChar = "";
+                for(let r = y1; r <= y2; r++) {
+                    for(let c = x1; c <= x2; c++) {
+                        grid[r][c] = fillChar;
+                        if(fillChar !== "") textColorGrid[r][c] = inkColorHex;
+                    }
+                }
+                updateLayerTextVisuals(); saveState(); return;
+            }
+        }
         let fillChar = (selectedChar === "SMART") ? "." : selectedChar;
         if (isEraser) fillChar = "";
         floodFillAscii(x, y, fillChar); return;
@@ -645,6 +676,32 @@ function handleInput(x, y) {
     }
   } else if (mainMode === "COLOR") {
     if (toolMode === "FILL") {
+        // Nếu có vùng chọn Magic Wand
+        if (selectionMask && selectionMask.size > 0) {
+             const k = `${x},${y}`;
+             if (selectionMask.has(k)) {
+                 let fillColor = isColorEraser ? null : selectedColor;
+                 selectionMask.forEach(key => {
+                     let [cx, cy] = key.split(',').map(Number);
+                     colorGrid[cy][cx] = fillColor;
+                 });
+                 updateLayerColorVisuals(); saveState(); return;
+             }
+        }
+        // Nếu có vùng chọn và click chuột nằm trong vùng chọn -> Đổ màu cả vùng
+        if (selStart && selEnd) {
+            let x1 = min(selStart.x, selEnd.x), y1 = min(selStart.y, selEnd.y);
+            let x2 = max(selStart.x, selEnd.x), y2 = max(selStart.y, selEnd.y);
+            if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+                let fillColor = isColorEraser ? null : selectedColor;
+                for(let r = y1; r <= y2; r++) {
+                    for(let c = x1; c <= x2; c++) {
+                        colorGrid[r][c] = fillColor;
+                    }
+                }
+                updateLayerColorVisuals(); saveState(); return;
+            }
+        }
         let fillColor = isColorEraser ? null : selectedColor;
         floodFillColor(x, y, fillColor); return;
     }
@@ -723,30 +780,39 @@ function floodFillColor(x, y, newColor) {
 
 function magicWandSelect(x, y) {
   if (!isValidCell(x, y)) return;
-  let target = grid[y][x];
+  
+  selectionMask = new Set();
+  let targetChar = grid[y][x];
+  let targetColor = colorGrid[y][x];
+  
   let minX = x, maxX = x, minY = y, maxY = y;
   let stack = [[x, y]];
-  let visited = new Set();
   const key = (c, r) => `${c},${r}`;
-  visited.add(key(x, y));
 
   while(stack.length > 0) {
     let [cx, cy] = stack.pop();
+    let k = key(cx, cy);
     
-    if (cx < minX) minX = cx;
-    if (cx > maxX) maxX = cx;
-    if (cy < minY) minY = cy;
-    if (cy > maxY) maxY = cy;
+    if (selectionMask.has(k)) continue;
+    
+    let match = false;
+    if (mainMode === "ASCII") {
+        if (grid[cy][cx] === targetChar) match = true;
+    } else {
+        if (colorGrid[cy][cx] === targetColor) match = true;
+    }
+    
+    if (match) {
+        selectionMask.add(k);
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
 
-    let neighbors = [[cx+1, cy], [cx-1, cy], [cx, cy+1], [cx, cy-1]];
-    for(let n of neighbors) {
-        let nx = n[0], ny = n[1];
-        if(isValidCell(nx, ny) && !visited.has(key(nx, ny))) {
-            if(grid[ny][nx] === target) {
-                visited.add(key(nx, ny));
-                stack.push([nx, ny]);
-            }
-        }
+        if (cx > 0) stack.push([cx - 1, cy]);
+        if (cx < cols - 1) stack.push([cx + 1, cy]);
+        if (cy > 0) stack.push([cx, cy - 1]);
+        if (cy < rows - 1) stack.push([cx, cy + 1]);
     }
   }
   selStart = {x: minX, y: minY};
@@ -829,7 +895,34 @@ function cutSelection() {
   let x1 = min(selStart.x, selEnd.x); let y1 = min(selStart.y, selEnd.y);
   let x2 = max(selStart.x, selEnd.x); let y2 = max(selStart.y, selEnd.y);
   for (let y = y1; y <= y2; y++) { for (let x = x1; x <= x2; x++) { grid[y][x] = ""; textColorGrid[y][x] = "#000000"; setGridColor(x, y, null); } }
-  updateLayerTextVisuals(); saveState(); toolMode="DRAW"; selStart=null;
+  updateLayerTextVisuals(); saveState(); toolMode="DRAW"; selStart=null; selEnd=null; selectionMask=null;
+}
+function deleteSelection() {
+  let changed = false;
+  if (selectionMask && selectionMask.size > 0) {
+      selectionMask.forEach(key => {
+          let [cx, cy] = key.split(',').map(Number);
+          grid[cy][cx] = "";
+          textColorGrid[cy][cx] = "#000000";
+          setGridColor(cx, cy, null);
+      });
+      changed = true;
+  } else if (selStart && selEnd) {
+      let x1 = min(selStart.x, selEnd.x); let y1 = min(selStart.y, selEnd.y);
+      let x2 = max(selStart.x, selEnd.x); let y2 = max(selStart.y, selEnd.y);
+      for (let y = y1; y <= y2; y++) {
+          for (let x = x1; x <= x2; x++) {
+              grid[y][x] = "";
+              textColorGrid[y][x] = "#000000";
+              setGridColor(x, y, null);
+          }
+      }
+      changed = true;
+  }
+  if (changed) {
+      updateLayerTextVisuals();
+      saveState();
+  }
 }
 function pasteClipboard(sx, sy) {
   if (!clipboard) return;
@@ -857,7 +950,8 @@ function keyPressed() {
     if (key === 'x' || key === 'X') { cutSelection(); return false; }
     if (key === 'v' || key === 'V') { let m = getCorrectedMouse(); pasteClipboard(floor(m.x/cellW), floor(m.y/cellH)); return false; }
   }
-  if (keyCode === ESCAPE) { toolMode = "DRAW"; selStart = null; isShiftSelecting = false; }
+  if (keyCode === ESCAPE) { toolMode = "DRAW"; selStart = null; selEnd = null; selectionMask = null; isShiftSelecting = false; }
+  if (keyCode === DELETE || keyCode === BACKSPACE) { deleteSelection(); return false; }
 }
 
 function mouseWheel(event) {

@@ -1566,6 +1566,84 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   padding: 20px;
 }
 
+/* --- SLIDESHOW GALLERY --- */
+.gallery-slideshow {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  margin-top: 20px;
+  padding: 20px 0;
+  /* Mask edges for smooth fade effect */
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.gallery-track {
+  display: inline-flex;
+  gap: 20px;
+  width: max-content;
+  align-items: center; /* Căn giữa theo chiều dọc */
+  padding: 0 50%; /* Thêm khoảng trống để có thể căn giữa hình đầu/cuối */
+  /* Animation removed for JS control */
+}
+
+.gallery-slide-img {
+  height: auto; /* Để chiều cao tự nhiên */
+  max-height: 60vh; /* Giới hạn chiều cao tối đa */
+  width: auto; /* Để chiều rộng tự nhiên */
+  max-width: 80vw; /* Giới hạn chiều rộng tối đa */
+  border: 4px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: block;
+}
+
+.gallery-slide-img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.gallery-slide-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.gallery-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0,0,0,0.1);
+  margin-top: 10px;
+}
+
+.gallery-progress-fill {
+  height: 100%;
+  background: #0072BC;
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* Navigation Buttons */
+.gallery-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #000;
+  cursor: pointer;
+  z-index: 100;
+  padding: 5px 10px;
+  font-family: 'KK7VCROSDMono', monospace;
+  font-size: 18px;
+  transition: background 0.2s;
+}
+.gallery-nav-btn:hover { background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+.gallery-nav-btn.prev { left: 10px; }
+.gallery-nav-btn.next { right: 10px; }
+
 /* --- INTRO & RESULTS STYLES (Moved from inline) --- */
 .intro-video-bg {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
