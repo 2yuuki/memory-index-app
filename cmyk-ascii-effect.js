@@ -25,6 +25,8 @@ const cmykSketch = (p) => {
   let needsUpdate = true; // OPTIMIZATION: Flag to only redraw when necessary
   let gifLength = 30; // Frames for seamless GIF loop
   let currentFile = null; // Store current file for re-processing
+  let videoStream = null; // Webcam stream
+  let videoEl = null;     // Webcam video element
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
@@ -216,6 +218,21 @@ const cmykSketch = (p) => {
 
     // --- EXPOSE RESET FUNCTION GLOBALLY ---
     window.resetImageProcessor = () => {
+      // Stop Webcam if active
+      if (videoStream) {
+          videoStream.getTracks().forEach(track => track.stop());
+          videoStream = null;
+      }
+      if (videoEl) {
+          videoEl.remove();
+          videoEl = null;
+      }
+      const btnWebcam = document.getElementById('btnWebcam');
+      if(btnWebcam) {
+          btnWebcam.innerText = "Use Webcam";
+          btnWebcam.classList.remove('active');
+      }
+
       blobImg = null;
       currentFile = null;
       showImage = false;
@@ -695,6 +712,91 @@ const cmykSketch = (p) => {
       btnLoad.mousePressed(() => { fileIn.elt.click(); });
       fileIn.changed((e) => {
         loadAndProcessImage(e.target.files[0]);
+      });
+    }
+
+    // --- Webcam Logic ---
+    const btnWebcam = document.getElementById('btnWebcam');
+    if (btnWebcam) {
+      btnWebcam.addEventListener('click', () => {
+        if (videoStream) {
+            // --- CAPTURE MODE ---
+            if (videoEl && videoEl.readyState >= 2) {
+                // Capture current frame to static image
+                let w = videoEl.videoWidth;
+                let h = videoEl.videoHeight;
+                let staticImg = p.createImage(w, h);
+                staticImg.drawingContext.drawImage(videoEl, 0, 0, w, h);
+                
+                // Stop Stream
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                videoEl.remove();
+                videoEl = null;
+                
+                // Set as main image
+                blobImg = staticImg;
+                isAnimated = false;
+                
+                // Reset UI
+                btnWebcam.innerText = "Use Webcam";
+                btnWebcam.classList.remove('active');
+                
+                needsUpdate = true;
+                p.redraw();
+            }
+        } else {
+            // --- START WEBCAM MODE ---
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                 alert("Webcam not supported or blocked. Please use HTTPS or localhost.");
+                 return;
+            }
+            
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                videoStream = stream;
+                videoEl = document.createElement('video');
+                videoEl.srcObject = stream;
+                videoEl.play().catch(e => console.error("Auto-play failed", e));
+                
+                videoEl.onloadedmetadata = () => {
+                    let w = videoEl.videoWidth;
+                    let h = videoEl.videoHeight;
+                    
+                    // Resize logic (same as loadAndProcessImage)
+                    const MAX_DIM = 800;
+                    if (w > MAX_DIM || h > MAX_DIM) {
+                        let ratio = w / h;
+                        if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
+                        else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
+                    }
+                    
+                    p.resizeCanvas(w, h);
+                    const sheet = p.select('#tab-image-proc .paper-sheet');
+                    if(sheet) sheet.style('aspect-ratio', `${w}/${h}`);
+                    
+                    gfxFrame = createOptimizedGraphics(w, h);
+                    if (imgBuffer) imgBuffer.remove();
+                    imgBuffer = p.createGraphics(w, h);
+                    imgBuffer.pixelDensity(1);
+                    imgBuffer.elt.getContext('2d', { willReadFrequently: true });
+                    imgBuffer.clear();
+                    
+                    // Set blobImg to video wrapper for draw() loop
+                    blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl };
+                    isAnimated = true;
+                    
+                    btnWebcam.innerText = "Capture";
+                    btnWebcam.classList.add('active');
+                    
+                    // Hide placeholder
+                    const ph = p.select('#tab-image-proc .placeholder-text');
+                    if(ph) ph.style('display', 'none');
+                };
+            }).catch(err => {
+                console.error(err);
+                alert("Could not access webcam: " + err.message);
+            });
+        }
       });
     }
 

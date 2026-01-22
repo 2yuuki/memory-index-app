@@ -1469,7 +1469,7 @@ function setupLayoutTab() {
     let data = e.dataTransfer.getData("text/plain");
     if (data && data.startsWith("data:image")) {
        // OPTIMIZATION: Resize dropped image to save LocalStorage space
-       resizeBase64Img(data, 400, 0.6, (optimizedData) => {
+       resizeBase64Img(data, 1600, 0.9, (optimizedData) => {
            saveLayoutState(); // Save before drop
            let wrapper = createDiv(''); wrapper.parent(layoutDiv);
            wrapper.style('position', 'absolute'); wrapper.style('width', '150px'); wrapper.style('cursor', 'move');
@@ -1658,8 +1658,8 @@ function createLayoutUI() {
     createDiv('Paper Pattern').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
     let patRow = createDiv('').parent(group).class('mini-row').style('justify-content', 'center').style('gap', '10px');
     
-    let btnPrev = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;">').attribute('data-tooltip', 'Previous Pattern');
-    let btnNext = createButton('').parent(patRow).class('btn-retro').style('width','40px').html('<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDEwIDEwIj48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNiAyTDEyIDhMNiAxNFYyWiIvPjwvc3ZnPg==" class="pixel-icon">').attribute('data-tooltip', 'Next Pattern');
+    let btnPrev = createButton('').parent(patRow).class('btn-retro').style('width','40px').html("<-").attribute('data-tooltip', 'Previous Pattern');
+    let btnNext = createButton('').parent(patRow).class('btn-retro').style('width','40px').html("->").attribute('data-tooltip', 'Next Pattern');
 
     btnPrev.mousePressed(() => {
         changeActiveArtboardPattern(-1);
@@ -1681,6 +1681,47 @@ function createLayoutUI() {
             saveLayoutState();
         }
     });
+
+    // NEW: Align Object
+    createDiv('Align Object').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
+    let alignRow1 = createDiv('').parent(group).class('mini-row').style('gap','2px');
+    let alignRow2 = createDiv('').parent(group).class('mini-row').style('gap','2px').style('margin-top','2px');
+
+    const alignObject = (mode) => {
+        if (!selectedLayoutElement) return;
+        
+        let context = activeArtboard;
+        if (!context) {
+             let elTop = parseInt(selectedLayoutElement.style.top || 0);
+             let bgs = document.querySelectorAll('.layout-page-bg');
+             for(let bg of bgs) {
+                 if (elTop >= bg.offsetTop && elTop < bg.offsetTop + bg.offsetHeight) {
+                     context = bg;
+                     break;
+                 }
+             }
+        }
+        if (!context) return;
+
+        saveLayoutState();
+        let elW = selectedLayoutElement.offsetWidth;
+        let elH = selectedLayoutElement.offsetHeight;
+        let bgL = context.offsetLeft;
+        let bgT = context.offsetTop;
+        let bgW = context.offsetWidth;
+        let bgH = context.offsetHeight;
+        let pad = 40; // Padding inside artboard
+
+        if (mode === 'left') selectedLayoutElement.style.left = (bgL + pad) + 'px';
+        else if (mode === 'center') selectedLayoutElement.style.left = (bgL + (bgW - elW) / 2) + 'px';
+        else if (mode === 'right') selectedLayoutElement.style.left = (bgL + bgW - elW - pad) + 'px';
+        else if (mode === 'top') selectedLayoutElement.style.top = (bgT + pad) + 'px';
+        else if (mode === 'middle') selectedLayoutElement.style.top = (bgT + (bgH - elH) / 2) + 'px';
+        else if (mode === 'bottom') selectedLayoutElement.style.top = (bgT + bgH - elH - pad) + 'px';
+    };
+
+    ['Left', 'Center', 'Right'].forEach(m => { let b = createButton(m === 'Center' ? 'Ctr' : m).parent(alignRow1).class('btn-retro').style('flex','1').style('font-size','10px').style('padding','4px'); b.mousePressed(() => alignObject(m.toLowerCase())); b.attribute('data-tooltip', 'Align ' + m); });
+    ['Top', 'Middle', 'Bottom'].forEach(m => { let b = createButton(m === 'Middle' ? 'Mid' : m === 'Bottom' ? 'Bot' : m).parent(alignRow2).class('btn-retro').style('flex','1').style('font-size','10px').style('padding','4px'); b.mousePressed(() => alignObject(m.toLowerCase())); b.attribute('data-tooltip', 'Align ' + m); });
 
     // 2. Add Text Tool
     createDiv('Text Tool').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
