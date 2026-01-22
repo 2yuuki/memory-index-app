@@ -1,20 +1,22 @@
 # The Memory Index
 
-A digital memory index inspired by HyperCard aesthetics, built with p5.js.
+**Creative Process Documentation for a Major Project**
 
-## Features
-- **Input Tab:** Write thoughts, upload images, and convert them to ASCII art using CMYK/Dither effects.
-- **Sketch Tab:** Draw pixel art or ASCII sketches with custom tools (Pencil, Eraser, Bucket).
-- **Index Tab:** Organize your memory cards on a virtual A4 sheet with drag-and-drop layout.
+*   **Author:** Nguyen Thu Trang (s3926717)
+*   **Contact:** s3926717@rmit.edu.vn
+*   **Course:** COMM2754 Major Project, Semester C 2025
+*   **School:** School of Communication and Design, RMIT University Vietnam
 
-## Technologies
-- HTML5 / CSS3
-- JavaScript (ES6)
-- [p5.js](https://p5js.org/) for graphics and canvas manipulation.
+## Abstract
 
-## How to Run
-Simply open `index.html` in any modern web browser.
+The Memory Index is a public, web-based interactive platform built with p5.js. The project transforms personal memories—written notes, images, and sketches—into printable visual artifacts. These outputs take the form of a Memory Index Diagram and an East–West–South–North paper fortune-teller. The project explores how net.art aesthetics and computational systems can function as tools for emotional reflection.
 
-## Credits
-- Fonts: HP001, HypertextMono.
-- Design inspired by retro Macintosh interfaces.
+## Project Question
+
+> “How can we embrace our memories through the net.art?”
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. The full license text can be found in the `license` file.
+
+Copyright (C) 2025 Nguyen Thu Trang (s3926717)

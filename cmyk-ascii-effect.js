@@ -1,10 +1,27 @@
-// cmyk-ascii-effect.js - UNIVERSAL ASCII GENERATOR (Instance Mode)
+/**
+ * The Memory Index - CMYK ASCII Effect
+ * Copyright (C) 2025 Nguyen Thu Trang (s3926717)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 
 const cmykSketch = (p) => {
   let blobImg = null, gfxFrame;
   let showImage = false;
   let isAnimated = false;
-  let isJittering = false; // Trạng thái animation jitter
+  let isJittering = false; // Jitter animation state
   let needsUpdate = true; // OPTIMIZATION: Flag to only redraw when necessary
   let gifLength = 30; // Frames for seamless GIF loop
   let currentFile = null; // Store current file for re-processing
@@ -250,7 +267,7 @@ const cmykSketch = (p) => {
       if (shouldUpdateBuffer) {
         imgBuffer.clear();
         
-        // FIX: Giữ nguyên tỉ lệ khung hình (Aspect Ratio) của ảnh gốc
+        // FIX: Maintain original image aspect ratio
         let aspect = blobImg.width / blobImg.height;
         let canvasAspect = p.width / p.height;
         let drawW, drawH;
@@ -374,7 +391,7 @@ const cmykSketch = (p) => {
           }
         }
 
-        // FIX: Nếu pixel trong suốt (vùng trống quanh ảnh), coi như màu trắng để không vẽ mực
+        // FIX: If pixel is transparent (empty area around image), treat as white to avoid drawing ink
         if (a < 50) {
           r = 255; g = 255; b = 255;
         }
@@ -482,7 +499,7 @@ const cmykSketch = (p) => {
     // 2. Load Pixels
     gfxFrame.loadPixels();
 
-    // 2.1 Pre-process: Increase Contrast (Tăng độ tương phản để hạt màu rõ hơn)
+    // 2.1 Pre-process: Increase Contrast (to make color grains clearer)
     const contrast = 1.3; // Tăng 30% tương phản
     const intercept = 128 * (1 - contrast);
     for (let i = 0; i < gfxFrame.pixels.length; i+=4) {
@@ -504,7 +521,7 @@ const cmykSketch = (p) => {
         const oldG = gfxFrame.pixels[idx+1];
         const oldB = gfxFrame.pixels[idx+2];
         
-        // Jitter Noise (Thêm nhiễu động)
+        // Jitter Noise (Add dynamic noise)
         let noise = 0;
         if (isJittering) noise = p.random(-20, 20);
 
@@ -871,5 +888,5 @@ const cmykSketch = (p) => {
   }
 };
 
-// Khởi tạo Instance P5 cho CMYK tab
+// Initialize P5 Instance for CMYK tab
 new p5(cmykSketch);

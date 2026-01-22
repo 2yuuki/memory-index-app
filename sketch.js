@@ -1,4 +1,51 @@
-// sketch.js - FULL FEATURED + LAYOUT MODE + HOTKEYS FIXED
+/**
+ * The Memory Index
+ * Copyright (C) 2025 Nguyen Thu Trang (s3926717)
+ * 
+ * Author: Nguyen Thu Trang (s3926717)
+ * Contact: s3926717@rmit.edu.vn, yuuki24.work@gmail.com, @yuuwouldnever on Instagram
+ * This is the final results for my Major Project COMM2754, Semester C 2025 at RMIT University
+ * School of Communication and Design, RMIT University Vietnam
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * REFERENCES:
+ * 
+ * 1. Dither Mode (Tab 2 - Image Processor):
+ *    Nicup n.d., Works, nicup.art, viewed 20 November 2025, <https://nicup.art/works/>.
+ * 
+ * 2. Marker Presets (Tab 2 - Image Processor):
+ *    OpenProcessing n.d., Sketch 2589051, OpenProcessing, viewed 20 November 2025, <https://openprocessing.org/sketch/2589051>.
+ * 
+ * 3. ASCII Filter Main Code (Tab 2):
+ *    OpenProcessing n.d., Sketch 2729335, OpenProcessing, viewed 20 November 2025, <https://openprocessing.org/sketch/2729335>.
+ * 
+ * 4. ASCII Painting Tool (Tab 3):
+ *    OpenProcessing n.d., Sketch 2655050, OpenProcessing, viewed 15 November 2025, <https://openprocessing.org/sketch/2655050>.
+ *    HLNET n.d., ASCII Automata, Neocities, viewed 16 November 2025, <https://hlnet.neocities.org/ascii-automata/>.
+ * 
+ * 5. Functions for tools in Tab 4:
+ *    Google Gemini.
+ * 
+ * 6. Connecting tabs together:
+ *    Google Gemini.
+ * 
+ * 7. Local Storage:
+ *    Google Gemini.
+ */
+
+
 
 // --- GLOBALS FOR APP INTEGRATION ---
 var activeTab = 'tab-thoughts';
@@ -380,19 +427,19 @@ function setup() {
 
   // --- GLOBAL KEYBOARD LISTENER FOR LAYOUT (TAB 3) ---
   document.addEventListener('keydown', (e) => {
-      // Chỉ hoạt động khi đang ở Tab 3 (Index/Layout)
+      // Only works when in Tab 3 (Index/Layout)
       if (activeTab !== 'tab-index') return;
 
       // Ignore shortcuts if typing in text fields
       if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
 
-      // Delete / Backspace: Xóa phần tử đang chọn
+      // Delete / Backspace: Delete selected element
       if (e.key === 'Delete' || e.key === 'Backspace') {
           if (selectedLayoutElement) {
               saveLayoutState();
               selectedLayoutElement.remove();
               selectedLayoutElement = null;
-              e.preventDefault(); // Ngăn trình duyệt back lại
+              e.preventDefault(); // Prevent browser from going back
           }
       }
 
@@ -627,7 +674,7 @@ function handleInput(x, y) {
 
   if (mainMode === "ASCII") {
     if (toolMode === "FILL") {
-        // Nếu có vùng chọn Magic Wand
+        // If there is a Magic Wand selection
         if (selectionMask && selectionMask.size > 0) {
              const k = `${x},${y}`;
              if (selectionMask.has(k)) {
@@ -641,7 +688,7 @@ function handleInput(x, y) {
                  updateLayerTextVisuals(); saveState(); return;
              }
         }
-        // Nếu có vùng chọn và click chuột nằm trong vùng chọn -> Đổ màu cả vùng
+        // If there is a selection and the click is inside -> Fill the entire area
         if (selStart && selEnd) {
             let x1 = min(selStart.x, selEnd.x), y1 = min(selStart.y, selEnd.y);
             let x2 = max(selStart.x, selEnd.x), y2 = max(selStart.y, selEnd.y);
@@ -676,7 +723,7 @@ function handleInput(x, y) {
     }
   } else if (mainMode === "COLOR") {
     if (toolMode === "FILL") {
-        // Nếu có vùng chọn Magic Wand
+        // If there is a Magic Wand selection
         if (selectionMask && selectionMask.size > 0) {
              const k = `${x},${y}`;
              if (selectionMask.has(k)) {
@@ -688,7 +735,7 @@ function handleInput(x, y) {
                  updateLayerColorVisuals(); saveState(); return;
              }
         }
-        // Nếu có vùng chọn và click chuột nằm trong vùng chọn -> Đổ màu cả vùng
+        // If there is a selection and the click is inside -> Fill the entire area
         if (selStart && selEnd) {
             let x1 = min(selStart.x, selEnd.x), y1 = min(selStart.y, selEnd.y);
             let x2 = max(selStart.x, selEnd.x), y2 = max(selStart.y, selEnd.y);
@@ -1253,7 +1300,7 @@ function saveArtworkTXT() {
     let line = "";
     for(let x=0; x<cols; x++) {
       let c = grid[y][x];
-      // Nếu ô trống thì thay bằng khoảng trắng để giữ định dạng
+      // If the cell is empty, replace with a space to maintain formatting
       line += (c === "" ? " " : c);
     }
     content += line + "\n";
@@ -1504,7 +1551,7 @@ function setupLayoutTab() {
   let centerPanel = null;
   let holder = select('#layout-canvas-holder');
   if (holder) {
-      // FIX: Dùng DOM traversal (parentNode) thay vì p5 parent() để tìm đúng panel cha
+      // FIX: Use DOM traversal (parentNode) instead of p5 parent() to find the correct parent panel
       let p = holder.elt.parentNode;
       while(p) {
           if (p.classList && p.classList.contains('panel-center')) { centerPanel = new p5.Element(p); break; }

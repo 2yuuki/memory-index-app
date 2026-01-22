@@ -1,4 +1,51 @@
 <!DOCTYPE html>
+<!--
+ * The Memory Index
+ * Copyright (C) 2025 Nguyen Thu Trang (s3926717)
+ * 
+ * Author: Nguyen Thu Trang (s3926717)
+ * Contact: s3926717@rmit.edu.vn, yuuki24.work@gmail.com, @yuuwouldnever on Instagram
+ * This is the final results for my Major Project COMM2754, Semester C 2025 at RMIT University
+ * School of Communication and Design, RMIT University Vietnam
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * REFERENCES:
+ * 
+ * 1. Dither Mode (Tab 2 - Image Processor):
+ *    Nicup n.d., Works, nicup.art, viewed 20 November 2025, <https://nicup.art/works/>.
+ * 
+ * 2. Marker Presets (Tab 2 - Image Processor):
+ *    OpenProcessing n.d., Sketch 2589051, OpenProcessing, viewed 20 November 2025, <https://openprocessing.org/sketch/2589051>.
+ * 
+ * 3. ASCII Filter Main Code (Tab 2):
+ *    OpenProcessing n.d., Sketch 2729335, OpenProcessing, viewed 20 November 2025, <https://openprocessing.org/sketch/2729335>.
+ * 
+ * 4. ASCII Painting Tool (Tab 3):
+ *    OpenProcessing n.d., Sketch 2655050, OpenProcessing, viewed 15 November 2025, <https://openprocessing.org/sketch/2655050>.
+ *    HLNET n.d., ASCII Automata, Neocities, viewed 16 November 2025, <https://hlnet.neocities.org/ascii-automata/>.
+ * 
+ * 5. Functions for tools in Tab 4:
+ *    Google Gemini.
+ * 
+ * 6. Connecting tabs together:
+ *    Google Gemini.
+ * 
+ * 7. Local Storage:
+ *    Google Gemini.
+ -->
+ 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -193,24 +240,9 @@
     <div class="divider"></div>
 
     <h2 class="intro-heading-2">
-      <!-- <span class="lang-vi">Lời nói đầu</span> -->
       <span class="lang-en">Foreword</span>
     </h2>
     <div class="intro-desc">
-      <!-- <span class="lang-vi">
-        Thật sự thì những năm gần đây tôi đã có 1 đời sống tinh thần khá tệ hại. Kiểu, sợ phải buồn nên không cho phép bản thân dùng cảm xúc quá nhiều? Không bận tâm quá mức tới cái gì cả.<br><br>
-        lâu dần, việc đó làm tôi hoàn toàn trống rỗng. tôi không quá buồn hay quá hưng phấn về chuyện gì. và dần dần tôi quên luôn cả những kí ức yêu quý của tôi ngày xưa đó. thực ra cũng không hẳn là “yêu quý” tới vậy. có nhiều chuyện vẫn là những chuyện thật kinh khủng so với tôi vào thời điểm đó. chỉ là bây giờ, tôi đã quá tách biệt với chính cảm xúc của mình đến mức không còn nhớ về ký ức của bản thân như 1 thứ mình đã từng trải qua. tôi đã nghĩ:”mình có gặp chuyện này như vậy sao? Nhưng sao mình không có cảm giác gì về chuyện đó nữa vậy? cứ như mình đang nhìn vào mảnh kí ức của ai đó xa lạ khác, và bản thân thì là 1 vị khách vô tình được nghe kể về chuyện đó.”<br><br>
-        thật buồn. tôi cũng đã nghĩ vậy. những điều mình đã trải qua- khi đó nó lớn lao như vậy, vui có, buồn có, tràn trề hạnh phúc và tận cùng đớn đau, tôi nghĩ tôi cũng đã thử nếm từng vị đắng cay ngọt bùi như thế. Nhưng sao bây giờ mọi thứ trông giống nhau, làm ký ức của tôi trở nên vô nghĩa.<br><br>
-        như vậy tôi cũng không còn cái lõi để vận hành con người vốn lúc đó đang rệu rã giữa cuộc sống nữa.<br><br>
-        như vậy tôi sợ vượt qua không nổi cái cuộc sống đôi lúc lại nhàm chán, đôi lúc lại khó khăn, và tôi cũng sợ sống không hết món quà mà chính cái cuộc sống nhàm chán khó khăn ấy đôi khi có thể ném cho tôi 1 lúc nào đó.<br><br>
-        tôi sợ, nên tôi quyết định phải soi lại vào bên trong mình thôi. tôi thực sự nghĩ gì, đã cảm thấy như nào, và những người xung quanh tôi cũng đã sống những cuộc sống ra sao. tôi nghĩ tôi cần kiểm kê lại lần lượt từng trải nghiệm tôi đã trải qua, để tôi có thể 1 lúc nào đó sau này bật xa hơn nữa. đó là lí do mà tôi bắt tay vào làm dự án này.<br><br>
-        tôi muốn tri ân mọi người, những người luôn giúp đỡ tôi đến tận bây giờ, dù tôi biết tôi đã luôn khá vô tâm. tôi cũng muốn thay đổi bản thân, vậy nên càng phải làm dự án này thôi.<br><br>
-        Lúc mới đầu, tôi định sẽ kể 1 câu chuyện về 1 toán quân các kí ức bị bỏ rơi trồi lên đi diễu hành để đòi lại công bằng cho chúng. đó sẽ là 1 cuộc viễn chinh của những thứ bị lãng quên và đích đến của chúng là người chủ nhân của những kí ức đó. kiểu đến nơi chắc là sẽ đập cho thằng đó hay nhỏ đó 1 trận vì dám quên tụi này. Nhưng làm 1 bộ phim hoạt hình ngắn với mình tôi thì hơi khó để hoàn thành trong vòng 1 khoá học 3 tháng, vậy nên mentor của tôi gợi ý nếu chỉ làm 1 nhân vật 3D tương tác được trên web platform thì sao? mọi người có thể tương tác với nó bằng cách vẽ những hình dung của họ khi còn nhỏ vào giấy và sau đó tôi sẽ project lên nhân vật 3D đó như 1 lớp skin bên ngoài custom theo từng bản vẽ của người dùng. Và sau đó họ cũng có thể thay cả bối cảnh nhân vật như đồng quê bắc bộ hay sông nước miền Tây,… và cả những bản nhạc hát ru theo từng vùng miền mà người dùng đã được lớn lên cùng chúng.<br><br>
-        Nhưng sau đó tôi thấy ý tưởng đó hơi thiếu tính thú vị để tương tác. tự dưng bảo người dùng vẽ về hình dung tuổi thơ của họ thì quá khó để mời gọi mọi người cùng thực hiện. và cũng thiếu tính soi chiếu lại bên trong như mục đích mà tôi muốn cho dự án. chỉ qua 1 tương tác đó thì tính soi chiếu sẽ khá là nông. vậy nên tôi muốn nghĩ thêm cách để tạo ra 1 sản phẩm hay tác phẩm mà cho phép mọi người có 1 khoảnh khắc nhỏ có thể nghĩ lại về những điều đã qua của họ 1 cách trung thực. tôi nghĩ tới việc journaling. Thực ra bình thường tôi vốn không phải là 1 người thường xuyên ghi chép lại những điều đã qua. vậy nên tôi đã phải trả giá bằng việc tôi đã xem nhẹ phần lớn cuộc đời của tôi như tôi có nêu bên trên.<br><br>
-        tôi nghĩ bây giờ tôi nên thử viết lại những gì tôi thực sự đã và đang cảm thấy. nên tôi tạo 1 trang web để ghi chép và vẽ lại những kí ức đã qua. Trong đó, người dùng có thể viết lại những suy nghĩ của họ, cũng có thể lưu lại những hình ảnh về những thứ đã xảy ra, hoặc nếu không có hình ảnh, họ có thể vẽ.<br><br>
-        tôi cảm thấy journaling bằng note bình thường cũng quá nhàm rồi, nên có khi web của tôi cũng là 1 lựa chọn mới lạ cho những hôm khó ngủ của ai đó cũng được. ít ra với tôi thì cũng oke.<br><br>
-        Do vậy tôi nghĩ phải làm trang web có concept thú vị để làm unique selling point. tôi chỉ là muốn quay về cái thời tiểu học của mình, lúc tôi chỉ là 1 đứa bé, không nghĩ gì nhiều, tự tin với những gì mình có, chấp nhận bản thân là bản thân, và yêu thích những gì mình sẽ làm và đang làm. lúc đó mọi thứ thật rõ ràng, như tôi có được mọi câu trả lời cho bản thân vậy. vậy nên tôi chọn những aesthetic thuộc về thời 2010s, những trò chơi, những cuốn tập kẻ ô ly, bút mực tím, zingme, những thứ thực sự quen thuộc với mọi đứa trẻ cũng lớn lên ở thời đó. đó là 1 cách để tôi gợi lại những kí ức rủ nhau đi về với mình. Song song đó, tôi cũng muốn 1 thứ gì đó rõ ràng và hệ thống cùng xảy ra lúc đang ôm ấp những cảm xúc như vậy. làm vậy thì tôi sẽ không bị quá cảm tính và cũng soi chiếu tốt hơn. vậy nên tôi nghĩ tới những biểu đồ, những hệ thống, những con số và báo cáo,… và tôi nghĩ tới 1 bản biểu đồ cực kì phức tạp mô tả lại 1 thứ vô cùng cảm tính và cảm xúc đó là the net.art diagram. Vậy nên tôi thử đem làn sóng net.art- 1 loại hình nghệ thuật trên máy tính thời internet thô sơ kết hợp với sự hoài niệm của lứa học sinh 2010s Việt Nam xem sao.
-      </span> -->
       <span class="lang-en">
         Honestly, over the past few years, my inner life has been in a pretty bad place. It’s like—I became afraid of feeling sad, so I stopped allowing myself to feel too much of anything at all. I tried not to care too deeply about anything.<br><br>
         Over time, that left me completely hollow. I wasn’t deeply sad, but I wasn’t excited either. And gradually, I began to forget my own memories. Not all of them were exactly “precious” memories—some of them were terrifying to me at the time. But now, I feel so detached from my own emotions that I no longer remember those memories as things I once lived through.<br><br>
@@ -423,7 +455,6 @@
     <h2 class="intro-heading-2">
       <span class="lang-vi hidden">III. Tài liệu tham khảo</span>
       <span class="lang-en">V. References</span>
-      <!-- <span class="lang-vi">III. Tài liệu tham khảo</span> -->
     </h2>
     <ul class="intro-desc intro-list">
       <li style="margin-bottom: 8px;">Dunne, A & Raby, F 2013, Speculative Everything: Design, Fiction, and Social Dreaming, The MIT Press, Cambridge, MA.</li>
@@ -702,14 +733,14 @@
   style.innerHTML = `.hidden { display: none !important; }`;
   document.head.appendChild(style);
 
-  // Tự động sửa lỗi SVG không giãn (stretch) bằng cách thêm preserveAspectRatio="none"
+  // Automatically fix SVG stretch issue by adding preserveAspectRatio="none"
   async function fixSvgStretch(selector, url) {
     try {
       const resp = await fetch(url);
       if (!resp.ok) return;
       let svgText = await resp.text();
       
-      // Thêm thuộc tính preserveAspectRatio="none" để cho phép giãn hình
+      // Add preserveAspectRatio="none" to allow stretching
       if (svgText.includes('<svg')) {
         if (svgText.includes('preserveAspectRatio')) {
           svgText = svgText.replace(/preserveAspectRatio="[^"]*"/, 'preserveAspectRatio="none"');
@@ -723,11 +754,11 @@
       }
     } catch (e) { console.warn('SVG Fix skipped (needs local server):', e); }
   }
-  // Áp dụng fix cho top-bar và panel-center
-  //fixSvgStretch('.top-bar', 'assets/UI%20items/top-bar.svg');
-  //fixSvgStretch('.panel-center', 'assets/UI%20items/panel-center.svg');
-  //fixSvgStretch('.panel-left', 'assets/UI%20items/panel-left.svg');
-  //fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
+  // Apply fix for top-bar and panel-center
+  // fixSvgStretch('.top-bar', 'assets/UI%20items/top-bar.svg');
+  // fixSvgStretch('.panel-center', 'assets/UI%20items/panel-center.svg');
+  // fixSvgStretch('.panel-left', 'assets/UI%20items/panel-left.svg');
+  // fixSvgStretch('.sidebar-bg-rotated', 'assets/UI%20items/top-bar.svg');
 
   window.closeInstructionModal = function() {
       const chk = document.getElementById('chk-dont-show-instr');
@@ -831,6 +862,15 @@
     ];
 
     let images = potentialFiles.map(f => encodeURI(basePath + f));
+
+    // Add extra ASCII images requested
+    const extraImages = [
+        "assets/ASCII images/Artboard 4.png",
+        "assets/ASCII images/artwork (1).png",
+        "assets/ASCII images/artwork (2).png",
+        "assets/ASCII images/artwork.png"
+    ];
+    extraImages.forEach(src => images.push(encodeURI(src)));
     
     function renderGallery() {
         track.innerHTML = ''; // Clear existing content
@@ -867,7 +907,7 @@
             img.src = src;
             img.className = 'gallery-slide-img';
             
-            // Giữ kích thước nhỏ (200px) cho các file "tải xuống"
+            // Keep small size (200px) for "download" files
             if (decodeURI(src).includes("tải xuống")) {
                 img.style.height = '200px';
             } else {
@@ -975,14 +1015,14 @@
                     // Update Progress Bar
                     const progress = Math.min(waitTimer / waitDuration, 1) * 100;
                     let activeFound = false;
-                    // Tính tâm của khung nhìn hiện tại
+                    // Calculate center of current viewport
                     const viewCenter = container.scrollLeft + container.clientWidth / 2;
 
                     for (let i = 0; i < wrappers.length; i++) {
                         const w = wrappers[i];
                         const wCenter = w.offsetLeft + w.offsetWidth / 2;
                         
-                        // Kiểm tra xem hình này có đang ở giữa màn hình không (trong khoảng sai số)
+                        // Check if this image is in the center of the screen (within tolerance)
                         if (!activeFound && Math.abs(wCenter - viewCenter) < w.offsetWidth / 2 + 10) {
                              const fill = w.querySelector('.gallery-progress-fill');
                              if (fill) fill.style.width = `${progress}%`;
@@ -995,14 +1035,14 @@
 
                     waitTimer += dt;
                     if (waitTimer >= waitDuration) {
-                        // Tìm hình tiếp theo để căn giữa (Center Alignment)
+                        // Find next image to center align
                         for (let i = 0; i < wrappers.length; i++) {
                             const w = wrappers[i];
                             const wCenter = w.offsetLeft + w.offsetWidth / 2;
                             
-                            // Tìm hình đầu tiên có tâm nằm bên phải tâm màn hình hiện tại
+                            // Find first image with center to the right of current viewport center
                             if (wCenter > viewCenter + 20) { 
-                                // Tính toán vị trí scroll để đưa tâm hình vào giữa khung nhìn
+                                // Calculate scroll position to center the image
                                 scrollTarget = wCenter - container.clientWidth / 2;
                                 isScrolling = true;
                                 break;
@@ -1011,7 +1051,7 @@
                         if (!isScrolling) waitTimer = 0;
                     }
                 } else {
-                    // Hiệu ứng lướt (Swipe Animation)
+                    // Swipe Animation
                     const current = container.scrollLeft;
                     const dist = scrollTarget - current;
                     
@@ -1020,9 +1060,9 @@
                         isScrolling = false;
                         waitTimer = 0;
                     } else {
-                        let move = dist * 0.15; // Tăng tốc độ lướt để mượt hơn
-                        if (Math.abs(move) < 1) move = Math.sign(dist) * 1; // Giảm ngưỡng dừng để tránh khựng
-                        // An toàn: không di chuyển quá đích
+                        let move = dist * 0.15; // Increase swipe speed for smoothness
+                        if (Math.abs(move) < 1) move = Math.sign(dist) * 1; // Reduce stop threshold to avoid stutter
+                        // Safety: do not overshoot target
                         if (Math.abs(move) > Math.abs(dist)) move = dist;
                         container.scrollLeft += move;
                     }
@@ -1194,7 +1234,7 @@
       introView.style.display = 'flex';
       appBody.style.display = 'none';
       if(appSidebar) {
-        appSidebar.style.display = ''; /* Xóa inline style cũ nếu có */
+        appSidebar.style.display = ''; /* Remove old inline style if exists */
         appSidebar.classList.add('hidden');
       }
       
@@ -1215,7 +1255,7 @@
       introView.style.display = 'none';
       appBody.style.display = 'flex';
       if(appSidebar) {
-        appSidebar.style.display = ''; /* Xóa inline style cũ nếu có */
+        appSidebar.style.display = ''; /* Remove old inline style if exists */
         appSidebar.classList.remove('hidden');
       }
       tabs.forEach(t => {
