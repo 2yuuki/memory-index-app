@@ -58,6 +58,11 @@ let canvasW = 2400;
 let canvasH = 3200; 
 let inkColorHex = "#000000"; 
 
+// --- EXPORT OPTIONS ---
+// allow user to toggle whether the exported PNG should have a transparent
+// background (i.e. "tách nền" / remove background).
+let exportTransparent = false; 
+
 // --- DATA & BUFFERS ---
 let grid = [];      
 let colorGrid = []; 
@@ -1273,6 +1278,11 @@ function createUI() {
       createDiv('Files').parent(sidebarDiv).class('section-title').style('font-weight','700').style('font-size','16px'); exportGroup = createDiv('').parent(sidebarDiv).id('export-group');
       exportGroup.style('display','flex').style('flex-direction','column').style('gap','8px');
       let btnPng = createButton('EXPORT PNG').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as PNG image.'); btnPng.mousePressed(saveArtworkPNG);
+      // transparency checkbox
+      let chkTrans = createCheckbox('Transparent BG', exportTransparent).parent(exportGroup)
+                         .attribute('data-tooltip', 'Export PNG with a transparent background.');
+      chkTrans.style('font-family','monospace').style('font-size','14px');
+      chkTrans.changed(() => { exportTransparent = chkTrans.checked(); });
       let btnTxt = createButton('EXPORT TXT').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as Text file.'); btnTxt.mousePressed(saveArtworkTXT);
       let btnSvg = createButton('EXPORT SVG (TO EDIT)').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch as SVG vector.'); btnSvg.mousePressed(exportSVG);
       let importWrapper = createDiv('').parent(exportGroup).style('position','relative');
@@ -1282,7 +1292,9 @@ function createUI() {
       let btnLib = createButton('ADD TO LIBRARY').parent(exportGroup).class('btn-retro').attribute('data-tooltip', 'Save sketch to Memory Archive.');
       btnLib.mousePressed(() => {
           let name = select('#sSketchName') ? select('#sSketchName').value() : "Sketch";
-          let pg = createGraphics(canvasW, canvasH); pg.pixelDensity(1); pg.background(255);
+          let pg = createGraphics(canvasW, canvasH);
+          pg.pixelDensity(1);
+          if (!exportTransparent) pg.background(255);
           pg.image(pgColorLayer, 0, 0); pg.image(pgTextLayer, 0, 0);
           if(window.addToLibrary) { window.addToLibrary(pg, name); } pg.remove();
       });
@@ -1338,19 +1350,42 @@ function getContentBounds() {
     };
 }
 
-function saveArtworkPNG() { 
+function saveArtworkPNG() {
     let b = getContentBounds();
-    let pg = createGraphics(b.w, b.h); pg.pixelDensity(1); pg.background(255); 
-    
-    // Composite all visible layers
+    // if nothing drawn, warn user and avoid creating zero‑size canvas
+    if (b.w <= 0 || b.h <= 0) {
+        alert('Nothing to export – draw something first.');
+        return;
+    }
+
+    let pg = createGraphics(b.w, b.h);
+    pg.pixelDensity(1);
+    if (!exportTransparent) pg.background(255);
+
+    // Composite visible layers into the offscreen buffer
     asciiLayers.forEach(l => {
-        if(l.visible) {
+        if (l.visible) {
             pg.image(l.pgColor, -b.x, -b.y);
             pg.image(l.pgText, -b.x, -b.y);
         }
     });
-    
-    save(pg, 'artwork.png'); pg.remove(); 
+
+    // Use toDataURL rather than rely on p5.save removing the graphics too early.
+    // this also gives us a chance to garbage‑collect immediately afterwards.
+    pg.loadPixels();
+    try {
+        let dataURL = pg.canvas.toDataURL('image/png');
+        let a = document.createElement('a');
+        a.href = dataURL;
+        a.download = 'artwork.png';
+        a.click();
+    } catch (err) {
+        console.error('PNG export failed:', err);
+        // fallback to p5 save if something goes wrong
+        save(pg, 'artwork.png');
+    } finally {
+        pg.remove();
+    }
 }
 
 function saveArtworkTXT() {
@@ -1882,6 +1917,10 @@ function createLayoutUI() {
     let btnPdf = createButton('Save PDF').parent(expRow).class('btn-retro').style('flex','1').attribute('data-tooltip', 'Export all artboards as PDF.');
     btnPng.mousePressed(exportActiveArtboardPNG);
     btnPdf.mousePressed(exportAllArtboardsPDF);
+    let chkTransLayout = createCheckbox('Transparent BG', exportTransparent).parent(expRow)
+                            .attribute('data-tooltip', 'Make exported layout PNG transparent');
+    chkTransLayout.style('font-family','monospace').style('font-size','14px');
+    chkTransLayout.changed(() => { exportTransparent = chkTransLayout.checked(); });
 
     // 5. Project (Save/Load)
     createDiv('Project').parent(group).class('section-title').style('font-weight','700').style('font-size','16px');
@@ -2840,17 +2879,24 @@ async function prepareLayoutExportAsync(holder) {
 async function captureLayoutCanvas(holder) {
     return htmlToImage.toCanvas(holder, {
         pixelRatio: 2,
-        backgroundColor: '#ffffff'
+        backgroundColor: exportTransparent ? null : '#ffffff'
     });
 }
 
 function cropCanvasToArtboard(fullCanvas, holder, artboardBg) {
-    let scaleX = fullCanvas.width / holder.offsetWidth;
-    let scaleY = fullCanvas.height / holder.offsetHeight;
-    let x = Math.round(artboardBg.offsetLeft * scaleX);
-    let y = Math.round(artboardBg.offsetTop * scaleY);
-    let w = Math.round(artboardBg.offsetWidth * scaleX);
-    let h = Math.round(artboardBg.offsetHeight * scaleY);
+    // use bounding client rectangles in case the holder has transforms,
+    // scrollbars, or fractional pixel dimensions.
+    const holderRect = holder.getBoundingClientRect();
+    const artRect = artboardBg.getBoundingClientRect();
+
+    let scaleX = fullCanvas.width / holderRect.width;
+    let scaleY = fullCanvas.height / holderRect.height;
+
+    let x = Math.round((artRect.left - holderRect.left) * scaleX);
+    let y = Math.round((artRect.top - holderRect.top) * scaleY);
+    let w = Math.round(artRect.width * scaleX);
+    let h = Math.round(artRect.height * scaleY);
+
     let canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;

@@ -56,12 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if(window.switchTab) window.switchTab('tab-input');
   }, 100);
 
-  // Handle extension messages to prevent "message channel closed" errors
-  if (typeof chrome !== 'undefined' && chrome.runtime) {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      // Send a response immediately to prevent async timeout errors
-      sendResponse({ success: true });
-      return false; // Don't expect async response
-    });
-  }
 });
+
+// some browser extensions (Grammarly, ad blockers, etc.) inject scripts that send
+// runtime messages to every page. If our page doesn't reply synchronously the
+// extension often logs "A listener indicated an asynchronous response by
+// returning true..." even though it's not something we control. Add a global
+// catch‑all listener as early as possible so that any message gets an immediate
+// reply and the console noise disappears.
+//
+// This listener lives at the top level (not inside DOMContentLoaded) to ensure
+// it's registered before any extension tries to talk to us.
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Immediately acknowledge every message. We don't perform any work here.
+    sendResponse({ success: true });
+    return false; // do not indicate async response
+  });
+}
