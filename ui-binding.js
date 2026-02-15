@@ -55,4 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     if(window.switchTab) window.switchTab('tab-input');
   }, 100);
+
+  // Handle extension messages to prevent "message channel closed" errors
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      // Send a response immediately to prevent async timeout errors
+      sendResponse({ success: true });
+      return false; // Don't expect async response
+    });
+  }
 });

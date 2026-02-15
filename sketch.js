@@ -54,8 +54,8 @@ var activeTab = 'tab-thoughts';
 let cols, rows;
 let cellW = 9;  
 let cellH = 14; 
-let canvasW = 1600;
-let canvasH = 2400; 
+let canvasW = 2400;
+let canvasH = 3200; 
 let inkColorHex = "#000000"; 
 
 // --- DATA & BUFFERS ---
@@ -67,6 +67,10 @@ let pgTextLayer;
 let pgGridLayer; 
 let templateImg;    
 let libraryItems = []; // Store library data
+
+// --- LAYERS (ASCII) ---
+let asciiLayers = [];
+let activeLayerIndex = 0;
 let draggedLibItem = null; // Track dragged library item
 
 // --- INDEXEDDB HELPERS ---
@@ -310,29 +314,11 @@ function setup() {
   cols = floor(width / cellW);
   rows = floor(height / cellH);
   
-  // 1. Buffers
-  pgColorLayer = createGraphics(width, height);
-  pgColorLayer.pixelDensity(1);
-  pgColorLayer.noStroke();
+  // 1. Initialize Layers (Creates default layer and sets globals)
+  if (asciiLayers.length === 0) {
+      addAsciiLayer("Background");
+  }
 
-  // Disable transitions on the internal canvas element
-  try {
-    const c1 = pgColorLayer.canvas || pgColorLayer.elt;
-    if (c1 && c1.style) { c1.style.transition = 'none'; c1.style.animation = 'none'; c1.style.opacity = '1'; c1.style.willChange = 'auto'; }
-  } catch(e){}
-
-  pgTextLayer = createGraphics(width, height);
-  pgTextLayer.pixelDensity(1);
-  pgTextLayer.noSmooth(); // Ensure crisp pixel rendering
-  pgTextLayer.textFont("Consolas, monospace"); 
-  pgTextLayer.textAlign(CENTER, CENTER);
-  pgTextLayer.noStroke();
-
-  try {
-    const c2 = pgTextLayer.canvas || pgTextLayer.elt;
-    if (c2 && c2.style) { c2.style.transition = 'none'; c2.style.animation = 'none'; c2.style.opacity = '1'; c2.style.willChange = 'auto'; }
-  } catch(e){}
-  
   // 2. Pre-render Grid
   pgGridLayer = createGraphics(width, height);
   pgGridLayer.pixelDensity(1);
@@ -342,8 +328,7 @@ function setup() {
     if (c3 && c3.style) { c3.style.transition = 'none'; c3.style.animation = 'none'; c3.style.opacity = '1'; c3.style.willChange = 'auto'; }
   } catch(e){}
   preRenderGrid(pgGridLayer); 
-  
-  resetAllGrids();
+
   loadFromLocalStorage();
   loadLibrary(); // Load saved library items
   saveState(); 
@@ -406,6 +391,7 @@ function setup() {
   makePanelDraggable('sketch-patterns-panel');
   makePanelDraggable('sketch-ink-panel');
   makePanelDraggable('layout-tools-panel');
+  makePanelDraggable('sketch-layer-panel');
   makePanelDraggable('music-player-widget');
 
   // --- AUTO-SAVE ON UNLOAD (TAB 3 & 4) ---
@@ -530,9 +516,16 @@ function draw() {
   clear(); // Clear canvas to prevent ghosting when layers update
   image(pgGridLayer, 0, 0);
 
-  blendMode(MULTIPLY); 
-  image(pgColorLayer, 0, 0);
-  blendMode(BLEND); 
+  // Render all visible layers
+  for (let i = 0; i < asciiLayers.length; i++) {
+      let l = asciiLayers[i];
+      if (l.visible) {
+          blendMode(MULTIPLY);
+          image(l.pgColor, 0, 0);
+          blendMode(BLEND);
+          image(l.pgText, 0, 0);
+      }
+  }
 
   if (showTemplateImg && templateImg && templateImg.width > 1) {
       push();
@@ -546,8 +539,6 @@ function draw() {
       image(templateImg, 0, 0, drawW, drawH); 
       pop(); blendMode(BLEND); 
   }
-
-  image(pgTextLayer, 0, 0); 
 
   drawUIOverlays();
 }
@@ -573,7 +564,10 @@ function preRenderGrid(pg) {
 
 function drawSingleCellText(x, y) {
   let cx = x * cellW; let cy = y * cellH;
-  pgTextLayer.erase(); pgTextLayer.rect(cx, cy, cellW, cellH); pgTextLayer.noErase();
+  pgTextLayer.erase(); 
+  pgTextLayer.noStroke(); pgTextLayer.fill(255); // Ensure shape for erasing
+  pgTextLayer.rect(cx, cy, cellW, cellH); 
+  pgTextLayer.noErase();
   
   let char = grid[y][x];
   if (char !== "") {
@@ -589,6 +583,7 @@ function drawSingleCellText(x, y) {
 
 function updateLayerTextVisuals() {
   pgTextLayer.clear();
+  pgTextLayer.textFont("Consolas, monospace");
   pgTextLayer.textSize(userFontSize);
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
@@ -877,13 +872,12 @@ function scanLineColor(lx, rx, y, target, stack) {
 // --- UTILS ---
 function isValidCell(x, y) { return x >= 0 && x < cols && y >= 0 && y < rows; }
 function resetAllGrids() {
-  grid = []; colorGrid = []; textColorGrid = [];
-  for (let y = 0; y < rows; y++) {
-    let r1 = []; let r2 = []; let r3 = [];
-    for(let x=0; x<cols; x++) { r1.push(""); r2.push(null); r3.push("#000000"); }
-    grid.push(r1); colorGrid.push(r2); textColorGrid.push(r3);
-  }
-  if(pgColorLayer) pgColorLayer.clear(); if(pgTextLayer) pgTextLayer.clear();
+  // Reset active layer
+  if (!asciiLayers[activeLayerIndex]) return;
+  initLayerData(asciiLayers[activeLayerIndex]);
+  switchAsciiLayer(activeLayerIndex); // Sync globals and PGs
+  updateLayerColorVisuals();
+  updateLayerTextVisuals();
 }
 function isColorDark(hex) { if(!hex) return false; return brightness(color(hex)) < 150; }
 function calculateDirectionChar(x, y, px, py) {
@@ -1018,24 +1012,53 @@ function saveToLocalStorage(silent = false) {
   clearTimeout(sketchStorageTimeout);
   sketchStorageTimeout = setTimeout(() => {
     try {
-      if (typeof grid !== 'undefined' && typeof colorGrid !== 'undefined') {
-          localStorage.setItem('mem_idx_grid', JSON.stringify(grid));
-          localStorage.setItem('mem_idx_color', JSON.stringify(colorGrid));
-          localStorage.setItem('mem_idx_textcolor', JSON.stringify(textColorGrid));
-      }
+      // Save all layers data (excluding PGs)
+      let dataToSave = asciiLayers.map(l => ({
+          name: l.name,
+          visible: l.visible,
+          grid: l.grid,
+          colorGrid: l.colorGrid,
+          textColorGrid: l.textColorGrid
+      }));
+      localStorage.setItem('mem_idx_ascii_layers', JSON.stringify(dataToSave));
     } catch(e) {}
-  }, 1000); // Save only after 1 second of inactivity
+  }, 1000);
 }
+
 function loadFromLocalStorage() {
   try {
-    let g = localStorage.getItem('mem_idx_grid'); let c = localStorage.getItem('mem_idx_color'); let tc = localStorage.getItem('mem_idx_textcolor');
-    if(g && c) {
-      let lg = JSON.parse(g); let lc = JSON.parse(c); let ltc = tc ? JSON.parse(tc) : null;
-      if(lg.length === rows && lg[0].length === cols) { 
-          grid = lg; colorGrid = lc; 
-          if(ltc && ltc.length === rows && ltc[0].length === cols) textColorGrid = ltc;
-          else { textColorGrid = []; for(let y=0; y<rows; y++) { let r=[]; for(let x=0; x<cols; x++) r.push("#000000"); textColorGrid.push(r); } }
+    let layersData = localStorage.getItem('mem_idx_ascii_layers');
+    if (layersData) {
+      let parsed = JSON.parse(layersData);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+          // Reconstruct layers
+          asciiLayers = [];
+          parsed.forEach(d => {
+              addAsciiLayer(d.name, false); // Add without switching yet
+              let l = asciiLayers[asciiLayers.length - 1];
+              l.visible = d.visible;
+              // Validate dimensions
+              if (d.grid.length === rows && d.grid[0].length === cols) {
+                  l.grid = d.grid; l.colorGrid = d.colorGrid; l.textColorGrid = d.textColorGrid;
+              }
+              updateLayerVisualsFor(l);
+          });
+          switchAsciiLayer(0);
+      }
+    } else {
+      // Fallback to old format
+      let g = localStorage.getItem('mem_idx_grid'); let c = localStorage.getItem('mem_idx_color'); let tc = localStorage.getItem('mem_idx_textcolor');
+      if(g && c) {
+          let lg = JSON.parse(g); let lc = JSON.parse(c); let ltc = tc ? JSON.parse(tc) : null;
+          if(lg.length === rows && lg[0].length === cols) { 
+          let l = asciiLayers[activeLayerIndex];
+          l.grid = lg; l.colorGrid = lc; 
+          if(ltc && ltc.length === rows && ltc[0].length === cols) l.textColorGrid = ltc;
+          else { l.textColorGrid = []; for(let y=0; y<rows; y++) { let r=[]; for(let x=0; x<cols; x++) r.push("#000000"); l.textColorGrid.push(r); } }
+          // Sync globals
+          grid = l.grid; colorGrid = l.colorGrid; textColorGrid = l.textColorGrid;
           updateLayerTextVisuals(); updateLayerColorVisuals(); 
+          }
       }
     }
   } catch(e) {}
@@ -1069,14 +1092,28 @@ function createAlignControls() {
   let chkShow = createCheckbox('Show Template', true).parent(rowShow); chkShow.changed(() => { showTemplateImg = chkShow.checked(); });
 
   function addSlider(label, min, max, val, step, parent) {
-      let row = createDiv('').parent(parent).style('display','flex').style('justify-content','space-between');
-      createSpan(label).parent(row).style('font-size','14px');
-      let s = createSlider(min, max, val, step); s.parent(row); s.style('width','60%'); return s;
+      let row = createDiv('').parent(parent).style('display','flex').style('justify-content','space-between').style('align-items', 'center');
+      createSpan(label).parent(row).style('font-size','14px').style('width', '60px');
+      
+      let s = createSlider(min, max, val, step); 
+      s.parent(row); 
+      s.style('flex', '1');
+      s.style('margin', '0 5px');
+
+      let inp = createInput(String(val), 'number');
+      inp.parent(row);
+      inp.style('width', '45px');
+      inp.attribute('step', step);
+      
+      s.input(() => { inp.value(s.value()); });
+      inp.input(() => { s.value(inp.value()); });
+
+      return s;
   }
   createDiv('<i>Background:</i>').parent(group).style('font-size','14px');
-  sliderScale = addSlider('Zoom:', 0.1, 3.0, 1.0, 0.01, group);
-  sliderX = addSlider('Pos X:', -500, 2000, canvasW/2, 1, group);
-  sliderY = addSlider('Pos Y:', -500, 2000, canvasH/2, 1, group);
+  sliderScale = addSlider('Zoom:', 0.1, 10.0, 1.0, 0.01, group);
+  sliderX = addSlider('Pos X:', -500, 3000, canvasW/2, 1, group);
+  sliderY = addSlider('Pos Y:', -500, 4000, canvasH/2, 1, group);
   sliderRotate = addSlider('Rotate:', 0, 360, 0, 1, group); 
   sliderOpacity = addSlider('Opacity:', 0, 255, 120, 1, group);
 }
@@ -1250,10 +1287,20 @@ function createUI() {
           if(window.addToLibrary) { window.addToLibrary(pg, name); } pg.remove();
       });
   }
+
+  // Layer Control Buttons
+  let btnAddL = select('#btnAddAsciiLayer');
+  let btnDelL = select('#btnDelAsciiLayer');
+  if(btnAddL) btnAddL.mousePressed(() => addAsciiLayer());
+  if(btnDelL) btnDelL.mousePressed(() => deleteAsciiLayer());
 }
 
 // --- IO FUNCTIONS ---
 function handleFile(file) { 
+    if (file.subtype === 'svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+        handleSVGImport(file);
+        return;
+    }
     if (file.type === 'image') loadImage(file.data, handleImageLoad, () => alert("Failed to load image.")); 
     else alert("Invalid file type. Please drop an image.");
 }
@@ -1262,18 +1309,22 @@ function handleImageLoad(img) { templateImg = img; showTemplateImg = true; if(sl
 // Helper to find content bounding box
 function getContentBounds() {
     let minX = cols, minY = rows, maxX = -1, maxY = -1;
-    let hasContent = false;
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-            if (grid[y][x] !== "" || colorGrid[y][x] !== null) {
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-                hasContent = true;
+    let hasContent = false; 
+    
+    // Check all visible layers
+    asciiLayers.forEach(l => {
+        if(!l.visible) return;
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                if (l.grid[y][x] !== "" || l.colorGrid[y][x] !== null) {
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                    hasContent = true;
+                }
             }
         }
-    }
+    });
+
     if (!hasContent) return { x: 0, y: 0, w: canvasW, h: canvasH, minC: 0, minR: 0, maxC: cols-1, maxR: rows-1 };
     
     // Add 1 cell padding
@@ -1290,7 +1341,15 @@ function getContentBounds() {
 function saveArtworkPNG() { 
     let b = getContentBounds();
     let pg = createGraphics(b.w, b.h); pg.pixelDensity(1); pg.background(255); 
-    pg.image(pgColorLayer, -b.x, -b.y); pg.image(pgTextLayer, -b.x, -b.y); 
+    
+    // Composite all visible layers
+    asciiLayers.forEach(l => {
+        if(l.visible) {
+            pg.image(l.pgColor, -b.x, -b.y);
+            pg.image(l.pgText, -b.x, -b.y);
+        }
+    });
+    
     save(pg, 'artwork.png'); pg.remove(); 
 }
 
@@ -1337,9 +1396,22 @@ function exportSVG() {
   svg += `</svg>`; let blob = new Blob([svg], {type: "image/svg+xml"}); let url = URL.createObjectURL(blob); let a = document.createElement("a"); a.href = url; a.download = "drawing.svg"; a.click();
 }
 function handleSVGImport(file) {
-  if (file.type === 'image' || file.name.toLowerCase().endsWith('.svg')) {
-    if (file.file) { let reader = new FileReader(); reader.onload = (e) => { let content = e.target.result; if (content.startsWith('data:')) try { content = atob(content.split(',')[1]); } catch(err){} parseSVGAndLoadToGrid(content); }; reader.readAsText(file.file); } 
-    else if (file.data) { let data = file.data; if (typeof data === 'string') { if (data.startsWith('data:')) try { parseSVGAndLoadToGrid(atob(data.split(',')[1])); } catch(e){} else parseSVGAndLoadToGrid(data); } } 
+  if (file.type === 'image' || file.subtype === 'svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+    if (file.file) { 
+        let reader = new FileReader(); 
+        reader.onload = (e) => { parseSVGAndLoadToGrid(e.target.result); }; 
+        reader.readAsText(file.file); 
+    } 
+    else if (file.data && typeof file.data === 'string') { 
+        let content = file.data;
+        if (content.startsWith('data:')) {
+            try {
+                let base64 = content.split(',')[1];
+                content = decodeURIComponent(escape(window.atob(base64)));
+            } catch(e) { console.error(e); }
+        }
+        parseSVGAndLoadToGrid(content); 
+    } 
   }
 }
 function parseSVGAndLoadToGrid(svgText) {
@@ -3505,4 +3577,146 @@ function createTempArtboardContainer(artboardBg) {
         }
     }
     return container;
+}
+
+// --- ASCII LAYER MANAGEMENT ---
+function addAsciiLayer(name, switchTo = true) {
+    let l = {
+        name: name || "Layer " + (asciiLayers.length + 1),
+        visible: true,
+        grid: [],
+        colorGrid: [],
+        textColorGrid: [],
+        pgColor: createGraphics(width, height),
+        pgText: createGraphics(width, height),
+        history: [],
+        redoHistory: []
+    };
+    
+    // Init PGs
+    l.pgColor.pixelDensity(1); l.pgColor.noStroke();
+    l.pgText.pixelDensity(1); l.pgText.noSmooth(); 
+    l.pgText.textFont("Consolas, monospace"); l.pgText.textAlign(CENTER, CENTER); l.pgText.noStroke();
+    
+    // Init Data
+    initLayerData(l);
+    
+    asciiLayers.push(l);
+    if (switchTo) switchAsciiLayer(asciiLayers.length - 1);
+    else updateAsciiLayerUI();
+}
+
+function initLayerData(layer) {
+    layer.grid = []; layer.colorGrid = []; layer.textColorGrid = [];
+    for (let y = 0; y < rows; y++) {
+        let r1 = [], r2 = [], r3 = [];
+        for(let x=0; x<cols; x++) { r1.push(""); r2.push(null); r3.push("#000000"); }
+        layer.grid.push(r1); layer.colorGrid.push(r2); layer.textColorGrid.push(r3);
+    }
+    layer.pgColor.clear(); layer.pgText.clear();
+}
+
+function deleteAsciiLayer() {
+    if (asciiLayers.length <= 1) { alert("Cannot delete the last layer."); return; }
+    if (confirm("Delete active layer?")) {
+        asciiLayers.splice(activeLayerIndex, 1);
+        if (activeLayerIndex >= asciiLayers.length) activeLayerIndex = asciiLayers.length - 1;
+        switchAsciiLayer(activeLayerIndex);
+    }
+}
+
+function switchAsciiLayer(idx) {
+    if (idx < 0 || idx >= asciiLayers.length) return;
+    activeLayerIndex = idx;
+    let l = asciiLayers[idx];
+    
+    // Update Globals to point to active layer
+    grid = l.grid;
+    colorGrid = l.colorGrid;
+    textColorGrid = l.textColorGrid;
+    pgColorLayer = l.pgColor;
+    pgTextLayer = l.pgText;
+    history = l.history;
+    sketchRedoHistory = l.redoHistory;
+    
+    updateAsciiLayerUI();
+}
+
+function updateAsciiLayerUI() {
+    let listEl = document.getElementById('ascii-layer-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    
+    // Render list top-to-bottom (reverse array order visually)
+    for (let i = asciiLayers.length - 1; i >= 0; i--) {
+        let l = asciiLayers[i];
+        
+        // Create layer item using DOM instead of p5.js
+        let item = document.createElement('div');
+        item.className = 'layer-item';
+        if (i === activeLayerIndex) item.classList.add('selected');
+        
+        // Create visibility toggle button
+        let visBtn = document.createElement('button');
+        visBtn.className = 'layer-toggle-vis';
+        visBtn.innerHTML = l.visible ? '👁️' : '🙈';
+        visBtn.type = 'button'; // Explicitly set type to prevent form submission
+        
+        // Use addEventListener instead of onclick for better control
+        visBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            l.visible = !l.visible;
+            updateAsciiLayerUI(); // Re-render UI after toggle
+        }, true); // Use capture phase to handle before bubbling
+        
+        // Create name span
+        let nameSpan = document.createElement('span');
+        nameSpan.innerHTML = l.name;
+        nameSpan.style.flex = '1';
+        
+        // Create index label (for reference)
+        let indexSpan = document.createElement('span');
+        indexSpan.style.fontSize = '10px';
+        indexSpan.style.opacity = '0.5';
+        indexSpan.innerHTML = ' [' + (i+1) + ']';
+        
+        // Add click handler to layer item (separated from visibility button)
+        item.addEventListener('click', (e) => {
+            // Only switch layer if click is not on visibility button
+            if (!e.target.classList.contains('layer-toggle-vis')) {
+                switchAsciiLayer(i);
+            }
+        });
+        
+        // Assemble layer item
+        item.appendChild(visBtn);
+        item.appendChild(nameSpan);
+        item.appendChild(indexSpan);
+        
+        listEl.appendChild(item);
+    }
+}
+
+function updateLayerVisualsFor(layer) {
+    // Helper to update visuals of a specific layer without switching context permanently
+    let oldGrid = grid; let oldColor = colorGrid; let oldText = textColorGrid;
+    let oldPgColor = pgColorLayer; let oldPgText = pgTextLayer;
+    
+    grid = layer.grid; colorGrid = layer.colorGrid; textColorGrid = layer.textColorGrid;
+    pgColorLayer = layer.pgColor; pgTextLayer = layer.pgText;
+    
+    updateLayerColorVisuals();
+    updateLayerTextVisuals();
+    
+    // Restore if we weren't working on the active layer
+    if (layer !== asciiLayers[activeLayerIndex]) {
+        grid = oldGrid; colorGrid = oldColor; textColorGrid = oldText;
+        pgColorLayer = oldPgColor; pgTextLayer = oldPgText;
+    } else {
+        // If we updated active layer, ensure globals are set correctly (redundant but safe)
+        pgColorLayer = layer.pgColor;
+        pgTextLayer = layer.pgText;
+    }
 }

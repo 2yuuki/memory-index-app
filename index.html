@@ -621,6 +621,21 @@
       </div>
     </div>
 
+    <!-- Panel 4: Layers (ASCII) -->
+    <div id="sketch-layer-panel" class="floating-panel" style="top:20px; right:80px; left:auto;">
+      <div class="panel-header">
+        <span>Layers</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto; max-height: 300px;">
+        <div id="ascii-layer-list" class="layer-list"></div>
+        <div style="display:flex; gap:5px; margin-top:10px;">
+            <button class="btn-retro" id="btnAddAsciiLayer" style="padding:4px; font-size:10px;">+ Add</button>
+            <button class="btn-retro" id="btnDelAsciiLayer" style="padding:4px; font-size:10px;">- Del</button>
+        </div>
+      </div>
+    </div>
+
     <div style="position:relative; width:100%; height:100%; overflow:auto; background:#d0d0d0;">
       <div id="sketch-canvas-holder" style="padding: 20px;"></div>
       <div class="zoom-float" style="position:absolute; right:20px; bottom:20px; top:auto; transform:none;">
