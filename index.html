@@ -562,16 +562,19 @@
         <label class="chk"><input type="checkbox" id="chkShowSrc"> Show Source</label>
         <label class="chk"><input type="checkbox" id="chkAnimate"> Animate</label>
       </div>
-
-      <button class="btn-retro" id="cmykSaveBtn" style="margin-top:10px;" data-tooltip="Save processed image to library.">+ add to library</button>
-      <button class="btn-retro" id="btnSavePNG" style="margin-top:6px;" data-tooltip="Download as PNG image.">download image</button>
     </div>
 
     <div class="panel-center">
       <div class="paper-sheet paper-a4" style="height:75%; width:auto; aspect-ratio:297/210; margin:auto; transform:none; border:1px solid #000;">
         <div id="input-canvas-holder" class="canvas-holder">
-          <div class="placeholder-text">Drop Image Here</div>
+          <div class="placeholder-text desktop-only">Drop Image Here</div>
+          <div class="placeholder-text mobile-only">Tap to Import Image</div>
         </div>
+      </div>
+      
+      <div style="display: flex; gap: 15px; margin-top: 20px; width: 90%; justify-content: center;">
+        <button class="btn-retro" id="cmykSaveBtn" style="max-width: 250px;" data-tooltip="Save processed image to library.">+ add to library</button>
+        <button class="btn-retro" id="btnSavePNG" style="max-width: 250px;" data-tooltip="Download as PNG image.">download image</button>
       </div>
     </div>
   </div>

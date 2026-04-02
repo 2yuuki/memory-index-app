@@ -887,6 +887,10 @@ input[type="range"]::-webkit-slider-thumb{
   opacity: 0.5;
 }
 
+/* Placeholder text for mobile/desktop */
+.mobile-only { display: none; }
+.desktop-only { display: block; }
+
 /* archive */
 .archive-box{
   flex:1;
@@ -965,6 +969,10 @@ input[type="range"]::-webkit-slider-thumb{
   background: transparent;
   padding-left: 80px;
   border: none;
+}
+
+#tab-image-proc .panel-center {
+  flex-direction: column;
 }
 
 /* --- TAB 1 PAPER PATTERN --- */
@@ -1373,19 +1381,30 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
     height: 100%;
     border-bottom: none;
     font-size: 10px;
-    padding: 0;
+    padding: 0 8px; /* Thêm khoảng cách hai bên chữ để dễ nhìn hơn */
     text-align: center;
     justify-content: center;
+    align-items: center; /* Căn giữa chữ theo chiều dọc */
   }
   
   .sidebar-tab::before {
-    display: none;
+    display: block;
+    background: var(--grad-gray); /* Dùng gradient dọc thay vì ngang */
+    border-radius: 0 0 10px 10px; /* Bo tròn phía dưới, phẳng phía trên */
+    transform: perspective(70px) rotateX(-25deg); /* Góc âm giúp mép dưới nhỏ lại, tạo hình thang đúng chuẩn */
+    transform-origin: top; /* Gốc xoay ở trên cùng để dính vào panel chính */
+    border: 1px solid #444;
+    border-top: none; /* Xóa viền trên để tạo cảm giác dính liền với khối trên */
   }
   
   .sidebar-tab.active {
-    background: rgba(255,255,255,0.3);
-    color: var(--black);
+    background: transparent;
+    color: var(--white);
     font-weight: bold;
+  }
+  
+  .sidebar-tab.active::before {
+    background: var(--grad-pink); /* Đổi sang gradient hồng khi active */
   }
   
   .sidebar-bg-rotated { display: none; }
@@ -1436,6 +1455,9 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
     max-height: none;
     overflow: visible;
   }
+
+  .desktop-only { display: none; }
+  .mobile-only { display: block; }
   
   #tab-thoughts .section-title,
   #tab-image-proc .panel-left > .section-title:first-child,
@@ -1484,10 +1506,7 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
   }
   
   .music-widget {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 60px;
-    width: 90%;
+    display: none !important;
   }
   
   #floating-tooltip { display: none !important; }
