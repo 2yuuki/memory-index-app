@@ -225,11 +225,19 @@ window.switchTab = function(tabId) {
   }
 
   activeTab = tabId;
-  document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sidebar-tab').forEach(b => {
+    b.classList.remove('active');
+    b.style.color = '#000';
+    b.style.webkitTextFillColor = '#000';
+  });
   document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
   
   let btn = document.querySelector(`[data-tab="${tabId}"]`);
-  if(btn) btn.classList.add('active');
+  if(btn) {
+    btn.classList.add('active');
+    btn.style.color = 'var(--text-muted)';
+    btn.style.webkitTextFillColor = 'var(--text-muted)';
+  }
   let ws = document.getElementById(tabId);
   if(ws) ws.classList.add('active');
 
@@ -244,6 +252,7 @@ window.switchTab = function(tabId) {
     cnv.style.display = 'none';
     noLoop(); // Disable Sketch Loop
     if(window.resumeImageProcessor) window.resumeImageProcessor(); // Enable Image Processor
+    if(window.startWebcamAuto) window.startWebcamAuto(); // Auto-start webcam for Tab 2
   } else {
     // Thoughts or Layout Tab
     cnv.style.display = 'none';

@@ -27,6 +27,16 @@ const cmykSketch = (p) => {
   let currentFile = null; // Store current file for re-processing
   let videoStream = null; // Webcam stream
   let videoEl = null;     // Webcam video element
+  const webcamFlipX = true;
+
+  function getImageProcSheetSize() {
+    const sheetEl = document.querySelector('#tab-image-proc .paper-sheet');
+    if (!sheetEl) return null;
+    const w = Math.floor(sheetEl.clientWidth || 0);
+    const h = Math.floor(sheetEl.clientHeight || 0);
+    if (!w || !h) return null;
+    return { w, h };
+  }
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
@@ -284,20 +294,35 @@ const cmykSketch = (p) => {
       if (shouldUpdateBuffer) {
         imgBuffer.clear();
         
-        // FIX: Maintain original image aspect ratio
+        // Maintain original image aspect ratio
         let aspect = blobImg.width / blobImg.height;
         let canvasAspect = p.width / p.height;
         let drawW, drawH;
+        const fitMode = blobImg.fit || 'contain'; // contain | cover
         
-        if (aspect > canvasAspect) { drawW = p.width * imgScale; drawH = drawW / aspect; } 
-        else { drawH = p.height * imgScale; drawW = drawH * aspect; }
+        if (fitMode === 'cover') {
+          if (aspect > canvasAspect) { drawH = p.height * imgScale; drawW = drawH * aspect; }
+          else { drawW = p.width * imgScale; drawH = drawW / aspect; }
+        } else {
+          if (aspect > canvasAspect) { drawW = p.width * imgScale; drawH = drawW / aspect; } 
+          else { drawH = p.height * imgScale; drawW = drawH * aspect; }
+        }
 
         // Use native context to avoid p5.image type errors
         const ctx = imgBuffer.drawingContext;
         const dx = (p.width - drawW) / 2;
         const dy = (p.height - drawH) / 2;
         const src = blobImg.canvas || blobImg.elt;
-        if(src) ctx.drawImage(src, dx, dy, drawW, drawH);
+        if (src) {
+          if (blobImg.flip) {
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(src, -(dx + drawW), dy, drawW, drawH);
+            ctx.restore();
+          } else {
+            ctx.drawImage(src, dx, dy, drawW, drawH);
+          }
+        }
       }
 
       if (showImage) {
@@ -717,6 +742,69 @@ const cmykSketch = (p) => {
 
     // --- Webcam Logic ---
     const btnWebcam = document.getElementById('btnWebcam');
+    const startWebcam = () => {
+      if (videoStream) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Webcam not supported or blocked. Please use HTTPS or localhost.");
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
+        videoStream = stream;
+        videoEl = document.createElement('video');
+        videoEl.srcObject = stream;
+        videoEl.setAttribute('playsinline', '');
+        videoEl.muted = true;
+        videoEl.play().catch(e => console.error("Auto-play failed", e));
+
+        videoEl.onloadedmetadata = () => {
+          let w = videoEl.videoWidth;
+          let h = videoEl.videoHeight;
+
+          // Resize logic (same as loadAndProcessImage)
+          const MAX_DIM = 800;
+          if (w > MAX_DIM || h > MAX_DIM) {
+            let ratio = w / h;
+            if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
+            else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
+          }
+
+          const sheetSize = getImageProcSheetSize();
+          const targetW = sheetSize ? sheetSize.w : w;
+          const targetH = sheetSize ? sheetSize.h : h;
+          p.resizeCanvas(targetW, targetH);
+
+          gfxFrame = createOptimizedGraphics(targetW, targetH);
+          if (imgBuffer) imgBuffer.remove();
+          imgBuffer = p.createGraphics(targetW, targetH);
+          imgBuffer.pixelDensity(1);
+          imgBuffer.elt.getContext('2d', { willReadFrequently: true });
+          imgBuffer.clear();
+
+          // Set blobImg to video wrapper for draw() loop
+          blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl, flip: webcamFlipX, fit: 'cover' };
+          isAnimated = true;
+
+          if (btnWebcam) {
+            btnWebcam.innerText = "Capture";
+            btnWebcam.classList.add('active');
+          }
+
+          // Hide placeholder
+          const ph = p.select('#tab-image-proc .placeholder-text');
+          if(ph) ph.style('display', 'none');
+        };
+      }).catch(err => {
+        console.error(err);
+        alert("Could not access webcam: " + err.message);
+      });
+    };
+
+    if (btnWebcam) {
+      // Expose for tab auto-start
+      window.startWebcamAuto = () => startWebcam();
+    }
+
     if (btnWebcam) {
       btnWebcam.addEventListener('click', () => {
         if (videoStream) {
@@ -735,6 +823,8 @@ const cmykSketch = (p) => {
                 videoEl = null;
                 
                 // Set as main image
+                staticImg.flip = webcamFlipX;
+                staticImg.fit = 'cover';
                 blobImg = staticImg;
                 isAnimated = false;
                 
@@ -747,55 +837,7 @@ const cmykSketch = (p) => {
             }
         } else {
             // --- START WEBCAM MODE ---
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                 alert("Webcam not supported or blocked. Please use HTTPS or localhost.");
-                 return;
-            }
-            
-            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-                videoStream = stream;
-                videoEl = document.createElement('video');
-                videoEl.srcObject = stream;
-                videoEl.play().catch(e => console.error("Auto-play failed", e));
-                
-                videoEl.onloadedmetadata = () => {
-                    let w = videoEl.videoWidth;
-                    let h = videoEl.videoHeight;
-                    
-                    // Resize logic (same as loadAndProcessImage)
-                    const MAX_DIM = 800;
-                    if (w > MAX_DIM || h > MAX_DIM) {
-                        let ratio = w / h;
-                        if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
-                        else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
-                    }
-                    
-                    p.resizeCanvas(w, h);
-                    const sheet = p.select('#tab-image-proc .paper-sheet');
-                    if(sheet) sheet.style('aspect-ratio', `${w}/${h}`);
-                    
-                    gfxFrame = createOptimizedGraphics(w, h);
-                    if (imgBuffer) imgBuffer.remove();
-                    imgBuffer = p.createGraphics(w, h);
-                    imgBuffer.pixelDensity(1);
-                    imgBuffer.elt.getContext('2d', { willReadFrequently: true });
-                    imgBuffer.clear();
-                    
-                    // Set blobImg to video wrapper for draw() loop
-                    blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl };
-                    isAnimated = true;
-                    
-                    btnWebcam.innerText = "Capture";
-                    btnWebcam.classList.add('active');
-                    
-                    // Hide placeholder
-                    const ph = p.select('#tab-image-proc .placeholder-text');
-                    if(ph) ph.style('display', 'none');
-                };
-            }).catch(err => {
-                console.error(err);
-                alert("Could not access webcam: " + err.message);
-            });
+            startWebcam();
         }
       });
     }
