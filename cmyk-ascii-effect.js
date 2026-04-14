@@ -32,6 +32,8 @@ const cmykSketch = (p) => {
   const webcamBaseFPS = 10;
   const webcamAsciiGrid = 6;
   const webcamSampleStep = 6;
+  // Brightness multiplier applied to live webcam frames (1 = normal, >1 = brighter)
+  const webcamBrightness = 1.3;
   // NOTE: ml5/handpose removed — hand detection, auto-capture and polling were stripped to reduce CPU usage
 
   // --- UNIVERSAL ASCII SETTINGS ---
@@ -326,15 +328,30 @@ const cmykSketch = (p) => {
         const dy = (p.height - drawH) / 2;
         const src = blobImg.canvas || blobImg.elt;
         if (src) {
-          if (blobImg.flip) {
+          // If source is a live video element, apply brightness filter for better visibility
+          const isVideo = (typeof HTMLVideoElement !== 'undefined') && (src instanceof HTMLVideoElement || (blobImg.elt && blobImg.elt.tagName && blobImg.elt.tagName.toLowerCase() === 'video'));
+          if (isVideo) {
             ctx.save();
-            ctx.scale(-1, 1);
-            ctx.drawImage(src, -(dx + drawW), dy, drawW, drawH);
+            ctx.filter = `brightness(${webcamBrightness})`;
+            if (blobImg.flip) {
+              ctx.scale(-1, 1);
+              ctx.drawImage(src, -(dx + drawW), dy, drawW, drawH);
+            } else {
+              ctx.drawImage(src, dx, dy, drawW, drawH);
+            }
+            ctx.filter = 'none';
             ctx.restore();
           } else {
-            ctx.drawImage(src, dx, dy, drawW, drawH);
+            if (blobImg.flip) {
+              ctx.save();
+              ctx.scale(-1, 1);
+              ctx.drawImage(src, -(dx + drawW), dy, drawW, drawH);
+              ctx.restore();
+            } else {
+              ctx.drawImage(src, dx, dy, drawW, drawH);
+            }
           }
-        }
+         }
       }
 
       if (showImage) {
