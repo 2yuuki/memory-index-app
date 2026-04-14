@@ -110,6 +110,45 @@
     The Index of Memory
   </h1>
 
+  <div class="intro-recap-video" style="max-width:1200px; margin:12px auto; text-align:center; width:100%;">
+    <video class="lazy-video" muted playsinline loop preload="none" style="width:100%; height:auto; border:1px solid #ccc; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);" aria-label="Project recap video">
+      <source data-src="assets/recap video/memory index_recap_v006.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+  <script>
+  (function(){
+    const v = document.querySelector('.lazy-video');
+    if(!v) return;
+    const source = v.querySelector('source[data-src]');
+
+    function loadAndPlay(){
+      if (source && !source.src) {
+        source.src = source.dataset.src;
+        v.load();
+      }
+      // attempt to autoplay (muted allows autoplay on most browsers)
+      v.play().catch(() => {});
+    }
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            loadAndPlay();
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: '200px 0px' });
+      io.observe(v);
+    } else {
+      // Fallback: load immediately
+      loadAndPlay();
+    }
+  })();
+  </script>
+
   <p style="text-align:center; font-family:'KK7VCROSDMono'; color:#182983; line-height:1.6;">
     Creative Process Documentation<br>
     Nguyen Thu Trang – s3926717<br>

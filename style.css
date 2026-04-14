@@ -999,9 +999,18 @@ input[type="range"]::-webkit-slider-thumb{
 
 #tab-image-proc .panel-center {
   flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+}
+#tab-image-proc .paper-sheet{
+  margin-bottom: 6px;
+}
+#tab-image-proc .panel-center .tab2-actions{
+  margin-top: 0 !important;
+  padding-top: 0;
 }
 #tab-image-proc .tab2-actions{
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 /* --- TAB 1 PAPER PATTERN --- */

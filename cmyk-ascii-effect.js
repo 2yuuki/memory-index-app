@@ -28,15 +28,11 @@ const cmykSketch = (p) => {
   let videoStream = null; // Webcam stream
   let videoEl = null;     // Webcam video element
   const webcamFlipX = true;
-
-  function getImageProcSheetSize() {
-    const sheetEl = document.querySelector('#tab-image-proc .paper-sheet');
-    if (!sheetEl) return null;
-    const w = Math.floor(sheetEl.clientWidth || 0);
-    const h = Math.floor(sheetEl.clientHeight || 0);
-    if (!w || !h) return null;
-    return { w, h };
-  }
+  const webcamMaxDim = 720;
+  const webcamBaseFPS = 10;
+  const webcamAsciiGrid = 6;
+  const webcamSampleStep = 6;
+  // NOTE: ml5/handpose removed — hand detection, auto-capture and polling were stripped to reduce CPU usage
 
   // --- UNIVERSAL ASCII SETTINGS ---
   let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
@@ -69,6 +65,12 @@ const cmykSketch = (p) => {
   let sampleStep = 4;
   let centroid = { x: 0, y: 0, ok: false }, fade = 0;
 
+  // Placeholder variables for removed ml5/handpose integration
+  // These ensure legacy checks elsewhere (clearInterval/dispose) do not throw
+  let handDetectIntervalId = null;
+  let handposeModel = null;
+  let handPredictions = [];
+
   // ASCII settings
   let asciiGrid = 5; // Renamed to avoid conflict with global grid in sketch.js
   let baseFont = 14;
@@ -76,6 +78,8 @@ const cmykSketch = (p) => {
   let rampReplica = " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@";
   const rampDense = " .:-=+*#%@";
   let invertRamp = true;
+
+  // default values will be set after the actual variables are declared (avoids TDZ)
 
   // Presets
   const rampPresets = {
@@ -100,6 +104,10 @@ const cmykSketch = (p) => {
   let lastSampleTime = 0; 
   let baseFPS = 15; 
   let minSamplePeriod = 1000 / 60; 
+  // Defaults that depend on initial values
+  const defaultBaseFPS = baseFPS;
+  const defaultAsciiGrid = asciiGrid;
+  const defaultSampleStep = sampleStep;
 
   // Helper for optimized canvas with willReadFrequently
   function createOptimizedGraphics(w, h) {
@@ -260,11 +268,15 @@ const cmykSketch = (p) => {
     // --- EXPOSE PAUSE/RESUME FOR PERFORMANCE ---
     window.pauseImageProcessor = () => {
       p.noLoop();
+      // Pause hand detection to save CPU
+      if (handDetectIntervalId) { clearInterval(handDetectIntervalId); handDetectIntervalId = null; }
     };
     
     window.resumeImageProcessor = () => {
       p.loop();
       needsUpdate = true; // Force one draw upon resume
+      // Restart handpose polling if webcam active
+      if (!handDetectIntervalId && videoEl && window.ml5) setupHandposeModel();
     };
   };
 
@@ -749,56 +761,77 @@ const cmykSketch = (p) => {
         return;
       }
 
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
-        videoStream = stream;
-        videoEl = document.createElement('video');
-        videoEl.srcObject = stream;
-        videoEl.setAttribute('playsinline', '');
-        videoEl.muted = true;
-        videoEl.play().catch(e => console.error("Auto-play failed", e));
+      // Request a lower-resolution, low-framerate stream to reduce CPU/GPU load
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: 480 },
+          height: { ideal: 360 },
+          frameRate: { ideal: webcamBaseFPS, max: webcamBaseFPS }
+        }
+      };
 
-        videoEl.onloadedmetadata = () => {
-          let w = videoEl.videoWidth;
-          let h = videoEl.videoHeight;
+      navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+         videoStream = stream;
+         videoEl = document.createElement('video');
+         videoEl.srcObject = stream;
+         videoEl.setAttribute('playsinline', '');
+         videoEl.muted = true;
+         videoEl.autoplay = true;
+         videoEl.style.position = 'absolute';
+         videoEl.style.left = '-9999px';
+         videoEl.style.top = '0';
+         videoEl.style.width = '320px';
+         videoEl.style.height = '240px';
+         videoEl.style.opacity = '0';
+         videoEl.style.pointerEvents = 'none';
+         document.body.appendChild(videoEl);
+         videoEl.play().catch(e => console.error("Auto-play failed", e));
 
-          // Resize logic (same as loadAndProcessImage)
-          const MAX_DIM = 800;
-          if (w > MAX_DIM || h > MAX_DIM) {
-            let ratio = w / h;
-            if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
-            else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
-          }
+         videoEl.onloadedmetadata = () => {
+           let w = videoEl.videoWidth;
+           let h = videoEl.videoHeight;
+           videoEl.width = w;
+           videoEl.height = h;
 
-          const sheetSize = getImageProcSheetSize();
-          const targetW = sheetSize ? sheetSize.w : w;
-          const targetH = sheetSize ? sheetSize.h : h;
-          p.resizeCanvas(targetW, targetH);
+           // Resize logic (same as loadAndProcessImage)
+           const MAX_DIM = 800;
+           if (w > MAX_DIM || h > MAX_DIM) {
+             let ratio = w / h;
+             if (w > h) { w = MAX_DIM; h = Math.floor(MAX_DIM / ratio); }
+             else { h = MAX_DIM; w = Math.floor(MAX_DIM * ratio); }
+           }
 
-          gfxFrame = createOptimizedGraphics(targetW, targetH);
-          if (imgBuffer) imgBuffer.remove();
-          imgBuffer = p.createGraphics(targetW, targetH);
-          imgBuffer.pixelDensity(1);
-          imgBuffer.elt.getContext('2d', { willReadFrequently: true });
-          imgBuffer.clear();
+           const sheetSize = getImageProcSheetSize();
+           const targetW = sheetSize ? sheetSize.w : w;
+           const targetH = sheetSize ? sheetSize.h : h;
+           p.resizeCanvas(targetW, targetH);
 
-          // Set blobImg to video wrapper for draw() loop
-          blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl, flip: webcamFlipX, fit: 'cover' };
-          isAnimated = true;
+           gfxFrame = createOptimizedGraphics(targetW, targetH);
+           if (imgBuffer) imgBuffer.remove();
+           imgBuffer = p.createGraphics(targetW, targetH);
+           imgBuffer.pixelDensity(1);
+           imgBuffer.elt.getContext('2d', { willReadFrequently: true });
+           imgBuffer.clear();
 
-          if (btnWebcam) {
-            btnWebcam.innerText = "Capture";
-            btnWebcam.classList.add('active');
-          }
+           // Set blobImg to video wrapper for draw() loop
+           blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl, flip: webcamFlipX, fit: 'cover' };
+           isAnimated = true;
 
-          // Hide placeholder
-          const ph = p.select('#tab-image-proc .placeholder-text');
-          if(ph) ph.style('display', 'none');
-        };
-      }).catch(err => {
-        console.error(err);
-        alert("Could not access webcam: " + err.message);
-      });
-    };
+           if (btnWebcam) {
+             btnWebcam.innerText = "Stop Webcam";
+             btnWebcam.classList.add('active');
+           }
+
+           // Hide placeholder
+           const ph = p.select('#tab-image-proc .placeholder-text');
+           if(ph) ph.style('display', 'none');
+         };
+       }).catch(err => {
+         console.error(err);
+         alert("Could not access webcam: " + err.message);
+       });
+     };
 
     if (btnWebcam) {
       // Expose for tab auto-start
@@ -819,9 +852,16 @@ const cmykSketch = (p) => {
                 // Stop Stream
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
-                videoEl.remove();
-                videoEl = null;
-                
+                // Clear any hand-detection interval
+                if (handDetectIntervalId) { clearInterval(handDetectIntervalId); handDetectIntervalId = null; }
+                try { if (handposeModel && typeof handposeModel.dispose === 'function') handposeModel.dispose(); } catch (e) {}
+                handposeModel = null;
+                if (videoEl) { videoEl.remove(); videoEl = null; }
+                 if (handposeModel && typeof handposeModel.detectStop === 'function') {
+                   try { handposeModel.detectStop(); } catch (e) {}
+                 }
+                handPredictions = [];
+                 
                 // Set as main image
                 staticImg.flip = webcamFlipX;
                 staticImg.fit = 'cover';
@@ -914,7 +954,19 @@ const cmykSketch = (p) => {
     // 4. Save Button
     const btnSave = p.select('#cmykSaveBtn');
     if(btnSave) {
+      try { btnSave.html && btnSave.html('Capture & Add to Library'); } catch(e) {}
       btnSave.mousePressed(() => {
+        // If webcam is active, capture the current processed canvas and add to library without stopping webcam
+        if (videoStream && videoEl) {
+          let res = p.get();
+          let name = "Memory_" + p.millis();
+          if(window.addToLibrary) window.addToLibrary(res, name);
+          showStatus("CAPTURED TO LIBRARY");
+          setTimeout(() => showStatus(""), 2000);
+          return;
+        }
+
+        // Otherwise, fall back to saving current canvas (static image) and optionally reset state
         if (!blobImg) {
           if(window.customAlert) window.customAlert("No image to save!");
           else alert("No image to save!");
@@ -924,13 +976,13 @@ const cmykSketch = (p) => {
         let res = p.get();
         let name = "Memory_" + p.millis();
         if(window.addToLibrary) window.addToLibrary(res, name);
-        
+
         // --- RESET STATE TO REDUCE LAG ---
-        blobImg = null; // Quan trọng: Ngắt vòng lặp xử lý ảnh nặng
+        blobImg = null; // Ngắt vòng lặp xử lý ảnh nặng
         currentFile = null;
         showImage = false;
         isAnimated = false;
-        
+
         // Reset UI (Xóa tên file và ảnh preview)
         const fileIn = p.select('#fileIn');
         if(fileIn) fileIn.elt.value = ''; 
@@ -943,21 +995,28 @@ const cmykSketch = (p) => {
       });
     }
 
-    // --- NEW: Download PNG Button ---
-    const btnDownload = p.select('#btnSavePNG');
-    if(btnDownload) {
-      btnDownload.mousePressed(() => {
-        if (isJittering) {
-          // Save GIF 30 frames (faster) instead of 120. 30 frames @ 30fps = 1 second loop.
-          p.saveGif("memory_jitter.gif", gifLength, { units: 'frames' });
-        } else {
-          p.save("memory_static.png");
-          showStatus("IMAGE SAVED");
-          setTimeout(() => showStatus(""), 2000);
-        }
-      });
-    }
+  }
 
+  // Helper: determine a sensible canvas size for the image-processor area
+  function getImageProcSheetSize() {
+    try {
+      const holder = document.getElementById('input-canvas-holder');
+      if (!holder) return null;
+      const rect = holder.getBoundingClientRect();
+      // Use at least 320x240 but prefer actual holder size (floor to ints)
+      let w = Math.max(320, Math.floor(rect.width) || p.width || 800);
+      let h = Math.max(240, Math.floor(rect.height) || p.height || 800);
+      // Constrain to reasonable maximum to avoid extremely large canvases
+      const MAX = 1200;
+      if (w > MAX || h > MAX) {
+        const ratio = Math.min(MAX / w, MAX / h);
+        w = Math.floor(w * ratio);
+        h = Math.floor(h * ratio);
+      }
+      return { w, h };
+    } catch (e) {
+      return null;
+    }
   }
 
   let statusDiv;
