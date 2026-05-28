@@ -16,30 +16,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 const cmykSketch = (p) => {
   let blobImg = null, gfxFrame;
   let showImage = false;
   let isAnimated = false;
-  let isJittering = false; // Jitter animation state
-  let needsUpdate = true; // OPTIMIZATION: Flag to only redraw when necessary
-  let gifLength = 30; // Frames for seamless GIF loop
-  let currentFile = null; // Store current file for re-processing
-  let videoStream = null; // Webcam stream
-  let videoEl = null;     // Webcam video element
+  let isJittering = false; 
+  let needsUpdate = true; 
+  let gifLength = 30; 
+  let currentFile = null; 
+  let videoStream = null; 
+  let videoEl = null;     
   const webcamFlipX = true;
   const webcamMaxDim = 720;
   const webcamBaseFPS = 10;
   const webcamAsciiGrid = 6;
   const webcamSampleStep = 6;
-  // Brightness multiplier applied to live webcam frames (1 = normal, >1 = brighter)
   const webcamBrightness = 1.3;
-  // NOTE: ml5/handpose removed — hand detection, auto-capture and polling were stripped to reduce CPU usage
 
   // --- UNIVERSAL ASCII SETTINGS ---
-  let mode = "replica"; // replica, replicaSolid, mask, maskSolid, track
-  let renderMode = "ascii"; // ascii, dither
-  let colorMode = "cmyk"; // Default to CMYK
+  let mode = "replica"; 
+  let renderMode = "ascii"; 
+  let colorMode = "cmyk"; 
   
   // Colors
   let cMono, cDark, cLight, bgColor;
@@ -49,7 +46,7 @@ const cmykSketch = (p) => {
   // CMYK Stroke Settings
   let cmykSettings = {
     weight: 2.5,
-    threshold: 40,
+    threshold: 80,
     gamma: 1.3,
     jitter: 1.5,
     probPow: 1.3
@@ -57,7 +54,7 @@ const cmykSketch = (p) => {
 
   // Dynamics
   let sizeMin = 0.85, sizeMax = 1.25;
-  let speed = 1.0; // ASCII animation smoothing speed
+  let speed = 1.0; 
   let _lumPrev = [], _rPrev = [], _gPrev = [], _bPrev = [];
 
   // Mask & Track
@@ -67,21 +64,21 @@ const cmykSketch = (p) => {
   let sampleStep = 4;
   let centroid = { x: 0, y: 0, ok: false }, fade = 0;
 
-  // Placeholder variables for removed ml5/handpose integration
-  // These ensure legacy checks elsewhere (clearInterval/dispose) do not throw
   let handDetectIntervalId = null;
   let handposeModel = null;
   let handPredictions = [];
 
   // ASCII settings
-  let asciiGrid = 5; // Renamed to avoid conflict with global grid in sketch.js
-  let baseFont = 14;
-  let asciiOpacity = 240;
-  let rampReplica = " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@";
-  const rampDense = " .:-=+*#%@";
-  let invertRamp = true;
-
-  // default values will be set after the actual variables are declared (avoids TDZ)
+  // Grid cell size in pixels (controls pixelation). Keep reasonably large to avoid very fine grids that are slow.
+  const MIN_ASCII_GRID = 6;
+  const MAX_ASCII_GRID = 64;
+  let asciiGrid = MIN_ASCII_GRID;
+   let baseFont = 14;
+   let asciiOpacity = 240;
+   let rampReplica = " .'`^,:;~-_+*=!/?|()[]{}<>i!lI;:o0O8&%$#@";
+   const rampDense = " .:-=+*#%@";
+   let rampBlocks = "▁▂▃▄▅▆▇█"; 
+   let invertRamp = false;
 
   // Presets
   const rampPresets = {
@@ -102,16 +99,14 @@ const cmykSketch = (p) => {
   
   // Buffers
   let imgBuffer; 
-  let smallBuffer; // Optimization: Downsampled buffer for ASCII analysis
+  let smallBuffer; 
   let lastSampleTime = 0; 
   let baseFPS = 15; 
   let minSamplePeriod = 1000 / 60; 
-  // Defaults that depend on initial values
   const defaultBaseFPS = baseFPS;
   const defaultAsciiGrid = asciiGrid;
   const defaultSampleStep = sampleStep;
 
-  // Helper for optimized canvas with willReadFrequently
   function createOptimizedGraphics(w, h) {
     const cnv = document.createElement('canvas');
     cnv.width = w;
@@ -119,7 +114,7 @@ const cmykSketch = (p) => {
     const ctx = cnv.getContext('2d', { willReadFrequently: true });
     return {
       canvas: cnv,
-      elt: cnv, // Alias for p5 compatibility
+      elt: cnv, 
       width: w,
       height: h,
       ctx: ctx,
@@ -145,22 +140,20 @@ const cmykSketch = (p) => {
 
   p.setup = function() {
     let cnv = p.createCanvas(800, 800);
-    // FIX: Target the correct container ID from index.html
     let container = p.select('#input-canvas-holder');
     if (container) {
       cnv.parent(container);
-      // Responsive Canvas Styles
       cnv.style('max-width', '100%');
       cnv.style('max-height', '100%');
       cnv.style('display', 'block');
       cnv.style('margin', '0 auto');
       cnv.style('mix-blend-mode', 'multiply');
-      cnv.elt.getContext('2d', { willReadFrequently: true }); // Hint to suppress warnings
+      cnv.elt.getContext('2d', { willReadFrequently: true }); 
     }
 
-    p.frameRate(30); // OPTIMIZATION: Reduce FPS to save resources
+    p.frameRate(30); 
     p.pixelDensity(1);
-    p.textFont("'ocr-a-std', monospace");
+    p.textFont("'Courier New', monospace");
     p.textAlign(p.CENTER, p.CENTER);
     p.noStroke();
     
@@ -168,67 +161,51 @@ const cmykSketch = (p) => {
 
     imgBuffer = p.createGraphics(p.width, p.height);
     imgBuffer.pixelDensity(1);
-    imgBuffer.elt.getContext('2d', { willReadFrequently: true }); // Fix Canvas2D warning
+    imgBuffer.elt.getContext('2d', { willReadFrequently: true });
     imgBuffer.clear();
 
-    // Default Colors
     cMono  = p.color(255);
     cDark  = p.color(180, 200, 255);
     cLight = p.color(255, 255, 255);
     bgColor = p.color("#ffffff");
     
-    // Heatmap Colors for Brightness Mode
-    cHeat1 = p.color(20, 0, 50);    // Dark Purple
-    cHeat2 = p.color(220, 20, 60);  // Crimson
-    cHeat3 = p.color(255, 220, 0);  // Gold
+    cHeat1 = p.color(20, 0, 50);    
+    cHeat2 = p.color(220, 20, 60);  
+    cHeat3 = p.color(255, 220, 0);  
 
-    // Color Presets
     stabiloPalette = [
-      p.color(60, 190, 185),   // Turquoise
-      p.color(240, 130, 150),  // Pink Blush
-      p.color(245, 225, 80),   // Milky Yellow
-      p.color(160, 130, 190)   // Lilac Haze
+      p.color(60, 190, 185),   
+      p.color(240, 130, 150),  
+      p.color(245, 225, 80),   
+      p.color(160, 130, 190)   
     ];
     cmykPalette = [
-      p.color(0, 174, 239),    // Cyan
-      p.color(236, 0, 140),    // Magenta
-      p.color(245, 230, 0),    // Yellow
-      p.color(0, 166, 81)      // Green
+      p.color(0, 174, 239),    
+      p.color(236, 0, 140),    
+      p.color(245, 230, 0),    
+      p.color(0, 166, 81)      
     ];
 
-    bindExistingUI(); // Bind to HTML controls instead of creating new ones
+    bindExistingUI(); 
 
-    // --- OBSERVER TO STYLE P5.JS DEFAULT PROGRESS BAR ---
-    // p5.saveGif creates a status div at bottom-left. We force it to bottom-right and style it.
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
-        // 1. Detect when p5 adds the progress bar
         for (const node of m.addedNodes) {
           if (node.tagName === 'DIV') {
              const txt = node.innerText || "";
-             // Check keywords: Saving, Frame, Save
              if (txt.includes('Saving') || txt.includes('Frame') || txt.includes('Save')) {
-               // A. Hide the original p5 bar completely
                node.style.display = 'none';
-               
-               // B. Mirror the text to OUR custom status bar (which is correctly positioned)
                showStatus(txt);
-               
-               // C. Watch for text updates (e.g. "Frame 10/120") and update our bar
-               const innerObs = new MutationObserver(() => {
-                 showStatus(node.innerText);
-               });
+               const innerObs = new MutationObserver(() => { showStatus(node.innerText); });
                innerObs.observe(node, { characterData: true, childList: true, subtree: true });
              }
           }
         }
-        
-        // 2. Detect when p5 removes the progress bar (Saving done)
         for (const node of m.removedNodes) {
           if (node.tagName === 'DIV') {
              const txt = node.innerText || "";
              if (txt.includes('Saving') || txt.includes('Frame') || txt.includes('Save')) {
-               showStatus(""); // Clear our custom status
+               showStatus(""); 
              }
           }
         }
@@ -236,9 +213,7 @@ const cmykSketch = (p) => {
     });
     observer.observe(document.body, { childList: true });
 
-    // --- EXPOSE RESET FUNCTION GLOBALLY ---
     window.resetImageProcessor = () => {
-      // Stop Webcam if active
       if (videoStream) {
           videoStream.getTracks().forEach(track => track.stop());
           videoStream = null;
@@ -252,32 +227,27 @@ const cmykSketch = (p) => {
           btnWebcam.innerText = "Use Webcam";
           btnWebcam.classList.remove('active');
       }
-
       blobImg = null;
       currentFile = null;
       showImage = false;
       isAnimated = false;
-      p.background(255); // Clear canvas
-      p.redraw(); // Force clear visual
+      p.background(255); 
+      p.redraw(); 
       
-      // Reset UI elements
       const previewBox = p.select('#preview-area');
       if(previewBox) previewBox.html('');
       const fileIn = p.select('#fileIn');
       if(fileIn) fileIn.elt.value = '';
     };
 
-    // --- EXPOSE PAUSE/RESUME FOR PERFORMANCE ---
     window.pauseImageProcessor = () => {
       p.noLoop();
-      // Pause hand detection to save CPU
       if (handDetectIntervalId) { clearInterval(handDetectIntervalId); handDetectIntervalId = null; }
     };
     
     window.resumeImageProcessor = () => {
       p.loop();
-      needsUpdate = true; // Force one draw upon resume
-      // Restart handpose polling if webcam active
+      needsUpdate = true; 
       if (!handDetectIntervalId && videoEl && window.ml5) setupHandposeModel();
     };
   };
@@ -392,174 +362,155 @@ const cmykSketch = (p) => {
     }
   };
 
-  /* ---------------- Replica / Mask ---------------- */
+  /* ---------------- Replica / Mask (FIXED PROPERTIES BINDING) ---------------- */
   function drawAsciiReplicaOrMask() {
     const cell = asciiGrid;
     const cols = p.floor(p.width / cell);
     const rows = p.floor(p.height / cell);
-    const n = cols * rows;
 
-    if (_lumPrev.length !== n) {
-      _lumPrev = new Array(n).fill(255); _rPrev = new Array(n).fill(255);
-      _gPrev = new Array(n).fill(255); _bPrev = new Array(n).fill(255);
-    }
-
-    // OPTIMIZATION: Downsample image to grid size for faster pixel access
+    // OPTIMIZATION: Use our lightweight optimized canvas for downsampling to avoid p5.getImageData warnings
     if (!smallBuffer || smallBuffer.width !== cols || smallBuffer.height !== rows) {
-      if (smallBuffer) smallBuffer.remove();
-      smallBuffer = p.createGraphics(cols, rows);
-      smallBuffer.pixelDensity(1);
-      smallBuffer.elt.getContext('2d', { willReadFrequently: true });
+      // Release previous buffer if any
+      if (smallBuffer) {
+        try { if (typeof smallBuffer.remove === 'function') smallBuffer.remove(); } catch(e) {}
+      }
+      smallBuffer = createOptimizedGraphics(cols, rows);
     }
     smallBuffer.clear();
+    // Draw downsampled source into optimized buffer
     smallBuffer.image(imgBuffer, 0, 0, cols, rows);
+    // Use optimized loadPixels that uses willReadFrequently context
     smallBuffer.loadPixels();
 
-    // Animation smoothing
-    const alphaT = p.constrain(p.map(speed, 0.2, 2.0, 0.18, 0.95), 0.08, 0.98);
-    const sizeBuckets = 6;
-
-    const useGradient = colorMode === "gradient";
-    const useMono     = colorMode === "mono";
-    const mono = cMono.levels;
-    const dark = cDark.levels;
-    const light = cLight.levels;
-    
-    const ramp = invertRamp ? rampReplica.split("").reverse().join("") : rampReplica;
-    const rampLen = p.max(1, ramp.length - 1);
-    const haveImg = !!blobImg;
-
-    p.blendMode(p.MULTIPLY);
-    p.noFill();
-    p.strokeWeight(cmykSettings.weight);
-    p.textSize(baseFont);
-    
+    p.push();
+    p.noStroke();
     p.textAlign(p.CENTER, p.CENTER);
 
-    // OPTIMIZATION: Define offsets outside the loop to avoid GC churn
-    const offsets = [
-      { x: -cmykSettings.jitter, y: -cmykSettings.jitter },
-      { x: cmykSettings.jitter, y: -cmykSettings.jitter },
-      { x: 0, y: cmykSettings.jitter },
-      { x: 0, y: 0 }
-    ];
+    // Character sets
+    const blocks = rampBlocks; // shadows (configurable)
+    const mids = rampReplica || rampDense;      // midtones (user-editable)
+    const highlightChar = " "; // highlights -> space
+
+    // Dynamic thresholds tied to UI 'threshold' control
+    let t_adj = p.max(0.1, cmykSettings.threshold / 40.0); // 40 => neutral
+    const shadowCut = p.constrain(0.33 * t_adj, 0.0, 0.85);
+    const midCut = p.constrain(1.0 - (0.1 / t_adj), shadowCut + 0.05, 0.99);
+
+    // Text size now derived directly from cell size; pattern scale controls asciiGrid
+    const txtSize = p.max(4, Math.floor(cell * 0.95));
+    p.textSize(txtSize);
+    if (cell >= 8) p.textStyle(p.BOLD); else p.textStyle(p.NORMAL);
+
+    // Color mode helpers
+    const useGradient = (colorMode === 'gradient');
+    const useMono = (colorMode === 'mono');
+    const mono = cMono ? cMono.levels : [255,255,255];
+    const dark = cDark ? cDark.levels : [0,0,0];
+    const light = cLight ? cLight.levels : [255,255,255];
+    const haveImg = !!blobImg;
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
-        const idxCell = y * cols + x;
-        const cx = (x * cell + cell * 0.5);
-        const cy = (y * cell + cell * 0.5);
-
-        let r=255,g=255,b=255,a=0; 
-        if (haveImg) {
-          // OPTIMIZATION: Read from downsampled buffer (1 pixel = 1 cell)
-          const i = 4 * (y * cols + x);
-          if (i >= 0 && i < smallBuffer.pixels.length - 3) {
-            r = smallBuffer.pixels[i];
-            g = smallBuffer.pixels[i+1];
-            b = smallBuffer.pixels[i+2];
-            a = smallBuffer.pixels[i+3];
-          }
+        const i = 4 * (y * cols + x);
+        let r = 255, g = 255, b = 255, a = 255;
+        if (smallBuffer && smallBuffer.pixels && i >= 0 && i + 3 < smallBuffer.pixels.length) {
+          r = smallBuffer.pixels[i];
+          g = smallBuffer.pixels[i+1];
+          b = smallBuffer.pixels[i+2];
+          a = smallBuffer.pixels[i+3];
         }
 
-        // FIX: If pixel is transparent (empty area around image), treat as white to avoid drawing ink
-        if (a < 50) {
-          r = 255; g = 255; b = 255;
-        }
+        // Treat transparent as white (no ink)
+        if (a < 50) { r = 255; g = 255; b = 255; }
 
-        const lumNow = 0.2126*r + 0.7152*g + 0.0722*b;
-        
-        // FIX: NaN safety for lerp (from new logic)
-        let safeLum = Number.isFinite(_lumPrev[idxCell]) ? _lumPrev[idxCell] : 255;
-        const lum = _lumPrev[idxCell] = p.lerp(safeLum, lumNow, alphaT);
-        
-        let safeR = Number.isFinite(_rPrev[idxCell]) ? _rPrev[idxCell] : 255;
-        let safeG = Number.isFinite(_gPrev[idxCell]) ? _gPrev[idxCell] : 255;
-        let safeB = Number.isFinite(_bPrev[idxCell]) ? _bPrev[idxCell] : 255;
-        const rr  = _rPrev[idxCell]   = p.lerp(safeR, r, alphaT);
-        const gg  = _gPrev[idxCell]   = p.lerp(safeG, g, alphaT);
-        const bb  = _bPrev[idxCell]   = p.lerp(safeB, b, alphaT);
+        // Luminance (0 dark .. 255 bright)
+        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        let t = p.constrain(lum / 255, 0, 1);
 
-        const t = lum / 255;
-        const rampIdx = (t * rampLen) | 0;
-        const ch = ramp[rampIdx] || " ";
-
-
-        // mask alpha
+        // Compute maskAlpha similar to previous logic to respect mask mode
         let maskA = 1.0;
-        if ((mode === "mask" || mode === "maskSolid") && haveImg) {
+        if ((mode === "mask" || mode === "maskSolid") && blobImg) {
           const m = (r + g) * 0.5 - b; // less blue → blob
           maskA = smoothstep(maskThreshold - maskSoftness, maskThreshold + maskSoftness, m);
-        } else if (haveImg) {
+        } else if (blobImg) {
           const blueBias = b - (r + g) * 0.5;
-          if (blueBias > 25) maskA = 0.35; // gentle fade outside blob in replica
+          if (blueBias > 25) maskA = 0.35; // gentle fade outside blob
         }
 
-        // opacity per mode
+        // Apply gamma (UI) and invert (UI)
+        if (cmykSettings.gamma !== 1.0 && cmykSettings.gamma > 0) t = Math.pow(t, cmykSettings.gamma);
+        if (invertRamp) t = 1.0 - t;
+
+        // final alpha (respect mode)
         let finalAlpha;
-        if (mode === "replicaSolid") {
-          finalAlpha = 255;                 
-        } else if (mode === "maskSolid") {
-          finalAlpha = 255 * maskA;         
+        if (mode === "replicaSolid") finalAlpha = 255;
+        else if (mode === "maskSolid") finalAlpha = 255 * maskA;
+        else finalAlpha = asciiOpacity * maskA;
+
+        // Choose character based on luminance band
+        let ch = highlightChar;
+        if (t <= shadowCut) {
+          // Shadow: map darker values to heavier block (reverse mapping: darker => larger block)
+          const subT = p.map(t, 0, shadowCut, 1, 0); // 1..0 where 1 = darkest
+          const idx = p.constrain(Math.floor(subT * (blocks.length)), 0, blocks.length - 1);
+          ch = blocks[idx];
+        } else if (t < midCut) {
+          // Midtone: use user-defined replica ramp
+          const subT = p.map(t, shadowCut, midCut, 0, 1);
+          const idx = p.constrain(Math.floor(subT * (mids.length)), 0, mids.length - 1);
+          ch = mids[idx];
         } else {
-          finalAlpha = asciiOpacity * maskA; 
+          // Highlight: keep space (no ink)
+          ch = highlightChar;
         }
 
-        
-        // CMYK Separation Math (Used for density calculation in all modes)
-        let cVal = 255 - rr;
-        let mVal = 255 - gg;
-        let yVal = 255 - bb;
-        let gVal = (255 - gg); // Greenish/Black channel
-        if (mVal > 80) gVal -= mVal * 0.6;
-        gVal = p.constrain(gVal, 0, 255);
+        // Draw single, non-overlapping character per grid cell
+        const cx = x * cell + cell * 0.5;
+        const cy = y * cell + cell * 0.5;
 
-        // Gamma
-        let gamma = cmykSettings.gamma;
-        cVal = p.pow(cVal / 255.0, gamma) * 255.0;
-        mVal = p.pow(mVal / 255.0, gamma) * 255.0;
-        yVal = p.pow(yVal / 255.0, gamma) * 255.0;
-        gVal = p.pow(gVal / 255.0, gamma) * 255.0;
-
-        let values = [cVal, mVal, yVal, gVal];
-        
-        // Use Stabilo palette if selected, otherwise default to CMYK angles/colors
-        let palette = (colorMode === 'stabilo') ? stabiloPalette : cmykPalette;
-        
-
-        for (let layer = 0; layer < 4; layer++) {
-          let val = values[layer];
-          if (val < cmykSettings.threshold) continue;
-
-          let prob = p.map(val, cmykSettings.threshold, 255, 0, 1);
-          prob = p.pow(prob, cmykSettings.probPow) * 1.2;
-
-          if (p.random(1.0) < prob) {
-            // Determine Color based on Mode
-            if (colorMode === 'mono') {
-              p.stroke(0, finalAlpha); // Black ink
-            } else if (colorMode === 'image') {
-              p.stroke(rr, gg, bb, finalAlpha); // Original pixel color
-            } else if (colorMode === 'brightness') {
-              // Dynamic color based on luminance (Heatmap style)
-              let t = lum / 255;
-              let c;
-              if (t < 0.5) c = p.lerpColor(cHeat1, cHeat2, t * 2);
-              else c = p.lerpColor(cHeat2, cHeat3, (t - 0.5) * 2);
-              c.setAlpha(finalAlpha);
-              p.stroke(c);
-            } else {
-              p.stroke(palette[layer]); // CMYK/Stabilo ink
-            }
-            
-            p.text(ch, cx + offsets[layer].x, cy + offsets[layer].y);
+        // Apply color/ink type
+        if (ch !== highlightChar) {
+          // Use marker-style overlay for CMYK/stabilo color modes
+          if (colorMode === 'cmyk' || colorMode === 'markers' || colorMode === 'stabilo') {
+            // select palette
+            const palette = (colorMode === 'cmyk') ? cmykPalette : stabiloPalette;
+            // pick color by luminance t (darker->first)
+            const pi = p.constrain(Math.floor(t * palette.length), 0, palette.length - 1);
+            const col = palette[pi] || p.color(0,0,0);
+            const levels = col.levels || [0,0,0];
+            // draw with screen composite to simulate marker blending (user requested 'screen')
+            const ctx = p.drawingContext;
+            ctx.save();
+            try {
+              // Use 'difference' only when the original source preview is shown, otherwise use 'multiply'
+              const op = (typeof showImage !== 'undefined' && showImage) ? 'difference' : 'multiply';
+              ctx.globalCompositeOperation = op;
+            } catch (e) { /* some contexts may not support this mode, ignore */ }
+            p.fill(levels[0], levels[1], levels[2], finalAlpha);
+            p.text(ch, cx, cy);
+            ctx.restore();
+          } else if (colorMode === 'image' && haveImg) {
+            p.fill(r, g, b, finalAlpha);
+            p.text(ch, cx, cy);
+          } else if (useMono) {
+            p.fill(mono[0], mono[1], mono[2], finalAlpha);
+            p.text(ch, cx, cy);
+          } else if (useGradient) {
+            const cr = p.lerp(dark[0], light[0], t);
+            const cg = p.lerp(dark[1], light[1], t);
+            const cb = p.lerp(dark[2], light[2], t);
+            p.fill(cr, cg, cb, finalAlpha);
+            p.text(ch, cx, cy);
+          } else {
+            // default (fallback)
+            p.fill(0, finalAlpha);
+            p.text(ch, cx, cy);
           }
-        }
+         }
       }
     }
-    
-    // Reset blend mode
-    p.blendMode(p.BLEND);
+
+    p.pop();
   }
 
   /* ---------------- Dither (Floyd-Steinberg) ---------------- */
@@ -582,6 +533,9 @@ const cmykSketch = (p) => {
     const w = gfxFrame.width;
     const h = gfxFrame.height;
     
+    // Map Threshold slider (0-100) to pixel values (0-255)
+    const thresh = p.map(cmykSettings.threshold, 0, 100, 0, 255);
+    
     // 3. Apply Algorithm
     for (let y = 0; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
@@ -597,7 +551,6 @@ const cmykSketch = (p) => {
         if (isJittering) noise = p.random(-20, 20);
 
         // Quantize (Thresholding)
-        const thresh = cmykSettings.threshold;
         const newR = (oldR + noise < thresh) ? 0 : 255;
         const newG = (oldG + noise < thresh) ? 0 : 255;
         const newB = (oldB + noise < thresh) ? 0 : 255;
@@ -756,9 +709,8 @@ const cmykSketch = (p) => {
     });
   }
 
-  // --- UI BINDING (Connects to index.html controls) ---
+  // --- UI BINDING ---
   function bindExistingUI() {
-    // 1. Image Loading
     const btnLoad = p.select('#btnLoadImage');
     const fileIn = p.select('#fileIn');
     
@@ -769,7 +721,6 @@ const cmykSketch = (p) => {
       });
     }
 
-    // --- Webcam Logic ---
     const btnWebcam = document.getElementById('btnWebcam');
     const startWebcam = () => {
       if (videoStream) return;
@@ -778,7 +729,6 @@ const cmykSketch = (p) => {
         return;
       }
 
-      // Request a lower-resolution, low-framerate stream to reduce CPU/GPU load
       const constraints = {
         video: {
           facingMode: 'user',
@@ -811,7 +761,6 @@ const cmykSketch = (p) => {
            videoEl.width = w;
            videoEl.height = h;
 
-           // Resize logic (same as loadAndProcessImage)
            const MAX_DIM = 800;
            if (w > MAX_DIM || h > MAX_DIM) {
              let ratio = w / h;
@@ -831,7 +780,6 @@ const cmykSketch = (p) => {
            imgBuffer.elt.getContext('2d', { willReadFrequently: true });
            imgBuffer.clear();
 
-           // Set blobImg to video wrapper for draw() loop
            blobImg = { width: videoEl.videoWidth, height: videoEl.videoHeight, elt: videoEl, canvas: videoEl, flip: webcamFlipX, fit: 'cover' };
            isAnimated = true;
 
@@ -840,7 +788,6 @@ const cmykSketch = (p) => {
              btnWebcam.classList.add('active');
            }
 
-           // Hide placeholder
            const ph = p.select('#tab-image-proc .placeholder-text');
            if(ph) ph.style('display', 'none');
          };
@@ -851,41 +798,29 @@ const cmykSketch = (p) => {
      };
 
     if (btnWebcam) {
-      // Expose for tab auto-start
       window.startWebcamAuto = () => startWebcam();
     }
 
     if (btnWebcam) {
       btnWebcam.addEventListener('click', () => {
         if (videoStream) {
-            // --- CAPTURE MODE ---
             if (videoEl && videoEl.readyState >= 2) {
-                // Capture current frame to static image
                 let w = videoEl.videoWidth;
                 let h = videoEl.videoHeight;
                 let staticImg = p.createImage(w, h);
                 staticImg.drawingContext.drawImage(videoEl, 0, 0, w, h);
                 
-                // Stop Stream
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
-                // Clear any hand-detection interval
                 if (handDetectIntervalId) { clearInterval(handDetectIntervalId); handDetectIntervalId = null; }
-                try { if (handposeModel && typeof handposeModel.dispose === 'function') handposeModel.dispose(); } catch (e) {}
-                handposeModel = null;
                 if (videoEl) { videoEl.remove(); videoEl = null; }
-                 if (handposeModel && typeof handposeModel.detectStop === 'function') {
-                   try { handposeModel.detectStop(); } catch (e) {}
-                 }
                 handPredictions = [];
                  
-                // Set as main image
                 staticImg.flip = webcamFlipX;
                 staticImg.fit = 'cover';
                 blobImg = staticImg;
                 isAnimated = false;
                 
-                // Reset UI
                 btnWebcam.innerText = "Use Webcam";
                 btnWebcam.classList.remove('active');
                 
@@ -893,13 +828,11 @@ const cmykSketch = (p) => {
                 p.redraw();
             }
         } else {
-            // --- START WEBCAM MODE ---
             startWebcam();
         }
       });
     }
 
-    // --- Mapped Controls ---
     const sRenderMode = p.select('#selRenderMode');
     const asciiControls = p.select('#ascii-controls');
     if(sRenderMode) {
@@ -907,6 +840,7 @@ const cmykSketch = (p) => {
         renderMode = sRenderMode.value();
         if(asciiControls) asciiControls.style('display', renderMode === 'ascii' ? 'block' : 'none');
         needsUpdate = true;
+        p.redraw();
       });
     }
 
@@ -914,66 +848,171 @@ const cmykSketch = (p) => {
     if(sColorMode) sColorMode.changed(() => {
       colorMode = sColorMode.value();
       needsUpdate = true;
+      p.redraw();
     });
 
-    // Map "Pattern" slider to Stroke Weight
     const sWeight = p.select('#cfgWeight');
-    if(sWeight) sWeight.input(() => { cmykSettings.weight = parseFloat(sWeight.value()); needsUpdate = true; });
+    // Robust binding: support both p5 element and native input element.
+    // If the slider exposes min/max, map its range to the ascii grid range.
+    function handleWeightChange(val, srcEl) {
+      let num = parseFloat(val);
+      if (isNaN(num)) return;
 
-    // Map "Threshold" slider (CMYK Threshold)
+      // If source element has min/max, map slider proportionally to [MIN_ASCII_GRID, MAX_ASCII_GRID]
+      try {
+        const el = srcEl && srcEl.target ? srcEl.target : srcEl || null;
+        let minV = null, maxV = null;
+        if (el) {
+          if (el.min !== undefined && el.max !== undefined) { minV = parseFloat(el.min); maxV = parseFloat(el.max); }
+          else if (el.getAttribute) {
+            const aMin = el.getAttribute('min'); const aMax = el.getAttribute('max');
+            if (aMin !== null && aMax !== null) { minV = parseFloat(aMin); maxV = parseFloat(aMax); }
+          }
+        }
+
+        let desiredGrid;
+        if (minV !== null && maxV !== null && !isNaN(minV) && !isNaN(maxV) && maxV > minV) {
+          const frac = (num - minV) / (maxV - minV);
+          desiredGrid = Math.round(MIN_ASCII_GRID + frac * (MAX_ASCII_GRID - MIN_ASCII_GRID));
+        } else {
+          // Heuristic: if slider values are small (<=10), treat value as direct pixel size; else map 1..100 -> MIN..MAX
+          if (num <= 10) desiredGrid = Math.round(Math.max(MIN_ASCII_GRID, Math.min(MAX_ASCII_GRID, num)));
+          else {
+            const frac = Math.max(0, Math.min(1, (num - 1) / 99));
+            desiredGrid = Math.round(MIN_ASCII_GRID + frac * (MAX_ASCII_GRID - MIN_ASCII_GRID));
+          }
+        }
+
+        cmykSettings.weight = num;
+        desiredGrid = Math.max(MIN_ASCII_GRID, Math.min(MAX_ASCII_GRID, desiredGrid));
+
+        if (asciiGrid !== desiredGrid) {
+          asciiGrid = desiredGrid;
+          baseFont = Math.max(6, Math.floor(asciiGrid * 0.95));
+          if (smallBuffer) {
+            try { if (typeof smallBuffer.remove === 'function') smallBuffer.remove(); } catch (e) {}
+            smallBuffer = null;
+          }
+          needsUpdate = true;
+          p.redraw();
+          try { console.debug && console.debug('cfgWeight ->', num, 'mapped asciiGrid ->', asciiGrid); } catch(e){}
+        }
+      } catch (err) {
+        // Fallback simple behavior
+        cmykSettings.weight = num;
+        const v = Math.max(MIN_ASCII_GRID, Math.min(MAX_ASCII_GRID, Math.round(num)));
+        if (asciiGrid !== v) {
+          asciiGrid = v; baseFont = Math.max(6, Math.floor(asciiGrid * 0.95));
+          if (smallBuffer) { try { if (typeof smallBuffer.remove === 'function') smallBuffer.remove(); } catch (e) {} smallBuffer = null; }
+          needsUpdate = true; p.redraw();
+        }
+      }
+    }
+
+    if (sWeight) {
+      // p5 Element: pass underlying element so handler can read min/max
+      sWeight.input(() => handleWeightChange(sWeight.value(), sWeight.elt));
+      sWeight.changed(() => handleWeightChange(sWeight.value(), sWeight.elt));
+    }
+    
+    // Also attempt to attach to any likely native inputs if p5 selector didn't match
+    const nativeCandidates = [
+      document.getElementById('cfgWeight'),
+      document.getElementById('patternScale'),
+      document.querySelector('input[name="weight"]'),
+      document.querySelector('input[name="pattern"]'),
+      document.querySelector('input[type="range"].pattern')
+    ];
+    for (const el of nativeCandidates) {
+      if (!el) continue;
+      el.addEventListener('input', (e) => handleWeightChange(e.target.value, e));
+      el.addEventListener('change', (e) => handleWeightChange(e.target.value, e));
+    }
+
     const sThreshold = p.select('#cfgThreshold');
     if(sThreshold) sThreshold.input(() => {
       cmykSettings.threshold = parseFloat(sThreshold.value());
       needsUpdate = true;
+      p.redraw();
     });
     
     const sSrcOpacity = p.select('#cfgSrcOpacity');
     if(sSrcOpacity) sSrcOpacity.input(() => {
       imgOpacity = parseFloat(sSrcOpacity.value());
       needsUpdate = true;
+      p.redraw();
     });
 
     const sScale = p.select('#sldScale');
-    if(sScale) sScale.input(() => { imgScale = parseFloat(sScale.value()); needsUpdate = true; });
+    if(sScale) sScale.input(() => { imgScale = parseFloat(sScale.value()); needsUpdate = true; p.redraw(); });
 
     const sShowSource = p.select('#chkShowSrc');
-    if(sShowSource) sShowSource.changed(() => { showImage = sShowSource.checked(); needsUpdate = true; });
+    if(sShowSource) sShowSource.changed(() => { showImage = sShowSource.checked(); needsUpdate = true; p.redraw(); });
 
     const sChars = p.select('#inpChars');
-    if(sChars) sChars.input(() => { rampReplica = sChars.value(); needsUpdate = true; });
+    if(sChars) sChars.input(() => { rampReplica = sChars.value() || rampDense; needsUpdate = true; p.redraw(); });
 
-    // Map "Invert" checkbox
     const sInvert = p.select('#chkInvert');
-    if(sInvert) sInvert.changed(() => { invertRamp = sInvert.checked(); needsUpdate = true; });
+    if(sInvert) sInvert.changed(() => { invertRamp = sInvert.checked(); needsUpdate = true; p.redraw(); });
 
-    // Map "Animate" checkbox
     const sAnimate = p.select('#chkAnimate');
     if(sAnimate) sAnimate.changed(() => { 
       isJittering = sAnimate.checked(); 
       needsUpdate = true; 
+      p.redraw();
     });
 
-    // --- NEW: Preset Dropdown ---
     const sPreset = p.select('#selAsciiPreset');
     if(sPreset) {
-      // Populate options
-      sPreset.html(''); // Clear existing
+      sPreset.html(''); 
       Object.keys(rampPresets).forEach(key => {
         sPreset.option(key);
       });
-      // Bind change event
       sPreset.changed(() => {
-        rampReplica = rampPresets[sPreset.value()];
+        const key = sPreset.value();
+        const presetStr = rampPresets[key];
+        if (!presetStr) return;
+        if (key === 'Blocks') {
+          rampBlocks = presetStr;
+          if (!rampReplica || rampReplica.trim().length === 0) rampReplica = rampDense;
+          const inpCharsEl = p.select('#inpChars');
+          if (inpCharsEl) try { inpCharsEl.value(rampReplica); } catch(e) {}
+        } else {
+          rampReplica = presetStr;
+          const inpCharsEl = p.select('#inpChars');
+          if (inpCharsEl) try { inpCharsEl.value(rampReplica); } catch(e) {}
+        }
         needsUpdate = true;
+        p.redraw();
       });
     }
 
-    // 4. Save Button
+    const gridSelectors = ['#sldGrid','#cfgGrid','#sldAsciiGrid','#inpGrid','#gridSize'];
+    for (const sel of gridSelectors) {
+      const el = p.select(sel);
+      if (el) {
+        el.input(() => {
+          const v = parseInt(el.value(), 10);
+          if (!isNaN(v) && v > 0) {
+            // clamp to configured min/max to prevent too-small cells
+            asciiGrid = Math.max(MIN_ASCII_GRID, Math.min(MAX_ASCII_GRID, v));
+            baseFont = Math.max(6, Math.floor(asciiGrid * 0.95));
+            if (smallBuffer) {
+              try { if (typeof smallBuffer.remove === 'function') smallBuffer.remove(); } catch (e) {}
+              smallBuffer = null;
+            }
+            needsUpdate = true;
+            p.redraw();
+          }
+        });
+        break;
+      }
+    }
+
     const btnSave = p.select('#cmykSaveBtn');
     if(btnSave) {
       try { btnSave.html && btnSave.html('Capture & Add to Library'); } catch(e) {}
       btnSave.mousePressed(() => {
-        // If webcam is active, capture the current processed canvas and add to library without stopping webcam
         if (videoStream && videoEl) {
           let res = p.get();
           let name = "Memory_" + p.millis();
@@ -983,7 +1022,6 @@ const cmykSketch = (p) => {
           return;
         }
 
-        // Otherwise, fall back to saving current canvas (static image) and optionally reset state
         if (!blobImg) {
           if(window.customAlert) window.customAlert("No image to save!");
           else alert("No image to save!");
@@ -994,36 +1032,30 @@ const cmykSketch = (p) => {
         let name = "Memory_" + p.millis();
         if(window.addToLibrary) window.addToLibrary(res, name);
 
-        // --- RESET STATE TO REDUCE LAG ---
-        blobImg = null; // Ngắt vòng lặp xử lý ảnh nặng
+        blobImg = null; 
         currentFile = null;
         showImage = false;
         isAnimated = false;
 
-        // Reset UI (Xóa tên file và ảnh preview)
         const fileIn = p.select('#fileIn');
         if(fileIn) fileIn.elt.value = ''; 
         const previewBox = p.select('#preview-area');
         if(previewBox) previewBox.html('<span class="muted">EMPTY</span>');
-        p.background(255); // Xóa trắng canvas
+        p.background(255); 
 
         showStatus("SAVED TO LIBRARY");
         setTimeout(() => showStatus(""), 3000);
       });
     }
-
   }
 
-  // Helper: determine a sensible canvas size for the image-processor area
   function getImageProcSheetSize() {
     try {
       const holder = document.getElementById('input-canvas-holder');
       if (!holder) return null;
       const rect = holder.getBoundingClientRect();
-      // Use at least 320x240 but prefer actual holder size (floor to ints)
       let w = Math.max(320, Math.floor(rect.width) || p.width || 800);
       let h = Math.max(240, Math.floor(rect.height) || p.height || 800);
-      // Constrain to reasonable maximum to avoid extremely large canvases
       const MAX = 1200;
       if (w > MAX || h > MAX) {
         const ratio = Math.min(MAX / w, MAX / h);
@@ -1040,11 +1072,11 @@ const cmykSketch = (p) => {
   function showStatus(msg) {
     if (!statusDiv) {
       statusDiv = p.createDiv('');
-      statusDiv.parent(document.body); // Move to body to avoid transform issues
+      statusDiv.parent(document.body); 
       statusDiv.style('position', 'fixed');
       statusDiv.style('bottom', '20px');
       statusDiv.style('right', '20px');
-      statusDiv.style('left', 'auto'); // Ensure it doesn't stick to the left
+      statusDiv.style('left', 'auto'); 
       statusDiv.style('font-family', '"ocr-a-std", monospace');
       statusDiv.style('font-size', '10pt');
       statusDiv.style('color', '#000');
