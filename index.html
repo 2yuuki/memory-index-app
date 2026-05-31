@@ -52,6 +52,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Memory Index</title>
   <link rel="icon" href="assets/UI items/logo.svg" type="image/x-icon" />
+  
+  <!-- === GLOBAL MESSAGE LISTENER TO SUPPRESS EXTENSION ERRORS === -->
+  <script>
+    // Register chrome message listener IMMEDIATELY to suppress extension console errors
+    // This catches messages from browser extensions (Grammarly, ad blockers, etc.)
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        try { sendResponse({ success: true }); } catch(e) {}
+        return false; // Don't indicate async response
+      });
+    }
+  </script>
+  
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -636,10 +649,19 @@
       </div>
       <div class="panel-content" style="padding:10px; overflow-y:auto;">
         <div class="tools-grid">
-          <button class="btn-retro" id="btnPencil" data-tooltip="Draw with selected character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMTEgMkwxMyA0TDEwIDdMNyA1TDExIDJaTTYgNkw5IDlMNCAxNEgyVjEyTDYgNloiLz48L3N2Zz4=" class="pixel-icon"> Pencil</button>
-          <button class="btn-retro" id="btnEraser" data-tooltip="Erase characters."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAyTDExIDhMMTQuNSA0LjVMOC41IDJINVpNNSA0TDggN0w2IDlMMyA2TDUgNFoiLz48L3N2Zz4=" class="pixel-icon"> Eraser</button>
-          <button class="btn-retro" id="btnFill" data-tooltip="Fill area with character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMSA0TDMgMTJIOS41TDEyIDRIMVpNMiA1SDExTDkuNSAxMUgzLjVMMiA1WiIvPjwvc3ZnPg==" class="pixel-icon"> Bucket</button>
-          <button class="btn-retro" id="btnMagicWand" data-tooltip="Select connected area of same character."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNOSA1TDExIDdMNCAxNEwyIDEyTDkgNVpNMTIgNEwxMyA1TDE0IDRMMTMgM0wxMiA0Wk0xMCAyTDExIDNMMTIIDJMMTEgMUwxMCAyWk0xNCA2TDE1IDdMMTYgNkwxNSA1TDE0IDZaIi8+PC9zdmc+" class="pixel-icon"> Wand</button>
+          <button class="btn-retro" id="btnGrab" data-tooltip="Pan/Move canvas."> Grab</button>
+
+          <button class="btn-retro" id="btnPencil" data-tooltip="Draw with selected character."> Pencil</button>
+          <button class="btn-retro" id="btnEraser" data-tooltip="Erase characters."> Eraser</button>
+          <button class="btn-retro" id="btnFill" data-tooltip="Fill area with character."> Bucket</button>
+          <button class="btn-retro" id="btnMagicWand" data-tooltip="Select connected area of same character."> Wand</button>
+          <button class="btn-retro" id="btnTextTool" data-tooltip="Write text and fill ascii into grid."> Text</button>
+          <button class="btn-retro" id="btnShapeRect" data-tooltip="Draw Rectangle."> Rect</button>
+          <button class="btn-retro" id="btnShapeTriangle" data-tooltip="Draw Triangle."> Tri</button>
+          <button class="btn-retro" id="btnShapeCircle" data-tooltip="Draw Circle."> Circ</button>
+          <button class="btn-retro" id="btnShapeStar" data-tooltip="Draw Star."> Star</button>
+          <button class="btn-retro" id="btnShapeHeart" data-tooltip="Draw Heart."> Heart</button>
+
           <button class="btn-retro" id="btnClearSketch" data-tooltip="Clear the entire canvas."> <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNSAxSDExVjJIMUMxVjNIMVYySDVWMVpNMiA0SDE0VjE1SDJWNFpNMCA1VjEwSDFWNUgwWk0xNSA1VjEwSDE2VjVIMTVaIi8+PC9zdmc+" class="pixel-icon"> Clear</button>
         </div>
       </div>

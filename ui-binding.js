@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log("UI Binding Loaded");
 
@@ -57,20 +58,3 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 100);
 
 });
-
-// some browser extensions (Grammarly, ad blockers, etc.) inject scripts that send
-// runtime messages to every page. If our page doesn't reply synchronously the
-// extension often logs "A listener indicated an asynchronous response by
-// returning true..." even though it's not something we control. Add a global
-// catch‑all listener as early as possible so that any message gets an immediate
-// reply and the console noise disappears.
-//
-// This listener lives at the top level (not inside DOMContentLoaded) to ensure
-// it's registered before any extension tries to talk to us.
-if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // Immediately acknowledge every message. We don't perform any work here.
-    sendResponse({ success: true });
-    return false; // do not indicate async response
-  });
-}
