@@ -54,7 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Now that the DOM is ready, we can safely call the p5-dependent setup functions
   setTimeout(() => {
-    if(window.switchTab) window.switchTab('tab-input');
+    if (window.switchTab) {
+      const activeWorkspace = document.querySelector('.workspace.active');
+      window.switchTab(activeWorkspace ? activeWorkspace.id : 'tab-thoughts');
+    }
   }, 100);
 
 });

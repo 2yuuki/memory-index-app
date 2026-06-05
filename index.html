@@ -89,7 +89,6 @@
     <div class="sidebar-tab active" data-tab="tab-thoughts" onclick="switchTab('tab-thoughts')" data-tooltip="Tab 1: Write and collect your thoughts.">1. Thoughts</div>
     <div class="sidebar-tab" data-tab="tab-image-proc" onclick="switchTab('tab-image-proc')" data-tooltip="Tab 2: Process images into ASCII art.">2. Image Processor</div>
     <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')" data-tooltip="Tab 3: Sketch freely with ASCII characters.">3. ASCII Sketch</div>
-    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')" data-tooltip="Tab 4: Arrange your memory diagram.">4. Memory Diagram</div>
   </div>
 
   <div class="layout-column">
@@ -663,6 +662,10 @@
           <button class="btn-retro" id="btnShapeStar" data-tooltip="Draw Star."> Star</button>
           <button class="btn-retro" id="btnShapeHeart" data-tooltip="Draw Heart."> Heart</button>
 
+          <div style="grid-column: span 2; height: 1px; background: #ccc; margin: 4px 0;"></div>
+          <button class="btn-retro" id="btnUndo" data-tooltip="Undo last action (Ctrl+Z)."> Undo</button>
+          <button class="btn-retro" id="btnRedo" data-tooltip="Redo last action (Shift+Ctrl+Z)."> Redo</button>
+
           <button class="btn-retro" id="btnClearSketch" data-tooltip="Clear the entire canvas."> Clear</button>
         </div>
       </div>
@@ -737,30 +740,6 @@
     </div>
   </div>
 
-  <!-- TAB 4: INDEX -->
-  <div class="workspace" id="tab-index">
-    <div id="layout-tools-panel" class="floating-panel">
-      <div class="panel-header">
-        <span>Tools</span>
-        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
-      </div>
-      <div class="panel-content" style="padding:10px; overflow-y:auto;">
-        <div id="layer-controls"></div>
-        <div class="section-title" style="margin-top:10px;">Layers</div>
-        <div id="layer-list" class="layer-list"></div>
-      </div>
-    </div>
-
-    <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
-      <div class="artboard-wrapper">
-        <div class="paper-sheet paper-a4 fixed-a4">
-          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #444;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  
   </div><!-- end app-body -->
   </div><!-- end layout-column -->
   
@@ -800,7 +779,10 @@
   <div id="gallery-modal" class="modal-overlay" style="display:none;" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
       <img id="gallery-modal-img" src="" alt="Gallery Image">
-      <button class="btn-retro" style="width: auto; padding: 8px 20px; margin-top: 10px;" onclick="document.getElementById('gallery-modal').style.display='none'">Close</button>
+      <div style="display:flex; gap:10px; margin-top:10px; justify-content:center;">
+        <button class="btn-retro" id="gallery-download-btn" style="width: auto; padding: 8px 20px;">Download</button>
+        <button class="btn-retro" style="width: auto; padding: 8px 20px;" onclick="document.getElementById('gallery-modal').style.display='none'">Close</button>
+      </div>
     </div>
   </div>
 
@@ -824,7 +806,6 @@
 <script src="global.js"></script>
 <script src="tab-thoughts.js"></script>
 <script src="sketch.js"></script>
-<script src="tab-index.js"></script>
 <script src="cmyk-ascii-effect.js"></script>
 <script src="ui-binding.js"></script>
 <script>

@@ -20,32 +20,31 @@
  */
 
 
-function preload() {} 
+function preload() {}
 
 // --- SETUP ---
 function setup() {
-  frameRate(30); 
-  pixelDensity(1); 
+  frameRate(30);
+  pixelDensity(1);
   templateImg = createImage(100, 100);
-  
+
   mainCanvas = createCanvas(canvasW, canvasH);
   mainCanvas.id('myCanvas');
-  mainCanvas.parent('sketch-canvas-holder'); 
+  mainCanvas.parent('sketch-canvas-holder');
   mainCanvas.style('touch-action', 'none');
   applySketchCanvasZoom();
 
   try {
     const mc = mainCanvas.elt;
     if (mc && mc.style) {
-      mc.style.transition = 'none'; mc.style.animation = 'none'; mc.style.opacity = '1'; 
+      mc.style.transition = 'none'; mc.style.animation = 'none'; mc.style.opacity = '1';
     }
   } catch(e){}
-  
-  mainCanvas.drop(handleFile);
+
   mainCanvas.elt.ondragover = (e) => e.preventDefault();
   mainCanvas.elt.ondrop = (e) => {
     e.preventDefault();
-    
+
     let jsonData = e.dataTransfer.getData('application/json');
     if (jsonData) {
         try {
@@ -56,7 +55,7 @@ function setup() {
             }
         } catch(err) {}
     }
-    
+
     const droppedFile = e.dataTransfer.files && e.dataTransfer.files[0];
     if (droppedFile && droppedFile.type && droppedFile.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -72,20 +71,20 @@ function setup() {
 
   cols = workCols;
   rows = workRows;
-  
+
   if (asciiLayers.length === 0) {
       addAsciiLayer("Layer 1");
   }
 
   pgGridLayer = createGraphics(width, height);
   pgGridLayer.pixelDensity(1);
-  preRenderGrid(pgGridLayer); 
+  preRenderGrid(pgGridLayer);
 
   loadFromLocalStorage();
-  saveState(); 
+  saveState();
 
   // --- UI Configuration ---
-  injectMouseTool(); 
+  injectMouseTool();
   dockPanelsRight();
   renderPatternsUI();
   renderInkUI();
@@ -98,17 +97,15 @@ function setup() {
   if (sketchScrollArea) sketchScrollArea.addEventListener('scroll', saveUiState);
   restoreUiState();
   renderPropertiesUI();
-  updateLayerTextVisuals(); 
+  updateLayerTextVisuals();
+  updateToolButtonUI();
 
   let starBtn = document.getElementById('btnShapeStar');
   if (starBtn) starBtn.style.display = 'none';
   let heartBtn = document.getElementById('btnShapeHeart');
   if (heartBtn) heartBtn.style.display = 'none';
-  const tab4Btn = document.querySelector('[data-tab="tab-index"]');
-  if (tab4Btn) tab4Btn.style.display = 'none';
-
   const performAutoSave = () => {
-      saveToLocalStorage(true); 
+      saveToLocalStorage(true);
       saveUiState();
   };
   window.addEventListener('pagehide', performAutoSave);
@@ -125,7 +122,7 @@ function setup() {
 // Bơm Tool MOUSE mạnh mẽ ngay trước nút Pencil
 function injectMouseTool() {
     if (document.getElementById('btnMouse')) return;
-    
+
     let pencilBtn = document.getElementById('btnPencil');
     if (pencilBtn && pencilBtn.parentNode) {
         let mouseBtn = document.createElement('button');
@@ -137,7 +134,7 @@ function injectMouseTool() {
         mouseBtn.style.border = '1px solid #ccc';
         mouseBtn.style.background = '#fafafa';
         mouseBtn.style.fontWeight = 'bold';
-        pencilBtn.parentNode.insertBefore(mouseBtn, pencilBtn); 
+        pencilBtn.parentNode.insertBefore(mouseBtn, pencilBtn);
     }
 }
 
@@ -171,7 +168,7 @@ function dockPanelsRight() {
             p.style.border = '1px solid #ddd';
             p.style.background = 'rgba(255, 255, 255, 0.95)';
             p.style.borderRadius = '5px';
-            p.style.pointerEvents = 'auto'; 
+            p.style.pointerEvents = 'auto';
             p.style.zIndex = '1500';
             makePanelDraggable(p, panelHost);
         }
@@ -185,7 +182,7 @@ function bindPanelToggle() {
         let newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.onclick = (e) => {
-            e.stopPropagation(); 
+            e.stopPropagation();
             let panel = e.target.closest('.floating-panel');
             if (panel) {
                 let content = panel.querySelector('.panel-content');
@@ -264,7 +261,7 @@ function restoreUiState() {
         if (state.toolMode) toolMode = state.toolMode;
         if (state.selectedChar) selectedChar = state.selectedChar;
         if (state.selectedColor !== undefined) selectedColor = state.selectedColor;
-        if (state.magicWandMatchMode === 'char' || state.magicWandMatchMode === 'color') {
+        if (state.magicWandMatchMode === 'char' || state.magicWandMatchMode === 'color' || state.magicWandMatchMode === 'char_color') {
             magicWandMatchMode = state.magicWandMatchMode;
         }
         if (typeof state.showRulers === 'boolean') showRulers = state.showRulers;
@@ -296,16 +293,40 @@ function restoreUiState() {
 function setToolMode(nextMode, options = {}) {
     const previousTool = toolMode;
     toolMode = nextMode;
-    
+
     // Tự động deselect nếu đổi sang tool không liên quan đến select
     if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE') {
         selectionMask = null;
         selStart = null;
         selEnd = null;
     }
-    
+
+    updateToolButtonUI();
+
     if (options.render !== false) renderPropertiesUI();
     if (options.save !== false) saveUiState();
+}
+
+function updateToolButtonUI() {
+    const tModes = [
+        {id: 'btnPencil', mode: 'DRAW'},
+        {id: 'btnEraser', mode: 'ERASE'},
+        {id: 'btnFill', mode: 'FILL'},
+        {id: 'btnMagicWand', mode: 'MAGIC_WAND'},
+        {id: 'btnGrab', mode: 'GRAB'},
+        {id: 'btnMouse', mode: 'MOUSE'},
+        {id: 'btnTextTool', mode: 'TEXT'},
+        {id: 'btnShapeRect', mode: 'SHAPE_RECT'},
+        {id: 'btnShapeTriangle', mode: 'SHAPE_TRIANGLE'},
+        {id: 'btnShapeCircle', mode: 'SHAPE_CIRCLE'}
+    ];
+    tModes.forEach(t => {
+        let btn = document.getElementById(t.id);
+        if (btn) {
+            if (t.mode === toolMode) btn.classList.add('active-tool');
+            else btn.classList.remove('active-tool');
+        }
+    });
 }
 
 function getLastActiveTab() {
@@ -396,40 +417,72 @@ function renderPatternsUI() {
     patPanel.style.display = 'grid';
     patPanel.style.gridTemplateColumns = 'repeat(8, 1fr)';
     patPanel.style.gap = '4px';
-    
+
     palette.forEach(char => {
+        const isSelected = char === selectedChar;
         let btn = document.createElement('button');
         btn.textContent = char === 'SMART' ? '#' : char;
         btn.style.padding = '6px';
         btn.style.cursor = 'pointer';
         btn.style.fontFamily = 'Consolas, monospace';
-        btn.style.border = '1px solid #ccc';
-        btn.style.background = '#fafafa';
-        btn.onclick = () => { selectedChar = char; };
+        btn.style.border = isSelected ? '2px solid #0072bc' : '1px solid #ccc';
+        btn.style.background = isSelected ? '#d0e8ff' : '#fafafa';
+        btn.style.color = '#000';
+        btn.style.fontWeight = isSelected ? 'bold' : 'normal';
+        btn.onclick = () => {
+            selectedChar = char;
+            setToolMode('DRAW');
+            prevGridX = -1;
+            prevGridY = -1;
+            renderPatternsUI();
+            saveUiState();
+        };
         patPanel.appendChild(btn);
     });
+}
+
+function getAsciiFontFamily() {
+    return 'Consolas, "Courier New", Menlo, Monaco, monospace';
+}
+
+function applyAsciiTextStyle(target, size = userFontSize, hAlign = CENTER, vAlign = CENTER) {
+    const fontFamily = getAsciiFontFamily();
+    if (target && target.textFont) {
+        target.textFont(fontFamily);
+        target.textSize(size);
+        target.textAlign(hAlign, vAlign);
+        if (target.drawingContext) target.drawingContext.font = `${size}px ${fontFamily}`;
+    } else {
+        textFont(fontFamily);
+        textSize(size);
+        textAlign(hAlign, vAlign);
+        if (typeof drawingContext !== 'undefined') drawingContext.font = `${size}px ${fontFamily}`;
+    }
 }
 
 function renderInkUI() {
     let colorsContainer = document.querySelector('#sketch-colors');
     if (!colorsContainer) return;
     colorsContainer.innerHTML = '';
-    
+
         let customInput = document.getElementById('customInkColor');
         if (customInput && !customInput.oninput) {
             customInput.oninput = (e) => {
                 selectedColor = e.target.value;
-                setToolMode('INK');
+                renderInkUI();
+                saveUiState();
             };
         }
 
     let colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#000000", "#FFFFFF", null];
     colors.forEach(c => {
+        const isSelected = normalizeInkColor(c) === normalizeInkColor(selectedColor);
         let btn = document.createElement('div');
         btn.style.width = '100%';
         btn.style.height = '30px';
         btn.style.backgroundColor = c || '#eee';
-        btn.style.border = '1px solid #ccc';
+        btn.style.border = isSelected ? '3px solid #0072bc' : '1px solid #ccc';
+        btn.style.boxShadow = isSelected ? 'inset 0 0 0 2px #fff, 0 0 0 1px #003f6b' : 'none';
         btn.style.cursor = 'pointer';
         if (!c) {
             btn.textContent = 'X';
@@ -441,28 +494,46 @@ function renderInkUI() {
         }
         btn.onclick = () => {
             selectedColor = c;
-            setToolMode('INK');
             let customInput = document.getElementById('customInkColor');
             if (customInput && c) customInput.value = c;
+            renderInkUI();
+            saveUiState();
         };
         colorsContainer.appendChild(btn);
     });
+}
+
+function normalizeInkColor(value) {
+    if (value === undefined || value === null || value === '') return null;
+    return String(value).trim().toLowerCase();
 }
 
 function renderLayersUI() {
     let layPanel = document.querySelector('#sketch-layer-panel .panel-content');
     if (!layPanel) return;
     layPanel.innerHTML = '';
-    
+
     let addBtn = document.createElement('button');
     addBtn.textContent = '+ Add Layer';
     addBtn.style.marginBottom = '10px';
     addBtn.style.padding = '5px 10px';
     addBtn.style.width = '100%';
-    addBtn.onclick = () => { addAsciiLayer('Layer ' + (asciiLayers.length + 1)); renderLayersUI(); saveToLocalStorage(true); saveUiState(); };
+    addBtn.onclick = () => {
+        addAsciiLayer('Layer ' + (asciiLayers.length + 1));
+        clearLayerSelectionState();
+        selectedColor = '#000000';
+        const customInk = document.getElementById('customInkColor');
+        if (customInk) customInk.value = selectedColor;
+        setToolMode('DRAW');
+        renderLayersUI();
+        saveToLocalStorage(true);
+        saveUiState();
+    };
     layPanel.appendChild(addBtn);
-    
-    asciiLayers.forEach((l, i) => {
+
+    for (let displayIndex = asciiLayers.length - 1; displayIndex >= 0; displayIndex--) {
+        const l = asciiLayers[displayIndex];
+        const i = displayIndex;
         let div = document.createElement('div');
         div.style.display = 'flex';
         div.style.justifyContent = 'space-between';
@@ -482,16 +553,16 @@ function renderLayersUI() {
             e.stopPropagation();
             const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
             if (!Number.isInteger(fromIndex) || fromIndex === i) return;
-            moveLayer(fromIndex, i);
+            moveLayerAboveTarget(fromIndex, i);
         };
-        div.onclick = () => { 
+        div.onclick = () => {
             setActiveLayer(i);
-            renderLayersUI(); 
+            renderLayersUI();
             renderPropertiesUI();
             saveToLocalStorage(true);
             saveUiState();
         };
-        
+
         let name = document.createElement('span');
         name.textContent = (l.kind === 'image' ? '[IMG] ' : '') + l.name;
         name.title = 'Click to rename layer';
@@ -522,10 +593,23 @@ function renderLayersUI() {
         let controls = document.createElement('div');
         controls.style.display = 'flex';
         controls.style.gap = '4px';
-        
+
         let visBtn = document.createElement('button');
         visBtn.textContent = l.visible ? '👁' : '🙈';
-        visBtn.onclick = (e) => { e.stopPropagation(); l.visible = !l.visible; renderLayersUI(); saveToLocalStorage(true); saveUiState(); };
+        visBtn.onclick = (e) => {
+            e.stopPropagation();
+            syncActiveAsciiLayer();
+            l.visible = !l.visible;
+            if (i === activeLayerIndex) {
+                selectionMask = null;
+                selStart = null;
+                selEnd = null;
+            }
+            renderLayersUI();
+            renderPropertiesUI();
+            saveToLocalStorage(true);
+            saveUiState();
+        };
         controls.appendChild(visBtn);
 
         let lockBtn = document.createElement('button');
@@ -541,9 +625,9 @@ function renderLayersUI() {
         };
         controls.appendChild(lockBtn);
         div.appendChild(controls);
-        
+
         layPanel.appendChild(div);
-    });
+    }
 }
 
 function createUI() {
@@ -602,7 +686,7 @@ function renderPropertiesUI() {
     renderMagicWandProperties(content);
 
     if (!layer) return;
-    
+
     const opacityLabel = document.createElement('label');
     opacityLabel.style.fontSize = '11px';
     opacityLabel.textContent = 'Opacity';
@@ -872,7 +956,8 @@ function renderMagicWandProperties(content) {
     const modeSelect = document.createElement('select');
     [
         ['char', 'Same character'],
-        ['color', 'Same cell color']
+        ['color', 'Same cell color'],
+        ['char_color', 'Character & Text Color']
     ].forEach(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
@@ -1066,6 +1151,7 @@ function applyImageBlendMode(layer) {
 }
 
 function drawImageTransformBox(layer) {
+    if (toolMode !== 'MOUSE') return;
     if (!layer || layer.kind !== 'image' || !layer.img || !layer.visible) return;
     const b = getImageCellBounds(layer);
     const x = b.x * cellW;
@@ -1169,6 +1255,7 @@ function normalizeGridArray(source, fallbackValue) {
 function normalizeAsciiLayer(layer) {
   if (!layer) return;
   if (!layer.kind) layer.kind = 'ascii';
+  if (typeof layer.visible !== 'boolean') layer.visible = true;
   if (typeof layer.locked !== 'boolean') layer.locked = false;
   layer.grid = normalizeGridArray(layer.grid, "");
   layer.colorGrid = normalizeGridArray(layer.colorGrid, null);
@@ -1177,13 +1264,44 @@ function normalizeAsciiLayer(layer) {
 
 function setActiveLayer(index) {
   if (!asciiLayers[index]) return;
+  const changedLayer = index !== activeLayerIndex;
+  syncActiveAsciiLayer();
   activeLayerIndex = index;
   const l = asciiLayers[activeLayerIndex];
+  if (l.kind !== 'image') {
+    l.visible = true;
+    l.imgOpacity = 255;
+    l.blendMode = 'normal';
+  }
   grid = l.grid;
   colorGrid = l.colorGrid;
   textColorGrid = l.textColorGrid;
   pgColorLayer = l.pgColor;
   pgTextLayer = l.pgText;
+  if (changedLayer) clearLayerSelectionState();
+}
+
+function clearLayerSelectionState() {
+  selectionMask = null;
+  selStart = null;
+  selEnd = null;
+  isShiftSelecting = false;
+  isDraggingSelection = false;
+}
+
+function moveLayerAboveTarget(fromIndex, targetIndex) {
+  if (!asciiLayers[fromIndex] || !asciiLayers[targetIndex]) return;
+  const activeLayer = getActiveLayer();
+  const [moved] = asciiLayers.splice(fromIndex, 1);
+  let insertIndex = targetIndex;
+  if (fromIndex < targetIndex) insertIndex -= 1;
+  asciiLayers.splice(Math.min(asciiLayers.length, insertIndex + 1), 0, moved);
+  activeLayerIndex = Math.max(0, asciiLayers.indexOf(activeLayer));
+  setActiveLayer(activeLayerIndex);
+  renderLayersUI();
+  renderPropertiesUI();
+  saveToLocalStorage(true);
+  saveUiState();
 }
 
 function moveLayer(fromIndex, toIndex) {
@@ -1245,13 +1363,17 @@ function insertLayerFromClipboard(source, nameSuffix = ' Copy') {
   if (layer.kind === 'image') {
     layer.imageData = source.imageData || null;
     layer.img = source.img || null;
-    layer.imgX = source.imgX === undefined ? canvasW / 2 : source.imgX;
-    layer.imgY = source.imgY === undefined ? canvasH / 2 : source.imgY;
     layer.imgScale = source.imgScale || 1;
-    layer.imgCellX = source.imgCellX;
-    layer.imgCellY = source.imgCellY;
     layer.imgCellW = source.imgCellW;
     layer.imgCellH = source.imgCellH;
+
+    // Offset slightly so the pasted/duplicated image is visible and not hidden exactly under the original
+    layer.imgCellX = Math.min(workCols - layer.imgCellW, (source.imgCellX || 0) + 2);
+    layer.imgCellY = Math.min(workRows - layer.imgCellH, (source.imgCellY || 0) + 2);
+
+    layer.imgX = (layer.imgCellX + layer.imgCellW / 2) * cellW;
+    layer.imgY = (layer.imgCellY + layer.imgCellH / 2) * cellH;
+
     layer.imgRotate = source.imgRotate || 0;
     layer.imgOpacity = source.imgOpacity === undefined ? 180 : source.imgOpacity;
     layer.blendMode = source.blendMode || 'normal';
@@ -1372,9 +1494,21 @@ function importAsciiSvgText(svgText) {
 function getCorrectedMouse() {
   let x = (typeof mouseX === 'number') ? mouseX : 0;
   let y = (typeof mouseY === 'number') ? mouseY : 0;
-  x = constrain(x, 0, width);
-  y = constrain(y, 0, height);
   return { x: x, y: y };
+}
+
+function isPointerOnSketchCanvas() {
+  if (!mainCanvas || !mainCanvas.elt) return false;
+  if (typeof winMouseX === 'number' && typeof winMouseY === 'number' && document.elementFromPoint) {
+    const target = document.elementFromPoint(winMouseX, winMouseY);
+    if (target && target.closest && target.closest('.floating-panel, button, input, select, textarea, #global-lib-panel, #global-lib-btn')) {
+      return false;
+    }
+    if (target === mainCanvas.elt) return true;
+  }
+  const x = typeof mouseX === 'number' ? mouseX : -1;
+  const y = typeof mouseY === 'number' ? mouseY : -1;
+  return x >= 0 && y >= 0 && x <= width && y <= height;
 }
 
 function snapCellX(value) {
@@ -1403,34 +1537,55 @@ function getImageCellBounds(layer) {
 }
 
 // --- HISTORY, UNDO/REDO & CLIPBOARD LOGIC ---
+function cloneAllLayers() {
+    syncActiveAsciiLayer();
+    return asciiLayers.map(layer => cloneLayerForClipboard(layer));
+}
+
+function restoreLayersFromState(state) {
+    if (!state || !Array.isArray(state.layers) || state.layers.length === 0) return;
+    asciiLayers = state.layers.map(layer => {
+        const copy = cloneLayerForClipboard(layer);
+        copy.pgColor = createGraphics(canvasW, canvasH);
+        copy.pgColor.pixelDensity(1);
+        copy.pgText = createGraphics(canvasW, canvasH);
+        copy.pgText.pixelDensity(1);
+        if (copy.kind === 'image' && !copy.img && copy.imageData) {
+            loadImage(copy.imageData, img => { copy.img = img; });
+        }
+        return copy;
+    });
+    activeLayerIndex = constrain(state.activeIndex || 0, 0, asciiLayers.length - 1);
+    refreshAllLayerGraphics();
+    setActiveLayer(activeLayerIndex);
+    selectionMask = null;
+    selStart = null;
+    selEnd = null;
+    isDraggingSelection = false;
+    renderLayersUI();
+    renderPropertiesUI();
+    saveToLocalStorage(true);
+    saveUiState();
+}
+
 function saveState(silent) {
   try {
-    const gCopy = grid.map(row => Array.isArray(row) ? row.slice() : []);
-    const cCopy = colorGrid.map(row => Array.isArray(row) ? row.slice() : []);
-    const tCopy = textColorGrid.map(row => Array.isArray(row) ? row.slice() : []);
-    historyState.push({ grid: gCopy, colorGrid: cCopy, textColorGrid: tCopy });
+    syncActiveAsciiLayer();
+    historyState.push({
+        layers: cloneAllLayers(),
+        activeIndex: activeLayerIndex
+    });
     if (historyState.length > MAX_HISTORY) historyState.shift();
-    sketchRedoHistory = []; 
+    sketchRedoHistory = [];
   } catch (e) {}
 }
 
 function undoSketch() {
-    if (historyState.length > 1) { 
+    if (historyState.length > 1) {
         let currentState = historyState.pop();
         sketchRedoHistory.push(currentState);
         let prevState = historyState[historyState.length - 1];
-        
-        grid = prevState.grid.map(row => [...row]);
-        colorGrid = prevState.colorGrid.map(row => [...row]);
-        textColorGrid = prevState.textColorGrid.map(row => [...row]);
-        
-        asciiLayers[activeLayerIndex].grid = grid;
-        asciiLayers[activeLayerIndex].colorGrid = colorGrid;
-        asciiLayers[activeLayerIndex].textColorGrid = textColorGrid;
-        
-        updateLayerTextVisuals();
-        updateLayerColorVisuals();
-        saveToLocalStorage(true);
+        restoreLayersFromState(prevState);
     }
 }
 
@@ -1438,18 +1593,7 @@ function redoSketch() {
     if (sketchRedoHistory.length > 0) {
         let nextState = sketchRedoHistory.pop();
         historyState.push(nextState);
-        
-        grid = nextState.grid.map(row => [...row]);
-        colorGrid = nextState.colorGrid.map(row => [...row]);
-        textColorGrid = nextState.textColorGrid.map(row => [...row]);
-        
-        asciiLayers[activeLayerIndex].grid = grid;
-        asciiLayers[activeLayerIndex].colorGrid = colorGrid;
-        asciiLayers[activeLayerIndex].textColorGrid = textColorGrid;
-        
-        updateLayerTextVisuals();
-        updateLayerColorVisuals();
-        saveToLocalStorage(true);
+        restoreLayersFromState(nextState);
     }
 }
 
@@ -1483,9 +1627,9 @@ function copySelection() {
     if (!bounds) return;
     let { minX, maxX, minY, maxY, useMask } = bounds;
     layerClipboard = null;
-    
+
     clipboard = { w: maxX - minX + 1, h: maxY - minY + 1, data: [] };
-    
+
     for (let y = minY; y <= maxY; y++) {
         let row = [];
         for (let x = minX; x <= maxX; x++) {
@@ -1503,7 +1647,7 @@ function cutSelection() {
     if (!isActiveAsciiLayerEditable()) return;
     const bounds = getSelectionBounds();
     if (!bounds) return;
-    copySelection(); 
+    copySelection();
     clearSelectionCells(bounds);
 }
 
@@ -1536,7 +1680,7 @@ function deleteSelection() {
 function pasteClipboard() {
     if (!clipboard) return;
     if (!isActiveAsciiLayerEditable()) return;
-    
+
     let m = getCorrectedMouse();
     let x = 0; let y = 0;
 
@@ -1547,12 +1691,12 @@ function pasteClipboard() {
         x = Math.floor(viewX / cellW) + Math.floor((viewW / cellW) / 2) - Math.floor(clipboard.w / 2);
         y = Math.floor(viewY / cellH) + Math.floor((viewH / cellH) / 2) - Math.floor(clipboard.h / 2);
     }
-    
+
     floatingX = x;
     floatingY = y;
     isDraggingSelection = true;
     setToolMode('MOUSE'); // Tự động bật MOUSE tool cho phép kéo thả
-    selStart = null; selEnd = null; 
+    selStart = null; selEnd = null;
 }
 
 function commitFloatingSelection() {
@@ -1564,7 +1708,7 @@ function commitFloatingSelection() {
             let targetY = floatingY + cy;
             if (isValidCell(targetX, targetY)) {
                 let d = clipboard.data[cy][cx];
-                if (d.char !== "") grid[targetY][targetX] = d.char; 
+                if (d.char !== "") grid[targetY][targetX] = d.char;
                 if (d.color !== null) colorGrid[targetY][targetX] = d.color;
                 if (d.textColor !== "#000000" && d.char !== "") textColorGrid[targetY][targetX] = d.textColor;
             }
@@ -1614,11 +1758,14 @@ function addAsciiLayer(name = 'Layer') {
     colorGrid: layerColorGrid,
     textColorGrid: layerTextColorGrid,
     visible: true,
-    locked: false
+    locked: false,
+    imgOpacity: 255,
+    blendMode: 'normal'
   };
 
   asciiLayers.push(layer);
   activeLayerIndex = asciiLayers.length - 1;
+  clearLayerSelectionState();
 
   grid = asciiLayers[activeLayerIndex].grid;
   colorGrid = asciiLayers[activeLayerIndex].colorGrid;
@@ -1659,6 +1806,7 @@ function addImageLayer(img, dataUrl, name = 'Image Layer') {
 
 function draw() {
   if (activeTab !== 'tab-sketch') return;
+  syncActiveAsciiLayer();
 
   let m = getCorrectedMouse();
   mainCanvas.removeClass('cursor-pencil');
@@ -1669,11 +1817,15 @@ function draw() {
     else if (toolMode === "DRAW") {
       if (isEraser) mainCanvas.addClass('cursor-eraser');
       else mainCanvas.addClass('cursor-pencil');
+    } else if (toolMode === "MOUSE") {
+      cursor(HAND);
+    } else if (toolMode === "GRAB") {
+      cursor('grab');
     } else cursor(CROSS);
   } else cursor(ARROW);
 
   background(208);
-  
+
   push();
   translate(-viewX, -viewY);
 
@@ -1684,12 +1836,25 @@ function draw() {
   image(pgGridLayer, 0, 0);
   drawGridHoverGuide();
 
+  if (showTemplateImg && templateImg && templateImg.width > 1) {
+      push();
+      if (sliderScale) {
+          bgScale = sliderScale.value(); bgX = sliderX.value(); bgY = sliderY.value(); bgRotate = sliderRotate.value();
+          translate(bgX, bgY); rotate(radians(bgRotate)); scale(bgScale);
+      }
+      if (sliderOpacity) tint(255, sliderOpacity.value());
+      imageMode(CENTER); blendMode(MULTIPLY);
+      let drawW = width; let drawH = drawW * (templateImg.height / templateImg.width);
+      image(templateImg, 0, 0, drawW, drawH);
+      pop(); blendMode(BLEND);
+  }
+
   for (let i = 0; i < asciiLayers.length; i++) {
       let l = asciiLayers[i];
       if (l.visible) {
           let op = l.imgOpacity === undefined ? (l.kind === 'image' ? 180 : 255) : l.imgOpacity;
           let customMode = l.blendMode && l.blendMode !== 'normal';
-          
+
           if (l.kind === 'image' && l.img) {
               const b = getImageCellBounds(l);
               push();
@@ -1720,19 +1885,6 @@ function draw() {
       }
   }
 
-  if (showTemplateImg && templateImg && templateImg.width > 1) {
-      push();
-      if (sliderScale) {
-          bgScale = sliderScale.value(); bgX = sliderX.value(); bgY = sliderY.value(); bgRotate = sliderRotate.value(); 
-          translate(bgX, bgY); rotate(radians(bgRotate)); scale(bgScale);
-      }
-      if (sliderOpacity) tint(255, sliderOpacity.value());
-      imageMode(CENTER); blendMode(MULTIPLY); 
-      let drawW = width; let drawH = drawW * (templateImg.height / templateImg.width);
-      image(templateImg, 0, 0, drawW, drawH); 
-      pop(); blendMode(BLEND); 
-  }
-
   // --- DRAW FLOATING SELECTION (MOUSE DRAG) ---
   if (isDraggingSelection && clipboard) {
       for (let cy = 0; cy < clipboard.h; cy++) {
@@ -1746,7 +1898,7 @@ function draw() {
                       rect(drawX, drawY, cellW, cellH);
                   }
                   fill(d.textColor); noStroke();
-                  textFont("Consolas, monospace"); textSize(userFontSize); textAlign(CENTER, CENTER);
+                  applyAsciiTextStyle(null, userFontSize, CENTER, CENTER);
                   text(d.char, drawX + cellW/2, drawY + cellH/2);
               }
           }
@@ -1755,7 +1907,7 @@ function draw() {
       rect(floatingX * cellW, floatingY * cellH, clipboard.w * cellW, clipboard.h * cellH);
       drawingContext.setLineDash([]);
   }
-  
+
   if ((toolMode.startsWith('SHAPE_') || toolMode === 'TEXT' || toolMode === 'SELECT' || toolMode === 'MOUSE') && selStart && selEnd && !isDraggingSelection) {
       drawToolPreview();
   }
@@ -1763,7 +1915,7 @@ function draw() {
   drawImageTransformBox(getActiveLayer());
 
   drawSelectionMask();
-  pop(); 
+  pop();
 
   drawViewportOverlay();
   if (showRulers) drawRulers();
@@ -1786,21 +1938,19 @@ function preRenderGrid(pg) {
 }
 
 function drawSingleCellText(x, y) {
-  if (!pgTextLayer || x >= workCols || y >= workRows) return; 
+  if (!pgTextLayer || x >= workCols || y >= workRows) return;
   let cx = x * cellW; let cy = y * cellH;
-  pgTextLayer.erase(); 
-  pgTextLayer.noStroke(); pgTextLayer.fill(255); 
-  pgTextLayer.rect(cx, cy, cellW, cellH); 
+  pgTextLayer.erase();
+  pgTextLayer.noStroke(); pgTextLayer.fill(255);
+  pgTextLayer.rect(cx, cy, cellW, cellH);
   pgTextLayer.noErase();
-  
+
   let char = grid[y][x];
   if (char !== "") {
-      pgTextLayer.textFont("Consolas, monospace");
-      pgTextLayer.textSize(userFontSize);
-      pgTextLayer.textAlign(CENTER, CENTER);
-      
+      applyAsciiTextStyle(pgTextLayer, userFontSize, CENTER, CENTER);
+
       let displayColor = color(textColorGrid[y][x] || "#000000");
-      let posX = cx + cellW/2; 
+      let posX = cx + cellW/2;
       let posY = cy + cellH/2;
 
       pgTextLayer.noStroke();
@@ -1810,11 +1960,9 @@ function drawSingleCellText(x, y) {
 }
 
 function updateLayerTextVisuals() {
-  if (!pgTextLayer) return; 
+  if (!pgTextLayer) return;
   pgTextLayer.clear();
-  pgTextLayer.textFont("Consolas, monospace");
-  pgTextLayer.textSize(userFontSize);
-  pgTextLayer.textAlign(CENTER, CENTER); 
+  applyAsciiTextStyle(pgTextLayer, userFontSize, CENTER, CENTER);
 
   for (let y = 0; y < workRows; y++) {
     for (let x = 0; x < workCols; x++) {
@@ -1822,9 +1970,9 @@ function updateLayerTextVisuals() {
       if (char !== "") {
           let cx = x * cellW; let cy = y * cellH;
           let displayColor = color(textColorGrid[y][x] || "#000000");
-          let posX = cx + cellW/2; 
+          let posX = cx + cellW/2;
           let posY = cy + cellH/2;
-          
+
           pgTextLayer.noStroke();
           pgTextLayer.fill(displayColor);
           pgTextLayer.text(char, posX, posY);
@@ -1834,7 +1982,7 @@ function updateLayerTextVisuals() {
 }
 
 function updateLayerColorVisuals() {
-  if (!pgColorLayer) return; 
+  if (!pgColorLayer) return;
   pgColorLayer.clear(); pgColorLayer.noStroke();
   for (let y = 0; y < workRows; y++) {
     for (let x = 0; x < workCols; x++) {
@@ -1844,15 +1992,16 @@ function updateLayerColorVisuals() {
   }
 }
 
-function setAsciiCell(x, y, ch, textColor = null) {
+function setAsciiCell(x, y, ch, textColor = null, ignoreSelection = false) {
   if (!isActiveAsciiLayerEditable()) return;
-  if (selectionMask && !selectionMask[y][x]) return; 
+  if (!ignoreSelection && selectionMask && !selectionMask[y][x]) return;
   ensureGridCell(x, y);
   grid[y][x] = ch;
   if (textColor) {
       textColorGrid[y][x] = textColor;
   }
   drawSingleCellText(x, y);
+  syncActiveAsciiLayer();
 }
 
 function setGridColor(x, y, col) {
@@ -1863,12 +2012,12 @@ function setGridColor(x, y, col) {
   if (!pgColorLayer) return;
   pgColorLayer.erase(); pgColorLayer.rect(x * cellW, y * cellH, cellW, cellH); pgColorLayer.noErase();
   if (col !== null) { pgColorLayer.fill(col); pgColorLayer.rect(x * cellW, y * cellH, cellW, cellH); }
-  drawSingleCellText(x, y); 
+  drawSingleCellText(x, y);
 }
 
 function drawSelectionMask() {
   if (!selectionMask) return;
-  fill(0, 150, 255, 80); 
+  fill(0, 150, 255, 80);
   noStroke();
   for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
@@ -1897,9 +2046,9 @@ function drawGridHoverGuide() {
 function drawViewportOverlay() {
   fill(208);
   noStroke();
-  rect(viewW - viewX, -viewY, width, height); 
-  rect(-viewX, viewH - viewY, width, height); 
-  
+  rect(viewW - viewX, -viewY, width, height);
+  rect(-viewX, viewH - viewY, width, height);
+
   stroke(255, 0, 0, 150);
   strokeWeight(2);
   noFill();
@@ -1908,9 +2057,9 @@ function drawViewportOverlay() {
 
 function drawRulers() {
   fill(240); stroke(200); strokeWeight(1);
-  rect(0, 0, width, 20); 
-  rect(0, 0, 20, height); 
-  
+  rect(0, 0, width, 20);
+  rect(0, 0, 20, height);
+
   fill(0); noStroke(); textSize(9); textAlign(CENTER, TOP);
   for(let x = 0; x <= viewW; x += cellW) {
       if (x % (cellW*5) === 0) {
@@ -1920,7 +2069,7 @@ function drawRulers() {
           stroke(200); line(-viewX + x, 15, -viewX + x, 20); noStroke();
       }
   }
-  
+
   textAlign(RIGHT, CENTER);
   for(let y = 0; y <= viewH; y += cellH) {
       if (y % (cellH*5) === 0) {
@@ -1937,7 +2086,7 @@ function drawToolPreview() {
   let sy = Math.min(selStart.y, selEnd.y) * cellH;
   let ex = Math.max(selStart.x, selEnd.x) * cellW + cellW;
   let ey = Math.max(selStart.y, selEnd.y) * cellH + cellH;
-  
+
   noFill();
   if (toolMode === 'SELECT' || toolMode === 'MOUSE') {
       stroke(0, 150, 255);
@@ -1956,37 +2105,41 @@ function drawToolPreview() {
   } else if (toolMode === 'SHAPE_TRIANGLE') {
       triangle(sx + (ex-sx)/2, sy, ex, ey, sx, ey);
   }
-  
-  drawingContext.setLineDash([]); 
+
+  drawingContext.setLineDash([]);
 }
 
 function magicWandSelect(startX, startY) {
   if (!isValidCell(startX, startY)) return;
   const targetChar = grid[startY][startX];
-  const targetColor = getMagicWandCellColor(startX, startY);
-  
+  const targetBgColor = getMagicWandCellColor(startX, startY);
+  const targetTextColor = getMagicWandTextColor(startX, startY);
+
   if (!keyIsDown(SHIFT) || !selectionMask) {
       selectionMask = [];
       for (let y = 0; y < workRows; y++) selectionMask[y] = new Array(workCols).fill(false);
   }
-  
+
   for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
           const sameChar = grid[y][x] === targetChar;
-          const sameColor = getMagicWandCellColor(x, y) === targetColor;
-              
+          const sameBgColor = getMagicWandCellColor(x, y) === targetBgColor;
+          const sameTextColor = getMagicWandTextColor(x, y) === targetTextColor;
+
               let isMatch = false;
               if (magicWandMatchMode === 'color') {
-                  isMatch = sameColor;
-              } else {
+                  isMatch = sameBgColor;
+              } else if (magicWandMatchMode === 'char_color') {
+                  isMatch = sameChar && sameTextColor;
+              } else { // 'char'
                   // Match char mode: Nếu là ô trống (không kí tự), yêu cầu phải cùng màu (để phân biệt với ô space thường)
                   if (targetChar === "") {
-                      isMatch = sameChar && sameColor;
+                      isMatch = sameChar && sameBgColor;
                   } else {
                       isMatch = sameChar;
                   }
               }
-              
+
               if (isMatch) {
               selectionMask[y][x] = true;
           }
@@ -2006,6 +2159,11 @@ function getMagicWandCellColor(x, y) {
   return normalizeMagicWandColor(value);
 }
 
+function getMagicWandTextColor(x, y) {
+  const value = textColorGrid[y] ? textColorGrid[y][x] : '#000000';
+  return normalizeMagicWandColor(value);
+}
+
 function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
   if (targetChar === replaceChar) return;
   const targetColor = colorGrid[startY][startX];
@@ -2016,7 +2174,7 @@ function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
           let sameChar = grid[p.y][p.x] === targetChar;
           let sameColor = colorGrid[p.y][p.x] === targetColor;
           let isMatch = sameChar && (targetChar !== "" || sameColor);
-          
+
           if (isMatch && (!selectionMask || selectionMask[p.y][p.x])) {
               setAsciiCell(p.x, p.y, replaceChar, textColor);
               queue.push({x: p.x + 1, y: p.y});
@@ -2032,40 +2190,40 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
     if (textToolInput) textToolInput.remove();
     textToolInput = createElement('textarea');
     textToolInput.position(px, py);
-    
-    textToolInput.style('font-family', 'Consolas, monospace');
+
+    textToolInput.style('font-family', getAsciiFontFamily());
     textToolInput.style('font-size', userFontSize + 'px');
-    textToolInput.style('line-height', cellH + 'px'); 
+    textToolInput.style('line-height', cellH + 'px');
     textToolInput.style('width', Math.max(80, (maxX - minX + 1) * cellW) + 'px');
     textToolInput.style('height', Math.max(40, (maxY - minY + 1) * cellH) + 'px');
-    textToolInput.style('padding', '0px'); 
+    textToolInput.style('padding', '0px');
     textToolInput.style('margin', '0px');
     textToolInput.style('border', '1px dashed #f00');
     textToolInput.style('outline', 'none');
     textToolInput.style('box-sizing', 'border-box');
     textToolInput.style('overflow', 'hidden');
-    textToolInput.style('white-space', 'pre'); 
+    textToolInput.style('white-space', 'pre');
     textToolInput.style('z-index', '1000');
     textToolInput.style('background', 'rgba(255, 255, 255, 0.9)');
     textToolInput.style('resize', 'none');
     textToolInput.style('text-transform', 'uppercase');
     textToolInput.style('color', selectedColor || '#000000');
     textToolInput.elt.focus();
-    
+
     let commitText = () => {
         if(!textToolInput) return;
         let txt = textToolInput.value().toUpperCase();
-        
+
         let drawBorderChar = selectedChar === 'SMART' ? '#' : selectedChar;
         let drawTextColor = selectedColor || "#000000";
         if (!skipBorder && maxX - minX >= 1 && maxY - minY >= 1) {
             applyShape(minX, minY, maxX, maxY, 'SHAPE_RECT', drawBorderChar, false);
-            
+
             let innerMinX = minX + 1;
             let innerMinY = minY + 1;
             let innerMaxX = maxX - 1;
             let innerMaxY = maxY - 1;
-            
+
             let cx = innerMinX, cy = innerMinY;
             for (let i = 0; i < txt.length; i++) {
                 let char = txt[i];
@@ -2075,8 +2233,8 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
                 if (cx > innerMaxX) {
                     cx = innerMinX; cy++;
                 }
-                if (cy > innerMaxY) break; 
-                
+                if (cy > innerMaxY) break;
+
                 if (isValidCell(cx, cy)) setAsciiCell(cx, cy, char, drawTextColor);
                 cx++;
             }
@@ -2091,12 +2249,12 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
                 cx++;
             }
         }
-        
+
         saveState();
         textToolInput.remove();
         textToolInput = null;
     };
-    
+
     textToolInput.elt.onblur = commitText;
 }
 
@@ -2105,7 +2263,7 @@ function dropTextAsAscii(text, clientX, clientY) {
         if (window.showToast) window.showToast("Layer is locked or not an ASCII layer!");
         return;
     }
-    
+
     text = text.toUpperCase();
 
     let canvasRect = mainCanvas.elt.getBoundingClientRect();
@@ -2119,11 +2277,11 @@ function dropTextAsAscii(text, clientX, clientY) {
         gx = Math.floor(viewX / cellW) + 2;
         gy = Math.floor(viewY / cellH) + 2;
     }
-    
+
     let lines = text.split('\n');
     let maxLen = 1;
     lines.forEach(l => maxLen = Math.max(maxLen, l.length));
-    
+
     let minX = gx;
     let minY = gy;
     let maxX = Math.min(workCols - 1, gx + maxLen - 1);
@@ -2132,12 +2290,12 @@ function dropTextAsAscii(text, clientX, clientY) {
     setToolMode('TEXT');
     selStart = null;
     selEnd = null;
-    
+
     let px = canvasRect.left + (minX * cellW) - viewX;
     let py = canvasRect.top + (minY * cellH) - viewY;
-    
+
     openTextToolBox(minX, minY, maxX, maxY, px, py, true);
-    
+
     if (textToolInput) {
         textToolInput.value(text);
         textToolInput.style('width', Math.max(80, (maxLen + 2) * cellW) + 'px');
@@ -2152,7 +2310,7 @@ function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
   let shadowOffset = 1;
   let shadowChar = shadowBoxes[currentShadowIndex];
   let drawTextColor = selectedColor || "#000000";
-  
+
   let drawBorder = (x, y, ox, oy, drawChar) => {
     let drawX = x + ox, drawY = y + oy;
     if (isValidCell(drawX, drawY)) setAsciiCell(drawX, drawY, drawChar, drawTextColor);
@@ -2164,7 +2322,7 @@ function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
       let drawChar = isShadowPass ? shadowChar : char;
       let ox = isShadowPass ? shadowOffset : 0;
       let oy = isShadowPass ? shadowOffset : 0;
-      
+
       if (mode === 'SHAPE_RECT') {
           for(let y = minY; y <= maxY; y++) {
               for(let x = minX; x <= maxX; x++) {
@@ -2179,13 +2337,13 @@ function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
       } else if (mode === 'SHAPE_CIRCLE') {
           let cx = minX + w/2; let cy = minY + h/2;
           let rx = (w + 1) / 2; let ry = (h + 1) / 2;
-          
+
           for(let y = minY; y <= maxY; y++) {
               for(let x = minX; x <= maxX; x++) {
                   let dx = (x - cx) / (rx || 1);
                   let dy = (y - cy) / (ry || 1);
                   let dist = Math.sqrt(dx*dx + dy*dy);
-                  
+
                   if (dist >= 0.75 && dist <= 1.15) {
                       drawBorder(x, y, ox, oy, drawChar);
                   } else if (dist < 0.75 && !isShadowPass && shapeFillMode !== 'Hollow') {
@@ -2201,7 +2359,7 @@ function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
                   let edgeY = slope * Math.abs(x - topX) + minY;
                   let isInside = y >= edgeY && y <= maxY;
                   let isBorder = Math.abs(y - edgeY) < 1.5 || y === maxY;
-                  
+
                   if (isBorder && isInside) {
                       drawBorder(x, y, ox, oy, drawChar);
                   } else if (isInside && !isShadowPass && shapeFillMode !== 'Hollow') {
@@ -2221,33 +2379,36 @@ function isValidCell(x, y) {
 function mousePressed() {
   if (activeTab !== 'tab-sketch') return;
   if (isDraggingPanel) return;
+  if (!isPointerOnSketchCanvas()) return;
   prevGridX = -1; prevGridY = -1;
   let m = getCorrectedMouse();
   if (m.x < 0 || m.x > width || m.y < 0 || m.y > height) return;
   let realX = m.x + viewX;
   let realY = m.y + viewY;
 
-  for (let i = asciiLayers.length - 1; i >= 0; i--) {
-      const layer = asciiLayers[i];
-      const hit = hitImageTransform(layer, realX, realY);
-      if (hit) {
-          setActiveLayer(i);
-          renderLayersUI();
-          renderPropertiesUI();
-          imageTransformDrag = {
-              type: hit.type,
-              corner: hit.corner,
-              startX: realX,
-              startY: realY,
-              originCellX: getImageCellBounds(layer).x,
-              originCellY: getImageCellBounds(layer).y,
-              originCellW: getImageCellBounds(layer).w,
-              originCellH: getImageCellBounds(layer).h
-          };
-          return;
+  if (toolMode === 'MOUSE') {
+      for (let i = asciiLayers.length - 1; i >= 0; i--) {
+          const layer = asciiLayers[i];
+          const hit = hitImageTransform(layer, realX, realY);
+          if (hit) {
+              setActiveLayer(i);
+              renderLayersUI();
+              renderPropertiesUI();
+              imageTransformDrag = {
+                  type: hit.type,
+                  corner: hit.corner,
+                  startX: realX,
+                  startY: realY,
+                  originCellX: getImageCellBounds(layer).x,
+                  originCellY: getImageCellBounds(layer).y,
+                  originCellW: getImageCellBounds(layer).w,
+                  originCellH: getImageCellBounds(layer).h
+              };
+              return;
+          }
       }
   }
-  
+
   if (toolMode === 'GRAB') {
     prevGrabMouse = {x: m.x, y: m.y};
     return;
@@ -2267,7 +2428,7 @@ function mousePressed() {
           let maxX = Math.max(selStart.x, selEnd.x);
           let minY = Math.min(selStart.y, selEnd.y);
           let maxY = Math.max(selStart.y, selEnd.y);
-          
+
           if (mx >= minX && mx <= maxX && my >= minY && my <= maxY) {
               copySelection();
               cutSelection();
@@ -2279,9 +2440,9 @@ function mousePressed() {
               return;
           }
       }
-      
+
       prevGrabMouse = {x: m.x, y: m.y};
-      selStart = null; selEnd = null; 
+      selStart = null; selEnd = null;
       return;
   }
 
@@ -2295,14 +2456,14 @@ function mousePressed() {
   }
 
   // Dùng e.shiftKey thông qua đối tượng phím ảo của p5js
-  if (keyIsDown(16) || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') { 
-      selStart = {x: mx, y: my}; 
-      selEnd = {x: mx, y: my}; 
+  if (keyIsDown(16) || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') {
+      selStart = {x: mx, y: my};
+      selEnd = {x: mx, y: my};
       if (!toolMode.startsWith('SHAPE_') && toolMode !== 'TEXT') setToolMode("SELECT", { render: false });
-      isShiftSelecting = true; 
-      return; 
+      isShiftSelecting = true;
+      return;
   }
-  
+
   if (toolMode === "SELECT" && !isShiftSelecting) { selStart = {x: mx, y: my}; selEnd = {x: mx, y: my}; }
 
   handleInput(mx, my);
@@ -2311,7 +2472,7 @@ function mousePressed() {
 // --- GLOBAL KEYBOARD SHORTCUTS ---
 window.addEventListener('keydown', function(e) {
     if (activeTab !== 'tab-sketch') return;
-    
+
     // Bỏ qua nếu đang gõ text vào input/textarea
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || activeEl.isContentEditable)) return;
@@ -2326,14 +2487,17 @@ window.addEventListener('keydown', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (getSelectionBounds()) copySelection();
             else copyActiveLayer();
+            if (window.showToast) window.showToast("Copied");
         } else if (code === 'KeyX' || key === 'x') {
             e.preventDefault(); e.stopPropagation();
             if (getSelectionBounds()) cutSelection();
             else cutActiveLayer();
+            if (window.showToast) window.showToast("Cut");
         } else if (code === 'KeyV' || key === 'v') {
             e.preventDefault(); e.stopPropagation();
             if (clipboard) pasteClipboard();
             else pasteLayerClipboard();
+            if (window.showToast) window.showToast("Pasted");
         } else if (code === 'KeyZ' || key === 'z') {
             e.preventDefault(); e.stopPropagation();
             if (isDraggingSelection) {
@@ -2345,6 +2509,7 @@ window.addEventListener('keydown', function(e) {
         } else if (code === 'KeyD' || key === 'd') {
             e.preventDefault(); e.stopPropagation();
             duplicateActiveLayer();
+            if (window.showToast) window.showToast("Duplicated Layer");
         }
     } else if (code === 'Delete' || code === 'Backspace' || key === 'delete' || key === 'backspace') {
         e.preventDefault(); e.stopPropagation();
@@ -2354,6 +2519,7 @@ window.addEventListener('keydown', function(e) {
         } else {
             deleteSelection();
         }
+        if (window.showToast) window.showToast("Deleted");
     } else if (code === 'Escape' || key === 'escape') {
         e.preventDefault(); e.stopPropagation();
         if (isDraggingSelection) {
@@ -2369,6 +2535,7 @@ window.addEventListener('keydown', function(e) {
 function mouseDragged() {
   if (activeTab !== 'tab-sketch') return;
   if (isDraggingPanel) return;
+  if (!isPointerOnSketchCanvas() && !imageTransformDrag && toolMode !== 'GRAB' && toolMode !== 'MOUSE') return;
   let m = getCorrectedMouse();
 
   let realX = m.x + viewX;
@@ -2393,15 +2560,28 @@ function mouseDragged() {
               let y = imageTransformDrag.originCellY;
               let w = imageTransformDrag.originCellW;
               let h = imageTransformDrag.originCellH;
-              if (imageTransformDrag.corner.includes('e')) w = Math.max(1, imageTransformDrag.originCellW + dxCell);
-              if (imageTransformDrag.corner.includes('s')) h = Math.max(1, imageTransformDrag.originCellH + dyCell);
-              if (imageTransformDrag.corner.includes('w')) {
-                  x = imageTransformDrag.originCellX + dxCell;
-                  w = Math.max(1, imageTransformDrag.originCellW - dxCell);
+
+              let dw = 0; let dh = 0;
+              if (imageTransformDrag.corner.includes('e')) dw = dxCell;
+              if (imageTransformDrag.corner.includes('w')) dw = -dxCell;
+              if (imageTransformDrag.corner.includes('s')) dh = dyCell;
+              if (imageTransformDrag.corner.includes('n')) dh = -dyCell;
+
+              if (keyIsDown(16)) {
+                  let ratio = imageTransformDrag.originCellW / imageTransformDrag.originCellH;
+                  if (Math.abs(dw) > Math.abs(dh)) dh = Math.round(dw / ratio);
+                  else dw = Math.round(dh * ratio);
               }
+
+              if (imageTransformDrag.corner.includes('e')) w = Math.max(1, imageTransformDrag.originCellW + dw);
+              if (imageTransformDrag.corner.includes('w')) {
+                  w = Math.max(1, imageTransformDrag.originCellW + dw);
+                  x = imageTransformDrag.originCellX + imageTransformDrag.originCellW - w;
+              }
+              if (imageTransformDrag.corner.includes('s')) h = Math.max(1, imageTransformDrag.originCellH + dh);
               if (imageTransformDrag.corner.includes('n')) {
-                  y = imageTransformDrag.originCellY + dyCell;
-                  h = Math.max(1, imageTransformDrag.originCellH - dyCell);
+                  h = Math.max(1, imageTransformDrag.originCellH + dh);
+                  y = imageTransformDrag.originCellY + imageTransformDrag.originCellH - h;
               }
               x = constrain(x, 0, workCols - 1);
               y = constrain(y, 0, workRows - 1);
@@ -2444,11 +2624,11 @@ function mouseDragged() {
     return;
   }
 
-  if (isShiftSelecting || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT' || (toolMode === "SELECT" && keyIsDown(16))) { 
-      selEnd = {x: mx, y: my}; 
-      return; 
+  if (isShiftSelecting || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT' || (toolMode === "SELECT" && keyIsDown(16))) {
+      selEnd = {x: mx, y: my};
+      return;
   }
-  if (toolMode === "FILL") return; 
+  if (toolMode === "FILL") return;
 
   if (mx !== prevGridX || my !== prevGridY) {
       handleInput(mx, my);
@@ -2461,15 +2641,16 @@ function mouseReleased() {
 
   if (imageTransformDrag) {
       imageTransformDrag = null;
+      saveState();
       saveToLocalStorage(true);
       saveUiState();
       return;
   }
-  
+
   if (toolMode === 'MOUSE') {
       prevGrabMouse = null;
       saveUiState();
-      return; 
+      return;
   }
 
   if (toolMode.startsWith('SHAPE_') && selStart && selEnd) {
@@ -2482,11 +2663,11 @@ function mouseReleased() {
       let maxX = Math.max(selStart.x, selEnd.x);
       let minY = Math.min(selStart.y, selEnd.y);
       let maxY = Math.max(selStart.y, selEnd.y);
-      
+
       let canvasRect = mainCanvas.elt.getBoundingClientRect();
       let px = canvasRect.left + (minX * cellW) - viewX;
       let py = canvasRect.top + (minY * cellH) - viewY;
-      
+
       openTextToolBox(minX, minY, maxX, maxY, px, py);
       selStart = null; selEnd = null;
   } else if (toolMode === "SELECT" && selStart && selEnd) {
@@ -2498,9 +2679,11 @@ function mouseReleased() {
   }
 
   if (isShiftSelecting) isShiftSelecting = false;
-  else if (toolMode === "DRAW" || toolMode === "ERASE" || toolMode === "FILL" || toolMode === "INK") saveState(); 
-  
+  else if (toolMode === "DRAW" || toolMode === "ERASE" || toolMode === "FILL" || toolMode === "INK") saveState();
+
   prevGrabMouse = null;
+  prevGridX = -1;
+  prevGridY = -1;
   saveUiState();
 }
 
@@ -2515,10 +2698,11 @@ function loadFromLocalStorage() {
     }
     if (obj.canvasRatioPreset) canvasRatioPreset = obj.canvasRatioPreset;
 
-    if (obj.historyState) historyState = obj.historyState;
-    if (obj.sketchRedoHistory) sketchRedoHistory = obj.sketchRedoHistory;
+    historyState = [];
+    sketchRedoHistory = [];
 
-    if (obj.asciiLayers && Array.isArray(obj.asciiLayers) && obj.asciiLayers.length > 0) {
+    const hasLayerState = obj.asciiLayers && Array.isArray(obj.asciiLayers) && obj.asciiLayers.length > 0;
+    if (hasLayerState) {
       asciiLayers = [];
       for (let i = 0; i < obj.asciiLayers.length; i++) {
         const storedName = obj.asciiLayers[i].name === 'Background' && i === 0 ? 'Layer 1' : (obj.asciiLayers[i].name || ('Layer ' + (i + 1)));
@@ -2549,7 +2733,7 @@ function loadFromLocalStorage() {
         }
         normalizeAsciiLayer(asciiLayers[i]);
       }
-    } 
+    }
     if (asciiLayers.length === 0) {
         addAsciiLayer("Layer 1");
     }
@@ -2561,9 +2745,11 @@ function loadFromLocalStorage() {
     pgColorLayer = asciiLayers[activeLayerIndex].pgColor;
     pgTextLayer = asciiLayers[activeLayerIndex].pgText;
 
-    if (obj.grid && Array.isArray(obj.grid)) grid = obj.grid;
-    if (obj.colorGrid && Array.isArray(obj.colorGrid)) colorGrid = obj.colorGrid;
-    if (obj.textColorGrid && Array.isArray(obj.textColorGrid)) textColorGrid = obj.textColorGrid;
+    if (!hasLayerState) {
+      if (obj.grid && Array.isArray(obj.grid)) grid = obj.grid;
+      if (obj.colorGrid && Array.isArray(obj.colorGrid)) colorGrid = obj.colorGrid;
+      if (obj.textColorGrid && Array.isArray(obj.textColorGrid)) textColorGrid = obj.textColorGrid;
+    }
     syncActiveAsciiLayer();
     asciiLayers.forEach(normalizeAsciiLayer);
     grid = asciiLayers[activeLayerIndex].grid;
@@ -2588,7 +2774,7 @@ function loadFromLocalStorage() {
       pgColorLayer = prevColorLayer;
       pgTextLayer = prevTextLayer;
     });
-    
+
   } catch (e) {
      if (asciiLayers.length === 0) {
         addAsciiLayer("Layer 1");
@@ -2600,15 +2786,10 @@ function saveToLocalStorage(silent) {
   try {
     syncActiveAsciiLayer();
     const obj = {
-      grid: grid,
-      colorGrid: colorGrid,
-      textColorGrid: textColorGrid,
       canvasCols: workCols,
       canvasRows: workRows,
       canvasRatioPreset: canvasRatioPreset,
       activeLayerIndex: activeLayerIndex,
-      historyState: historyState,
-      sketchRedoHistory: sketchRedoHistory,
       asciiLayers: asciiLayers.map(l => ({
         name: l.name,
         grid: l.grid,
@@ -2638,15 +2819,23 @@ function saveToLocalStorage(silent) {
 function handleInput(x, y) {
   if (!isValidCell(x, y)) return;
   if (!isActiveAsciiLayerEditable()) return;
-  
+  const activeLayer = getActiveLayer();
+  if (activeLayer && activeLayer.kind !== 'image') {
+    activeLayer.visible = true;
+    activeLayer.imgOpacity = 255;
+    activeLayer.blendMode = 'normal';
+  }
+
   let drawTextColor = selectedColor || "#000000";
-  
+
   if (toolMode === 'DRAW') {
+    selectionMask = null;
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
     if (isEraser) ch = "";
-    setAsciiCell(x, y, ch, drawTextColor);
+    setAsciiCell(x, y, ch, drawTextColor, true);
   } else if (toolMode === 'ERASE') {
-    setAsciiCell(x, y, "", "#000000");
+    selectionMask = null;
+    setAsciiCell(x, y, "", "#000000", true);
   } else if (toolMode === 'FILL') {
     let targetChar = grid[y][x];
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
@@ -2759,7 +2948,7 @@ function exportAsciiSvg() {
         const textColor = layer.textColorGrid && layer.textColorGrid[y] ? (layer.textColorGrid[y][x] || "#000000") : "#000000";
         const tx = (x * cellW) + (cellW / 2);
         const ty = (y * cellH) + (cellH / 2);
-        parts.push(`<text x="${tx}" y="${ty}" font-family="Consolas, monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(textColor)}">${escapeXml(ch)}</text>`);
+        parts.push(`<text x="${tx}" y="${ty}" font-family="${escapeXml(getAsciiFontFamily())}" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(textColor)}">${escapeXml(ch)}</text>`);
       }
     }
   }
@@ -2794,13 +2983,20 @@ function renderAsciiArtworkToGraphics(pg, includeBackground) {
     if (!layer || !layer.visible) continue;
     let op = layer.imgOpacity === undefined ? (layer.kind === 'image' ? 180 : 255) : layer.imgOpacity;
     let customMode = layer.blendMode && layer.blendMode !== 'normal';
-    
+
     if (layer.kind === 'image' && layer.img) {
       const b = getImageCellBounds(layer);
       pg.push();
       applyPgBlendMode(pg, layer.blendMode || 'normal');
       pg.tint(255, op);
-      pg.image(layer.img, b.x * cellW, b.y * cellH, b.w * cellW, b.h * cellH);
+      pg.imageMode(CENTER);
+      pg.translate(b.x * cellW + (b.w * cellW) / 2, b.y * cellH + (b.h * cellH) / 2);
+      pg.rotate(radians(layer.imgRotate || 0));
+      pg.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+      let isRotated = (layer.imgRotate || 0) % 180 !== 0;
+      let drawPxW = isRotated ? b.h * cellH : b.w * cellW;
+      let drawPxH = isRotated ? b.w * cellW : b.h * cellH;
+      pg.image(layer.img, 0, 0, drawPxW, drawPxH);
       pg.noTint();
       pg.blendMode(BLEND);
       pg.pop();
@@ -2859,7 +3055,7 @@ function setGridTextColor(x, y, col) {
   if (selectionMask && !selectionMask[y][x]) return;
   ensureGridCell(x, y);
   textColorGrid[y][x] = col || "#000000";
-  drawSingleCellText(x, y); 
+  drawSingleCellText(x, y);
 }
 
 function setupToolBindings() {
@@ -2869,13 +3065,13 @@ function setupToolBindings() {
     {id: 'btnFill', mode: 'FILL'},
     {id: 'btnMagicWand', mode: 'MAGIC_WAND'},
     {id: 'btnGrab', mode: 'GRAB'},
-    {id: 'btnMouse', mode: 'MOUSE'}, 
+    {id: 'btnMouse', mode: 'MOUSE'},
     {id: 'btnTextTool', mode: 'TEXT'},
     {id: 'btnShapeRect', mode: 'SHAPE_RECT'},
     {id: 'btnShapeTriangle', mode: 'SHAPE_TRIANGLE'},
     {id: 'btnShapeCircle', mode: 'SHAPE_CIRCLE'}
   ];
-  
+
   tModes.forEach(t => {
     let btn = document.getElementById(t.id);
     if(btn) {
@@ -2886,6 +3082,12 @@ function setupToolBindings() {
       });
     }
   });
+
+  let btnUndo = document.getElementById('btnUndo');
+  if (btnUndo) btnUndo.addEventListener('click', undoSketch);
+
+  let btnRedo = document.getElementById('btnRedo');
+  if (btnRedo) btnRedo.addEventListener('click', redoSketch);
 
   let btnClear = document.getElementById('btnClearSketch');
   if (btnClear) {

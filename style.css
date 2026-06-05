@@ -799,6 +799,13 @@ textarea.retro-input{
   margin-top:auto;
 }
 
+/* Active state for selected tool */
+.btn-retro.active-tool {
+  background-image: var(--grad-pink);
+  color: var(--white);
+  border-color: #7f5cac;
+}
+
 /* small rows (sliders) */
 .mini-row{
   display:flex;

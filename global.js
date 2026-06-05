@@ -98,6 +98,9 @@ var palette = [
 
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
+  if (tabId === 'tab-index' || !document.getElementById(tabId)) {
+      tabId = 'tab-sketch';
+  }
   if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
       if (window.resetImageProcessor) window.resetImageProcessor();
   }
@@ -183,6 +186,7 @@ window.renderLibrary = function() {
         div.className = 'lib-item';
         div.draggable = true;
         div.dataset.src = item.src;
+        div.title = 'Click to preview. Drag to place on canvas.';
         if (item.text) div.dataset.text = item.text;
         
         let img = document.createElement('img');
@@ -194,6 +198,10 @@ window.renderLibrary = function() {
             if (item.text) {
                 e.dataTransfer.setData('application/json', JSON.stringify({type: 'thought', text: item.text}));
             }
+        };
+
+        div.onclick = () => {
+            previewLibraryItem(item);
         };
         
         let delBtn = document.createElement('button');
@@ -219,6 +227,48 @@ window.renderLibrary = function() {
         grid.appendChild(div);
     });
 };
+
+function previewLibraryItem(item) {
+    if (!item || !item.src) return;
+    const modal = document.getElementById('gallery-modal');
+    const modalImg = document.getElementById('gallery-modal-img');
+    const downloadBtn = document.getElementById('gallery-download-btn');
+    if (!modal || !modalImg) return;
+
+    modalImg.src = item.src;
+    modalImg.alt = item.name || 'Library image';
+    if (downloadBtn) {
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.dataset.src = item.src;
+        downloadBtn.dataset.filename = getLibraryDownloadName(item);
+        downloadBtn.onclick = (e) => {
+            e.stopPropagation();
+            downloadLibraryItem(item);
+        };
+    }
+    modal.style.display = 'flex';
+}
+
+function downloadLibraryItem(item) {
+    if (!item || !item.src) return;
+    const a = document.createElement('a');
+    a.href = item.src;
+    a.download = getLibraryDownloadName(item);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (window.showToast) window.showToast("Downloading image");
+}
+
+function getLibraryDownloadName(item) {
+    const safeName = String(item.name || 'memory')
+        .replace(/\.[a-z0-9]+$/i, '')
+        .replace(/[^a-z0-9_-]+/gi, '_')
+        .replace(/^_+|_+$/g, '') || 'memory';
+    const mimeMatch = String(item.src || '').match(/^data:image\/([^;,]+)/i);
+    const ext = mimeMatch ? mimeMatch[1].replace('jpeg', 'jpg') : 'png';
+    return `${safeName}.${ext}`;
+}
 
 window.saveLibraryToLocalStorage = function() {
     try {
