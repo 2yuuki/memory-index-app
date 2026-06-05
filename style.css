@@ -519,6 +519,7 @@ body::after {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  resize: both;
 }
 
 .panel-header {

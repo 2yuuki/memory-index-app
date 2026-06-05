@@ -91,6 +91,7 @@ function setup() {
   renderInkUI();
   renderLayersUI();
   createUI();
+  bindPanelToggle();
   setupSketchZoomUI();
   setupToolBindings();
   const sketchScrollArea = document.getElementById('sketch-scroll-area');
@@ -177,6 +178,29 @@ function dockPanelsRight() {
     });
 
     restoreUiState();
+}
+
+function bindPanelToggle() {
+    document.querySelectorAll('.panel-minimize-btn').forEach(btn => {
+        let newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.onclick = (e) => {
+            e.stopPropagation(); 
+            let panel = e.target.closest('.floating-panel');
+            if (panel) {
+                let content = panel.querySelector('.panel-content');
+                if (content) {
+                    if (content.style.display === 'none') {
+                        content.style.display = '';
+                        newBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
+                    } else {
+                        content.style.display = 'none';
+                        newBtn.innerHTML = '<span style="color:#0072BC; font-weight:bold; font-size:14px; line-height:0.5; display:flex; align-items:center; justify-content:center;">+</span>';
+                    }
+                }
+            }
+        };
+    });
 }
 
 function getUiState() {
@@ -387,12 +411,17 @@ function renderPatternsUI() {
 }
 
 function renderInkUI() {
-    let inkPanel = document.querySelector('#sketch-ink-panel .panel-content');
-    if (!inkPanel) return;
-    inkPanel.innerHTML = '';
-    inkPanel.style.display = 'grid';
-    inkPanel.style.gridTemplateColumns = 'repeat(5, 1fr)';
-    inkPanel.style.gap = '5px';
+    let colorsContainer = document.querySelector('#sketch-colors');
+    if (!colorsContainer) return;
+    colorsContainer.innerHTML = '';
+    
+        let customInput = document.getElementById('customInkColor');
+        if (customInput && !customInput.oninput) {
+            customInput.oninput = (e) => {
+                selectedColor = e.target.value;
+                setToolMode('INK');
+            };
+        }
 
     let colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#000000", "#FFFFFF", null];
     colors.forEach(c => {
@@ -413,8 +442,10 @@ function renderInkUI() {
         btn.onclick = () => {
             selectedColor = c;
             setToolMode('INK');
+            let customInput = document.getElementById('customInkColor');
+            if (customInput && c) customInput.value = c;
         };
-        inkPanel.appendChild(btn);
+        colorsContainer.appendChild(btn);
     });
 }
 
@@ -570,16 +601,8 @@ function renderPropertiesUI() {
     renderShapeProperties(content);
     renderMagicWandProperties(content);
 
-    if (!layer || layer.kind !== 'image') {
-        if (!toolMode.startsWith('SHAPE_') && toolMode !== 'MAGIC_WAND') {
-            const note = document.createElement('div');
-            note.style.fontSize = '11px';
-            note.textContent = 'Select an image layer to edit opacity, blend mode, and align.';
-            content.appendChild(note);
-        }
-        return;
-    }
-
+    if (!layer) return;
+    
     const opacityLabel = document.createElement('label');
     opacityLabel.style.fontSize = '11px';
     opacityLabel.textContent = 'Opacity';
@@ -588,7 +611,8 @@ function renderPropertiesUI() {
     opacity.min = '0';
     opacity.max = '255';
     opacity.step = '1';
-    opacity.value = layer.imgOpacity === undefined ? 180 : layer.imgOpacity;
+    let defaultOpacity = layer.kind === 'image' ? 180 : 255;
+    opacity.value = layer.imgOpacity === undefined ? defaultOpacity : layer.imgOpacity;
     opacity.disabled = !!layer.locked;
     opacity.oninput = () => {
         if (layer.locked) return;
@@ -603,7 +627,7 @@ function renderPropertiesUI() {
     blendLabel.style.fontSize = '11px';
     blendLabel.textContent = 'Blend Mode';
     const blendSelect = document.createElement('select');
-    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'].forEach(mode => {
+    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion', 'add'].forEach(mode => {
         const option = document.createElement('option');
         option.value = mode;
         option.textContent = mode;
@@ -619,6 +643,16 @@ function renderPropertiesUI() {
     };
     blendLabel.appendChild(blendSelect);
     content.appendChild(blendLabel);
+
+    if (layer.kind !== 'image') {
+        if (!toolMode.startsWith('SHAPE_') && toolMode !== 'MAGIC_WAND') {
+            const note = document.createElement('div');
+            note.style.fontSize = '11px';
+            note.textContent = 'Select an image layer to edit alignment and dither.';
+            content.appendChild(note);
+        }
+        return;
+    }
 
     const alignWrap = document.createElement('div');
     alignWrap.style.display = 'grid';
@@ -1021,6 +1055,13 @@ function applyImageBlendMode(layer) {
     else if (mode === 'overlay') blendMode(OVERLAY);
     else if (mode === 'darken') blendMode(DARKEST);
     else if (mode === 'lighten') blendMode(LIGHTEST);
+    else if (mode === 'color-dodge') blendMode(DODGE);
+    else if (mode === 'color-burn') blendMode(BURN);
+    else if (mode === 'hard-light') blendMode(HARD_LIGHT);
+    else if (mode === 'soft-light') blendMode(SOFT_LIGHT);
+    else if (mode === 'difference') blendMode(DIFFERENCE);
+    else if (mode === 'exclusion') blendMode(EXCLUSION);
+    else if (mode === 'add') blendMode(ADD);
     else blendMode(BLEND);
 }
 
@@ -1646,11 +1687,14 @@ function draw() {
   for (let i = 0; i < asciiLayers.length; i++) {
       let l = asciiLayers[i];
       if (l.visible) {
+          let op = l.imgOpacity === undefined ? (l.kind === 'image' ? 180 : 255) : l.imgOpacity;
+          let customMode = l.blendMode && l.blendMode !== 'normal';
+          
           if (l.kind === 'image' && l.img) {
               const b = getImageCellBounds(l);
               push();
               applyImageBlendMode(l);
-              tint(255, l.imgOpacity === undefined ? 180 : l.imgOpacity);
+              tint(255, op);
               imageMode(CORNER);
               image(l.img, b.x * cellW, b.y * cellH, b.w * cellW, b.h * cellH);
               noTint();
@@ -1658,10 +1702,21 @@ function draw() {
               pop();
               continue;
           }
-          blendMode(MULTIPLY);
-          if (l.pgColor) image(l.pgColor, 0, 0);
+          push();
+          tint(255, op);
+          if (customMode) {
+              applyImageBlendMode(l);
+              if (l.pgColor) image(l.pgColor, 0, 0);
+              if (l.pgText) image(l.pgText, 0, 0);
+          } else {
+              blendMode(MULTIPLY);
+              if (l.pgColor) image(l.pgColor, 0, 0);
+              blendMode(BLEND);
+              if (l.pgText) image(l.pgText, 0, 0);
+          }
+          noTint();
           blendMode(BLEND);
-          if (l.pgText) image(l.pgText, 0, 0);
+          pop();
       }
   }
 
@@ -1789,11 +1844,14 @@ function updateLayerColorVisuals() {
   }
 }
 
-function setAsciiCell(x, y, ch) {
+function setAsciiCell(x, y, ch, textColor = null) {
   if (!isActiveAsciiLayerEditable()) return;
   if (selectionMask && !selectionMask[y][x]) return; 
   ensureGridCell(x, y);
   grid[y][x] = ch;
+  if (textColor) {
+      textColorGrid[y][x] = textColor;
+  }
   drawSingleCellText(x, y);
 }
 
@@ -1948,7 +2006,7 @@ function getMagicWandCellColor(x, y) {
   return normalizeMagicWandColor(value);
 }
 
-function floodFill(startX, startY, targetChar, replaceChar) {
+function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
   if (targetChar === replaceChar) return;
   const targetColor = colorGrid[startY][startX];
   let queue = [{x: startX, y: startY}];
@@ -1960,7 +2018,7 @@ function floodFill(startX, startY, targetChar, replaceChar) {
           let isMatch = sameChar && (targetChar !== "" || sameColor);
           
           if (isMatch && (!selectionMask || selectionMask[p.y][p.x])) {
-              setAsciiCell(p.x, p.y, replaceChar);
+              setAsciiCell(p.x, p.y, replaceChar, textColor);
               queue.push({x: p.x + 1, y: p.y});
               queue.push({x: p.x - 1, y: p.y});
               queue.push({x: p.x, y: p.y + 1});
@@ -1991,6 +2049,7 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
     textToolInput.style('background', 'rgba(255, 255, 255, 0.9)');
     textToolInput.style('resize', 'none');
     textToolInput.style('text-transform', 'uppercase');
+    textToolInput.style('color', selectedColor || '#000000');
     textToolInput.elt.focus();
     
     let commitText = () => {
@@ -1998,6 +2057,7 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
         let txt = textToolInput.value().toUpperCase();
         
         let drawBorderChar = selectedChar === 'SMART' ? '#' : selectedChar;
+        let drawTextColor = selectedColor || "#000000";
         if (!skipBorder && maxX - minX >= 1 && maxY - minY >= 1) {
             applyShape(minX, minY, maxX, maxY, 'SHAPE_RECT', drawBorderChar, false);
             
@@ -2017,7 +2077,7 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
                 }
                 if (cy > innerMaxY) break; 
                 
-                if (isValidCell(cx, cy)) setAsciiCell(cx, cy, char);
+                if (isValidCell(cx, cy)) setAsciiCell(cx, cy, char, drawTextColor);
                 cx++;
             }
         } else {
@@ -2027,7 +2087,7 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
                 if (char === '\n') {
                     cx = minX; cy++; continue;
                 }
-                if (isValidCell(cx, cy)) setAsciiCell(cx, cy, char);
+                if (isValidCell(cx, cy)) setAsciiCell(cx, cy, char, drawTextColor);
                 cx++;
             }
         }
@@ -2091,10 +2151,11 @@ function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
   let w = maxX - minX; let h = maxY - minY;
   let shadowOffset = 1;
   let shadowChar = shadowBoxes[currentShadowIndex];
+  let drawTextColor = selectedColor || "#000000";
   
   let drawBorder = (x, y, ox, oy, drawChar) => {
     let drawX = x + ox, drawY = y + oy;
-    if (isValidCell(drawX, drawY)) setAsciiCell(drawX, drawY, drawChar);
+    if (isValidCell(drawX, drawY)) setAsciiCell(drawX, drawY, drawChar, drawTextColor);
   };
 
   let passes = withShadow ? 2 : 1;
@@ -2577,18 +2638,21 @@ function saveToLocalStorage(silent) {
 function handleInput(x, y) {
   if (!isValidCell(x, y)) return;
   if (!isActiveAsciiLayerEditable()) return;
+  
+  let drawTextColor = selectedColor || "#000000";
+  
   if (toolMode === 'DRAW') {
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
     if (isEraser) ch = "";
-    setAsciiCell(x, y, ch);
+    setAsciiCell(x, y, ch, drawTextColor);
   } else if (toolMode === 'ERASE') {
-    setAsciiCell(x, y, "");
+    setAsciiCell(x, y, "", "#000000");
   } else if (toolMode === 'FILL') {
     let targetChar = grid[y][x];
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
-    floodFill(x, y, targetChar, ch);
+    floodFill(x, y, targetChar, ch, drawTextColor);
   } else if (toolMode === 'INK') {
-    setGridColor(x, y, selectedColor);
+        setGridTextColor(x, y, selectedColor);
   }
 }
 
@@ -2704,6 +2768,22 @@ function exportAsciiSvg() {
   downloadTextFile(getNextAsciiFilename("svg"), parts.join(""), "image/svg+xml;charset=utf-8");
 }
 
+function applyPgBlendMode(pg, mode) {
+    if (mode === 'multiply') pg.blendMode(MULTIPLY);
+    else if (mode === 'screen') pg.blendMode(SCREEN);
+    else if (mode === 'overlay') pg.blendMode(OVERLAY);
+    else if (mode === 'darken') pg.blendMode(DARKEST);
+    else if (mode === 'lighten') pg.blendMode(LIGHTEST);
+    else if (mode === 'color-dodge') pg.blendMode(DODGE);
+    else if (mode === 'color-burn') pg.blendMode(BURN);
+    else if (mode === 'hard-light') pg.blendMode(HARD_LIGHT);
+    else if (mode === 'soft-light') pg.blendMode(SOFT_LIGHT);
+    else if (mode === 'difference') pg.blendMode(DIFFERENCE);
+    else if (mode === 'exclusion') pg.blendMode(EXCLUSION);
+    else if (mode === 'add') pg.blendMode(ADD);
+    else pg.blendMode(BLEND);
+}
+
 function renderAsciiArtworkToGraphics(pg, includeBackground) {
   pg.clear();
   if (includeBackground) {
@@ -2712,25 +2792,35 @@ function renderAsciiArtworkToGraphics(pg, includeBackground) {
   for (let i = 0; i < asciiLayers.length; i++) {
     const layer = asciiLayers[i];
     if (!layer || !layer.visible) continue;
+    let op = layer.imgOpacity === undefined ? (layer.kind === 'image' ? 180 : 255) : layer.imgOpacity;
+    let customMode = layer.blendMode && layer.blendMode !== 'normal';
+    
     if (layer.kind === 'image' && layer.img) {
       const b = getImageCellBounds(layer);
       pg.push();
-      const mode = layer.blendMode || 'normal';
-      if (mode === 'multiply') pg.blendMode(MULTIPLY);
-      else if (mode === 'screen') pg.blendMode(SCREEN);
-      else if (mode === 'overlay') pg.blendMode(OVERLAY);
-      else if (mode === 'darken') pg.blendMode(DARKEST);
-      else if (mode === 'lighten') pg.blendMode(LIGHTEST);
-      else pg.blendMode(BLEND);
-      pg.tint(255, layer.imgOpacity === undefined ? 180 : layer.imgOpacity);
+      applyPgBlendMode(pg, layer.blendMode || 'normal');
+      pg.tint(255, op);
       pg.image(layer.img, b.x * cellW, b.y * cellH, b.w * cellW, b.h * cellH);
       pg.noTint();
       pg.blendMode(BLEND);
       pg.pop();
       continue;
     }
-    if (layer.pgColor) pg.image(layer.pgColor, 0, 0);
-    if (layer.pgText) pg.image(layer.pgText, 0, 0);
+    pg.push();
+    pg.tint(255, op);
+    if (customMode) {
+        applyPgBlendMode(pg, layer.blendMode);
+        if (layer.pgColor) pg.image(layer.pgColor, 0, 0);
+        if (layer.pgText) pg.image(layer.pgText, 0, 0);
+    } else {
+        pg.blendMode(MULTIPLY);
+        if (layer.pgColor) pg.image(layer.pgColor, 0, 0);
+        pg.blendMode(BLEND);
+        if (layer.pgText) pg.image(layer.pgText, 0, 0);
+    }
+    pg.noTint();
+    pg.blendMode(BLEND);
+    pg.pop();
   }
 }
 
@@ -2762,6 +2852,14 @@ function setupSketchZoomUI() {
       saveUiState();
     });
   }
+}
+
+function setGridTextColor(x, y, col) {
+  if (!isActiveAsciiLayerEditable()) return;
+  if (selectionMask && !selectionMask[y][x]) return;
+  ensureGridCell(x, y);
+  textColorGrid[y][x] = col || "#000000";
+  drawSingleCellText(x, y); 
 }
 
 function setupToolBindings() {
