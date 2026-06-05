@@ -19,169 +19,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// --- GLOBALS FOR APP INTEGRATION ---
-var activeTab = 'tab-thoughts';
-
-// --- CONFIG ---
-let cols, rows;
-let cellW = 9;  
-let cellH = 14; 
-let canvasW = 2400;
-let canvasH = 3200; 
-let inkColorHex = "#000000"; 
-const workCols = 80; 
-const workRows = 80;
-
-// --- SHAPE FILL CONFIG ---
-let shapeFillMode = 'Solid'; 
-let shapeFillChar = '.';
 
 function preload() {} 
-
-// --- EXPORT OPTIONS ---
-let exportTransparent = false; 
-
-// --- DATA & BUFFERS ---
-let grid = [];      
-let colorGrid = []; 
-let textColorGrid = []; 
-let pgColorLayer;   
-let pgTextLayer;    
-let pgGridLayer; 
-let templateImg;    
-let libraryItems = []; 
-
-// --- LAYERS (ASCII) ---
-let asciiLayers = [];
-let activeLayerIndex = 0;
-let draggedLibItem = null; 
-
-// VIEWPORT / RULER / SHADOWS
-let viewX = 0, viewY = 0; 
-let viewW = workCols * cellW; 
-let viewH = workRows * cellH; 
-let viewZoom = 1.0; 
-let showRulers = true;
-let shadowBoxes = ["█","▓","▒","░"];
-let currentShadowIndex = 0;
-let prevGrabMouse = null; 
-let textToolInput = null; 
-
-// --- STATE ---
-let mainMode = "ASCII"; 
-let toolMode = "DRAW";    
-let selectedChar = "SMART"; 
-let isEraser = false;
-let selectedColor = "#FFFF00"; 
-let isColorEraser = false;
-let isShiftSelecting = false; 
-let showTemplateImg = true;
-let isDraggingPanel = false;
-
-// --- MOUSE & SELECTION DRAGGING ---
-let prevGridX = -1, prevGridY = -1;
-let isDraggingSelection = false;
-let dragOffsetX = 0, dragOffsetY = 0;
-let floatingX = 0, floatingY = 0;
-
-// --- SLIDERS & FONT SIZE ---
-let bgScale = 1.0, bgX = 0, bgY = 0, bgRotate = 0; 
-let sliderScale, sliderX, sliderY, sliderRotate, sliderOpacity;   
-let userFontSize = 12;
-
-// --- HISTORY & CLIPBOARD (SKETCH) ---
-let history = [];
-const MAX_HISTORY = 20; 
-let selStart = null, selEnd = null;
-let selectionMask = null; 
-let sketchRedoHistory = [];
-let clipboard = null;
-
-// --- UI REFS ---
-let sidebarDiv;
-let mainCanvas; 
-
-// --- PALETTE DATA ---
-let palette = [
-  "SMART", "|", "-", "/", "\\", "_",
-  "┌", "┐", "└", "┘", "─", "│", "┼", "┴", "┬", "┤", "├",
-  "╔", "╗", "╚", "╝", "═", "║", "╬", "╩", "╦", "╣", "╠",
-  "█", "▓", "▒", "░", "▀", "▄", "▌", "▐", "■", "□", 
-  "●", "○", "◆", "◇", "▲", "▼", "◄", "►", 
-  "(", ")", "[", "]", "{", "}", "<", ">",
-    "o", "*", "+", "x", ".", ",", ":", ";", "'", "`", "^", "~", "=",
-    "▚", "▞", "▦", "▩", "▤", "▥", "▧", "▨", "▩", "▪", "▫", "▬", "▭", "▮", "▯",
-    "@", "#", "$", "%", "&", "8", "W", "M", "Q", "Z", "X", "O", "0", 
-    "?", "!", "I", "1", "i", "l", "÷", "×", "±", "∞", "≈", "≡", "♪", "♫"
-];
-
-// --- CORE: TAB SWITCHING ---
-window.switchTab = function(tabId) {
-  if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
-      if (window.resetImageProcessor) window.resetImageProcessor();
-  }
-
-  activeTab = tabId;
-  document.querySelectorAll('.sidebar-tab').forEach(b => {
-    b.classList.remove('active');
-    b.style.color = '#000';
-    b.style.webkitTextFillColor = '#000';
-  });
-  document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
-  
-  let btn = document.querySelector(`[data-tab="${tabId}"]`);
-  if(btn) {
-    btn.classList.add('active');
-    btn.style.color = 'var(--text-muted)';
-    btn.style.webkitTextFillColor = 'var(--text-muted)';
-  }
-  let ws = document.getElementById(tabId);
-  if(ws) ws.classList.add('active');
-
-  let cnv = document.getElementById('myCanvas');
-  if(!cnv) return;
-  
-  if (tabId === 'tab-sketch') {
-    cnv.style.display = 'block';
-    loop(); 
-    if(window.pauseImageProcessor) window.pauseImageProcessor(); 
-  } else if (tabId === 'tab-image-proc') {
-    cnv.style.display = 'none';
-    noLoop(); 
-    if(window.resumeImageProcessor) window.resumeImageProcessor(); 
-    if(window.startWebcamAuto) window.startWebcamAuto(); 
-  } else {
-    cnv.style.display = 'none';
-    noLoop(); 
-    if(window.pauseImageProcessor) window.pauseImageProcessor(); 
-  }
-}
-
-// --- GLOBAL KEYBOARD SHORTCUTS (CHỐNG P5.JS NUỐT PHÍM) ---
-window.addEventListener('keydown', function(e) {
-    if (activeTab !== 'tab-sketch') return;
-    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
-
-    let isCtrl = e.ctrlKey || e.metaKey;
-
-    if (isCtrl) {
-        let key = e.key.toLowerCase();
-        if (key === 'c') {
-            e.preventDefault();
-            copySelection();
-        } else if (key === 'x') {
-            e.preventDefault();
-            cutSelection();
-        } else if (key === 'v') {
-            e.preventDefault();
-            pasteClipboard();
-        } else if (key === 'z') {
-            e.preventDefault();
-            if (e.shiftKey) redoSketch();
-            else undoSketch();
-        }
-    }
-});
 
 // --- SETUP ---
 function setup() {
@@ -193,6 +32,7 @@ function setup() {
   mainCanvas.id('myCanvas');
   mainCanvas.parent('sketch-canvas-holder'); 
   mainCanvas.style('touch-action', 'none');
+  applySketchCanvasZoom();
 
   try {
     const mc = mainCanvas.elt;
@@ -205,17 +45,24 @@ function setup() {
   mainCanvas.elt.ondragover = (e) => e.preventDefault();
   mainCanvas.elt.ondrop = (e) => {
     e.preventDefault();
+    const droppedFile = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type && droppedFile.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => loadImage(reader.result, img => addImageLayer(img, reader.result, droppedFile.name || 'Dropped Image'));
+      reader.readAsDataURL(droppedFile);
+      return;
+    }
     let data = e.dataTransfer.getData("text/plain");
     if (data && data.startsWith("data:image")) {
-      loadImage(data, handleImageLoad);
+      loadImage(data, img => addImageLayer(img, data, "Dropped Image"));
     }
   };
 
-  cols = Math.floor(width / cellW);
-  rows = Math.floor(height / cellH);
+  cols = workCols;
+  rows = workRows;
   
   if (asciiLayers.length === 0) {
-      addAsciiLayer("Background");
+      addAsciiLayer("Layer 1");
   }
 
   pgGridLayer = createGraphics(width, height);
@@ -234,15 +81,22 @@ function setup() {
   createUI();
   setupSketchZoomUI();
   setupToolBindings();
+  const sketchScrollArea = document.getElementById('sketch-scroll-area');
+  if (sketchScrollArea) sketchScrollArea.addEventListener('scroll', saveUiState);
+  restoreUiState();
+  renderPropertiesUI();
   updateLayerTextVisuals(); 
 
   let starBtn = document.getElementById('btnShapeStar');
   if (starBtn) starBtn.style.display = 'none';
   let heartBtn = document.getElementById('btnShapeHeart');
   if (heartBtn) heartBtn.style.display = 'none';
+  const tab4Btn = document.querySelector('[data-tab="tab-index"]');
+  if (tab4Btn) tab4Btn.style.display = 'none';
 
   const performAutoSave = () => {
       saveToLocalStorage(true); 
+      saveUiState();
   };
   window.addEventListener('pagehide', performAutoSave);
   window.addEventListener('beforeunload', performAutoSave);
@@ -250,7 +104,7 @@ function setup() {
       if (document.visibilityState === 'hidden') performAutoSave();
   });
 
-  window.switchTab('tab-thoughts');
+  window.switchTab(getLastActiveTab());
   let sb = select('.app-sidebar');
   if (sb) sb.addClass('hidden');
 }
@@ -276,49 +130,227 @@ function injectMouseTool() {
 
 function dockPanelsRight() {
     let canvasHolder = document.getElementById('sketch-canvas-holder');
+    let panelHost = document.getElementById('tab-sketch');
     if (!canvasHolder) return;
     canvasHolder.style.position = 'relative';
-    
-    let rightBar = document.getElementById('mi-right-sidebar');
-    if (!rightBar) {
-        rightBar = document.createElement('div');
-        rightBar.id = 'mi-right-sidebar';
-        rightBar.style.position = 'absolute';
-        rightBar.style.right = '20px';
-        rightBar.style.top = '20px';
-        rightBar.style.width = '300px';
-        rightBar.style.height = 'calc(100% - 40px)';
-        rightBar.style.pointerEvents = 'none';
-        rightBar.style.display = 'flex';
-        rightBar.style.flexDirection = 'column';
-        rightBar.style.gap = '15px';
-        rightBar.style.zIndex = '9999';
-        rightBar.style.overflowY = 'auto';
-        canvasHolder.appendChild(rightBar);
-    }
-    
-    ['sketch-main-tools', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel'].forEach(id => {
+    if (!panelHost) panelHost = canvasHolder;
+    panelHost.style.position = 'relative';
+
+    const defaults = {
+        'sketch-main-tools': { right: 20, top: 20 },
+        'sketch-export-panel': { right: 20, top: 275 },
+        'sketch-patterns-panel': { right: 20, top: 390 },
+        'sketch-ink-panel': { right: 20, top: 645 },
+        'sketch-layer-panel': { right: 20, top: 760 },
+        'sketch-properties-panel': { right: 320, top: 20 }
+    };
+
+    Object.keys(defaults).forEach(id => {
         let p = document.getElementById(id);
         if (p) {
-            p.style.position = 'relative';
-            p.style.left = '0';
-            p.style.top = '0';
-            p.style.width = '100%';
+            panelHost.appendChild(p);
+            p.style.position = 'absolute';
+            p.style.left = 'auto';
+            p.style.right = defaults[id].right + 'px';
+            p.style.top = defaults[id].top + 'px';
+            p.style.width = '280px';
             p.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
             p.style.border = '1px solid #ddd';
             p.style.background = 'rgba(255, 255, 255, 0.95)';
             p.style.borderRadius = '5px';
             p.style.pointerEvents = 'auto'; 
-            rightBar.appendChild(p);
-            
-            let header = p.querySelector('.panel-header') || p.querySelector('.panel-title');
-            if (header) {
-                header.style.cursor = 'default';
-                let newHeader = header.cloneNode(true);
-                header.parentNode.replaceChild(newHeader, header);
-            }
+            p.style.zIndex = '1500';
+            makePanelDraggable(p, panelHost);
         }
     });
+
+    restoreUiState();
+}
+
+function getUiState() {
+    const panels = {};
+    const sketchScroll = document.getElementById('sketch-scroll-area');
+    ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'].forEach(id => {
+        const panel = document.getElementById(id);
+        if (!panel) return;
+        panels[id] = {
+            left: panel.style.left,
+            right: panel.style.right,
+            top: panel.style.top,
+            display: panel.style.display
+        };
+    });
+    return {
+        activeTab: activeTab,
+        viewX: viewX,
+        viewY: viewY,
+        viewZoom: viewZoom,
+        canvasCols: workCols,
+        canvasRows: workRows,
+        canvasRatioPreset: canvasRatioPreset,
+        toolMode: toolMode,
+        selectedChar: selectedChar,
+        selectedColor: selectedColor,
+        magicWandMatchMode: magicWandMatchMode,
+        showRulers: showRulers,
+        activeLayerIndex: activeLayerIndex,
+        sketchScrollLeft: sketchScroll ? sketchScroll.scrollLeft : 0,
+        sketchScrollTop: sketchScroll ? sketchScroll.scrollTop : 0,
+        panels: panels
+    };
+}
+
+function saveUiState() {
+    try {
+        localStorage.setItem('mi_ui_state', JSON.stringify(getUiState()));
+    } catch (e) {}
+}
+
+function applySketchCanvasZoom() {
+    if (!mainCanvas || !mainCanvas.elt) return;
+    mainCanvas.elt.style.width = Math.round(canvasW * viewZoom) + 'px';
+    mainCanvas.elt.style.height = Math.round(canvasH * viewZoom) + 'px';
+    mainCanvas.elt.style.maxWidth = 'none';
+    mainCanvas.elt.style.maxHeight = 'none';
+    const zoomVal = document.getElementById('sketch-zoom-val');
+    if (zoomVal) zoomVal.textContent = Math.round(viewZoom * 100) + '%';
+}
+
+function restoreUiState() {
+    try {
+        const raw = localStorage.getItem('mi_ui_state');
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (Number.isFinite(state.viewX)) viewX = constrain(state.viewX, 0, width - viewW);
+        if (Number.isFinite(state.viewY)) viewY = constrain(state.viewY, 0, height - viewH);
+        if (Number.isFinite(state.viewZoom)) viewZoom = constrain(state.viewZoom, 0.1, 5.0);
+        if (state.canvasRatioPreset) canvasRatioPreset = state.canvasRatioPreset;
+        if (state.toolMode) toolMode = state.toolMode;
+        if (state.selectedChar) selectedChar = state.selectedChar;
+        if (state.selectedColor !== undefined) selectedColor = state.selectedColor;
+        if (state.magicWandMatchMode === 'char' || state.magicWandMatchMode === 'color') {
+            magicWandMatchMode = state.magicWandMatchMode;
+        }
+        if (typeof state.showRulers === 'boolean') showRulers = state.showRulers;
+        if (Number.isInteger(state.activeLayerIndex) && asciiLayers[state.activeLayerIndex]) {
+            activeLayerIndex = state.activeLayerIndex;
+            const l = asciiLayers[activeLayerIndex];
+            grid = l.grid; colorGrid = l.colorGrid; textColorGrid = l.textColorGrid; pgColorLayer = l.pgColor; pgTextLayer = l.pgText;
+        }
+        if (state.panels) {
+            Object.keys(state.panels).forEach(id => {
+                const panel = document.getElementById(id);
+                const panelState = state.panels[id];
+                if (!panel || !panelState) return;
+                if (panelState.left) panel.style.left = panelState.left;
+                if (panelState.right) panel.style.right = panelState.right;
+                if (panelState.top) panel.style.top = panelState.top;
+                if (panelState.display) panel.style.display = panelState.display;
+            });
+        }
+        const sketchScroll = document.getElementById('sketch-scroll-area');
+        if (sketchScroll) {
+            if (Number.isFinite(state.sketchScrollLeft)) sketchScroll.scrollLeft = state.sketchScrollLeft;
+            if (Number.isFinite(state.sketchScrollTop)) sketchScroll.scrollTop = state.sketchScrollTop;
+        }
+        applySketchCanvasZoom();
+    } catch (e) {}
+}
+
+function setToolMode(nextMode, options = {}) {
+    const previousTool = toolMode;
+    toolMode = nextMode;
+    
+    // Tự động deselect nếu đổi sang tool không liên quan đến select
+    if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE') {
+        selectionMask = null;
+        selStart = null;
+        selEnd = null;
+    }
+    
+    if (options.render !== false) renderPropertiesUI();
+    if (options.save !== false) saveUiState();
+}
+
+function getLastActiveTab() {
+    try {
+        const raw = localStorage.getItem('mi_ui_state');
+        if (!raw) return 'tab-thoughts';
+        const state = JSON.parse(raw);
+        return state.activeTab === 'tab-index' ? 'tab-sketch' : (state.activeTab || 'tab-thoughts');
+    } catch (e) {
+        return 'tab-thoughts';
+    }
+}
+
+function makePanelDraggable(panel, boundsEl) {
+    if (!panel || panel.dataset.miDraggable === 'true') return;
+    const header = panel.querySelector('.panel-header') || panel.querySelector('.panel-title');
+    if (!header) return;
+    panel.dataset.miDraggable = 'true';
+    header.style.cursor = 'move';
+
+    let startX = 0;
+    let startY = 0;
+    let originLeft = 0;
+    let originTop = 0;
+
+    const movePanel = (clientX, clientY) => {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const maxLeft = Math.max(0, boundsEl.clientWidth - panel.offsetWidth);
+        const maxTop = Math.max(0, boundsEl.clientHeight - panel.offsetHeight);
+        panel.style.left = constrain(originLeft + dx, 0, maxLeft) + 'px';
+        panel.style.top = constrain(originTop + dy, 0, maxTop) + 'px';
+        panel.style.right = 'auto';
+    };
+
+    const stopDrag = () => {
+        isDraggingPanel = false;
+        saveUiState();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', stopDrag);
+    };
+
+    const onMouseMove = (e) => {
+        e.preventDefault();
+        movePanel(e.clientX, e.clientY);
+    };
+
+    const onTouchMove = (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        e.preventDefault();
+        movePanel(e.touches[0].clientX, e.touches[0].clientY);
+    };
+
+    const startDrag = (clientX, clientY) => {
+        isDraggingPanel = true;
+        startX = clientX;
+        startY = clientY;
+        originLeft = parseFloat(panel.style.left) || panel.offsetLeft || 0;
+        originTop = parseFloat(panel.style.top) || panel.offsetTop || 0;
+        panel.style.zIndex = String(Date.now());
+    };
+
+    header.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button, input, select, textarea, a')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        startDrag(e.clientX, e.clientY);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', stopDrag);
+    });
+
+    header.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length === 0 || e.target.closest('button, input, select, textarea, a')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', stopDrag);
+    }, { passive: false });
 }
 
 function renderPatternsUI() {
@@ -368,9 +400,7 @@ function renderInkUI() {
         }
         btn.onclick = () => {
             selectedColor = c;
-            toolMode = 'INK'; 
-            let shapeConfig = document.getElementById('shape-config-panel');
-            if (shapeConfig) shapeConfig.style.display = 'none';
+            setToolMode('INK');
         };
         inkPanel.appendChild(btn);
     });
@@ -386,7 +416,7 @@ function renderLayersUI() {
     addBtn.style.marginBottom = '10px';
     addBtn.style.padding = '5px 10px';
     addBtn.style.width = '100%';
-    addBtn.onclick = () => { addAsciiLayer('Layer ' + (asciiLayers.length + 1)); renderLayersUI(); };
+    addBtn.onclick = () => { addAsciiLayer('Layer ' + (asciiLayers.length + 1)); renderLayersUI(); saveToLocalStorage(true); saveUiState(); };
     layPanel.appendChild(addBtn);
     
     asciiLayers.forEach((l, i) => {
@@ -399,20 +429,75 @@ function renderLayersUI() {
         div.style.border = '1px solid #ccc';
         div.style.marginBottom = '5px';
         div.style.cursor = 'pointer';
+        div.draggable = true;
+        div.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', String(i));
+        };
+        div.ondragover = (e) => e.preventDefault();
+        div.ondrop = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+            if (!Number.isInteger(fromIndex) || fromIndex === i) return;
+            moveLayer(fromIndex, i);
+        };
         div.onclick = () => { 
-            activeLayerIndex = i; 
-            grid = l.grid; colorGrid = l.colorGrid; textColorGrid = l.textColorGrid; pgColorLayer = l.pgColor; pgTextLayer = l.pgText; 
+            setActiveLayer(i);
             renderLayersUI(); 
+            renderPropertiesUI();
+            saveToLocalStorage(true);
+            saveUiState();
         };
         
         let name = document.createElement('span');
-        name.textContent = l.name;
+        name.textContent = (l.kind === 'image' ? '[IMG] ' : '') + l.name;
+        name.title = 'Click to rename layer';
+        name.onclick = (e) => {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = l.name;
+            input.style.width = '120px';
+            const commit = () => {
+                l.name = input.value.trim() || l.name;
+                renderLayersUI();
+                renderPropertiesUI();
+                saveToLocalStorage(true);
+                saveUiState();
+            };
+            input.onblur = commit;
+            input.onkeydown = (evt) => {
+                if (evt.key === 'Enter') input.blur();
+                if (evt.key === 'Escape') renderLayersUI();
+            };
+            name.replaceWith(input);
+            input.focus();
+            input.select();
+        };
         div.appendChild(name);
+
+        let controls = document.createElement('div');
+        controls.style.display = 'flex';
+        controls.style.gap = '4px';
         
         let visBtn = document.createElement('button');
         visBtn.textContent = l.visible ? '👁' : '🙈';
-        visBtn.onclick = (e) => { e.stopPropagation(); l.visible = !l.visible; renderLayersUI(); };
-        div.appendChild(visBtn);
+        visBtn.onclick = (e) => { e.stopPropagation(); l.visible = !l.visible; renderLayersUI(); saveToLocalStorage(true); saveUiState(); };
+        controls.appendChild(visBtn);
+
+        let lockBtn = document.createElement('button');
+        lockBtn.textContent = l.locked ? '🔒' : '🔓';
+        lockBtn.title = l.locked ? 'Unlock layer' : 'Lock layer';
+        lockBtn.onclick = (e) => {
+            e.stopPropagation();
+            l.locked = !l.locked;
+            renderLayersUI();
+            renderPropertiesUI();
+            saveToLocalStorage(true);
+            saveUiState();
+        };
+        controls.appendChild(lockBtn);
+        div.appendChild(controls);
         
         layPanel.appendChild(div);
     });
@@ -423,90 +508,812 @@ function createUI() {
     if (window.__mi_ui_initialized) return;
     window.__mi_ui_initialized = true;
 
-    const rightBar = document.getElementById('mi-right-sidebar');
-    if (!rightBar) return;
+    const panelHost = document.getElementById('tab-sketch') || document.getElementById('sketch-canvas-holder');
+    if (!panelHost) return;
+    createPropertiesPanel(panelHost);
+  } catch (e) {}
+}
 
-    const ui = document.createElement('div');
-    ui.id = 'shape-config-panel';
-    ui.className = 'mi-basic-ui panel';
-    ui.style.display = 'none'; 
-    ui.style.flexDirection = 'column'; 
-    ui.style.gap = '8px';
-    ui.style.background = 'rgba(255, 255, 255, 0.95)';
-    ui.style.padding = '10px';
-    ui.style.border = '1px solid #ddd';
-    ui.style.borderRadius = '5px';
-    ui.style.pointerEvents = 'auto';
+function createPropertiesPanel(panelHost) {
+    if (document.getElementById('sketch-properties-panel')) return;
+    const panel = document.createElement('div');
+    panel.id = 'sketch-properties-panel';
+    panel.className = 'floating-panel';
+    panel.style.position = 'absolute';
+    panel.style.right = '320px';
+    panel.style.top = '20px';
+    panel.style.width = '280px';
+    panel.style.background = 'rgba(255, 255, 255, 0.95)';
+    panel.style.border = '1px solid #ddd';
+    panel.style.borderRadius = '5px';
+    panel.style.pointerEvents = 'auto';
+    panel.style.zIndex = '1500';
+
+    const header = document.createElement('div');
+    header.className = 'panel-header';
+    header.innerHTML = '<span>Properties</span><button class="panel-minimize-btn" type="button">-</button>';
+    panel.appendChild(header);
+
+    const content = document.createElement('div');
+    content.id = 'sketch-properties-content';
+    content.className = 'panel-content';
+    content.style.padding = '10px';
+    content.style.display = 'flex';
+    content.style.flexDirection = 'column';
+    content.style.gap = '8px';
+    panel.appendChild(content);
+
+    panelHost.appendChild(panel);
+    makePanelDraggable(panel, panelHost);
+    renderPropertiesUI();
+}
+
+function renderPropertiesUI() {
+    const content = document.getElementById('sketch-properties-content');
+    if (!content) return;
+    const layer = getActiveLayer();
+    content.innerHTML = '';
+
+    renderCanvasProperties(content);
+    renderShapeProperties(content);
+    renderMagicWandProperties(content);
+
+    if (!layer || layer.kind !== 'image') {
+        if (!toolMode.startsWith('SHAPE_') && toolMode !== 'MAGIC_WAND') {
+            const note = document.createElement('div');
+            note.style.fontSize = '11px';
+            note.textContent = 'Select an image layer to edit opacity, blend mode, and align.';
+            content.appendChild(note);
+        }
+        return;
+    }
+
+    const opacityLabel = document.createElement('label');
+    opacityLabel.style.fontSize = '11px';
+    opacityLabel.textContent = 'Opacity';
+    const opacity = document.createElement('input');
+    opacity.type = 'range';
+    opacity.min = '0';
+    opacity.max = '255';
+    opacity.step = '1';
+    opacity.value = layer.imgOpacity === undefined ? 180 : layer.imgOpacity;
+    opacity.disabled = !!layer.locked;
+    opacity.oninput = () => {
+        if (layer.locked) return;
+        layer.imgOpacity = parseFloat(opacity.value);
+        saveToLocalStorage(true);
+        saveUiState();
+    };
+    opacityLabel.appendChild(opacity);
+    content.appendChild(opacityLabel);
+
+    const blendLabel = document.createElement('label');
+    blendLabel.style.fontSize = '11px';
+    blendLabel.textContent = 'Blend Mode';
+    const blendSelect = document.createElement('select');
+    ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'].forEach(mode => {
+        const option = document.createElement('option');
+        option.value = mode;
+        option.textContent = mode;
+        blendSelect.appendChild(option);
+    });
+    blendSelect.value = layer.blendMode || 'normal';
+    blendSelect.disabled = !!layer.locked;
+    blendSelect.onchange = () => {
+        if (layer.locked) return;
+        layer.blendMode = blendSelect.value;
+        saveToLocalStorage(true);
+        saveUiState();
+    };
+    blendLabel.appendChild(blendSelect);
+    content.appendChild(blendLabel);
+
+    const alignWrap = document.createElement('div');
+    alignWrap.style.display = 'grid';
+    alignWrap.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    alignWrap.style.gap = '4px';
+    [
+        ['Left', () => layer.imgCellX = 0],
+        ['Center', () => layer.imgCellX = Math.round((workCols - getImageCellBounds(layer).w) / 2)],
+        ['Right', () => layer.imgCellX = workCols - getImageCellBounds(layer).w],
+        ['Top', () => layer.imgCellY = 0],
+        ['Middle', () => layer.imgCellY = Math.round((workRows - getImageCellBounds(layer).h) / 2)],
+        ['Bottom', () => layer.imgCellY = workRows - getImageCellBounds(layer).h]
+    ].forEach(([labelText, action]) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-retro';
+        btn.textContent = labelText;
+        btn.disabled = !!layer.locked;
+        btn.onclick = () => {
+            if (layer.locked) return;
+            action();
+            saveToLocalStorage(true);
+            saveUiState();
+        };
+        alignWrap.appendChild(btn);
+    });
+    content.appendChild(alignWrap);
+
+    const ditherLabel = document.createElement('label');
+    ditherLabel.className = 'chk';
+    const ditherInput = document.createElement('input');
+    ditherInput.type = 'checkbox';
+    ditherInput.checked = !!layer.dither;
+    ditherInput.disabled = !!layer.locked;
+    ditherInput.onchange = () => {
+        if (layer.locked) return;
+        layer.dither = ditherInput.checked;
+        saveToLocalStorage(true);
+        saveUiState();
+    };
+    ditherLabel.appendChild(ditherInput);
+    ditherLabel.appendChild(document.createTextNode(' Dither Image'));
+    content.appendChild(ditherLabel);
+
+    const convertBtn = document.createElement('button');
+    convertBtn.className = 'btn-retro';
+    convertBtn.textContent = 'Convert Image to ASCII';
+    convertBtn.disabled = !!layer.locked;
+    convertBtn.onclick = () => convertImageLayerToAscii(layer);
+    content.appendChild(convertBtn);
+}
+
+function renderCanvasProperties(content) {
+    const title = document.createElement('div');
+    title.className = 'panel-subtitle';
+    title.textContent = 'Canvas';
+    content.appendChild(title);
+
+    const presetLabel = document.createElement('label');
+    presetLabel.textContent = 'Ratio';
+    const presetSelect = document.createElement('select');
+    [
+        ['4:3', '4:3'],
+        ['16:9', '16:9'],
+        ['1:1', '1:1'],
+        ['a4', 'A4 Portrait'],
+        ['custom', 'Custom']
+    ].forEach(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        presetSelect.appendChild(option);
+    });
+    presetSelect.value = canvasRatioPreset;
+    presetLabel.appendChild(presetSelect);
+    content.appendChild(presetLabel);
+
+    const sizeWrap = document.createElement('div');
+    sizeWrap.style.display = 'grid';
+    sizeWrap.style.gridTemplateColumns = '1fr 1fr';
+    sizeWrap.style.gap = '6px';
+
+    const colsLabel = document.createElement('label');
+    colsLabel.textContent = 'Cols';
+    const colsInput = document.createElement('input');
+    colsInput.type = 'number';
+    colsInput.min = '8';
+    colsInput.max = '400';
+    colsInput.step = '1';
+    colsInput.value = workCols;
+    colsLabel.appendChild(colsInput);
+
+    const rowsLabel = document.createElement('label');
+    rowsLabel.textContent = 'Rows';
+    const rowsInput = document.createElement('input');
+    rowsInput.type = 'number';
+    rowsInput.min = '8';
+    rowsInput.max = '300';
+    rowsInput.step = '1';
+    rowsInput.value = workRows;
+    rowsLabel.appendChild(rowsInput);
+
+    sizeWrap.appendChild(colsLabel);
+    sizeWrap.appendChild(rowsLabel);
+    content.appendChild(sizeWrap);
+
+    presetSelect.onchange = () => {
+        canvasRatioPreset = presetSelect.value;
+        if (canvasRatioPreset !== 'custom') {
+            const nextSize = getCanvasPresetSize(canvasRatioPreset);
+            colsInput.value = nextSize.cols;
+            rowsInput.value = nextSize.rows;
+        }
+        saveUiState();
+    };
+
+    colsInput.oninput = () => {
+        if (canvasRatioPreset !== 'custom') {
+            const presetRatios = { '4:3': 4 / 3, '16:9': 16 / 9, '1:1': 1, 'a4': 1 / Math.sqrt(2) };
+            const ratio = presetRatios[canvasRatioPreset];
+            if (ratio) {
+                let c = parseInt(colsInput.value, 10) || 8;
+                rowsInput.value = Math.max(8, Math.round((c * cellW) / (ratio * cellH)));
+            }
+        }
+    };
+    rowsInput.oninput = () => {
+        if (canvasRatioPreset !== 'custom') {
+            const presetRatios = { '4:3': 4 / 3, '16:9': 16 / 9, '1:1': 1, 'a4': 1 / Math.sqrt(2) };
+            const ratio = presetRatios[canvasRatioPreset];
+            if (ratio) {
+                let r = parseInt(rowsInput.value, 10) || 8;
+                colsInput.value = Math.max(8, Math.round((r * cellH * ratio) / cellW));
+            }
+        }
+    };
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'btn-retro';
+    applyBtn.textContent = 'Apply Canvas Size';
+    applyBtn.onclick = () => {
+        const nextCols = constrain(parseInt(colsInput.value, 10) || workCols, 8, 400);
+        const nextRows = constrain(parseInt(rowsInput.value, 10) || workRows, 8, 300);
+        setCanvasGridSize(nextCols, nextRows);
+    };
+    content.appendChild(applyBtn);
+}
+
+function renderShapeProperties(content) {
+    if (!toolMode.startsWith('SHAPE_')) return;
 
     const title = document.createElement('div');
-    title.textContent = 'Shape Configuration';
-    title.style.fontWeight = 'bold';
-    title.style.marginBottom = '5px';
-    ui.appendChild(title);
+    title.className = 'panel-subtitle';
+    title.textContent = 'Shape';
+    content.appendChild(title);
 
     const rulerBtn = document.createElement('button');
-    rulerBtn.id = 'toggle-rulers'; rulerBtn.type = 'button';
-    rulerBtn.textContent = showRulers ? 'Hide rulers' : 'Show rulers';
-    rulerBtn.style.padding = '4px 8px';
-    rulerBtn.style.fontSize = '12px';
-    rulerBtn.addEventListener('click', () => {
-      showRulers = !showRulers;
-      rulerBtn.textContent = showRulers ? 'Hide rulers' : 'Show rulers';
-    });
-    ui.appendChild(rulerBtn);
+    rulerBtn.id = 'toggle-rulers';
+    rulerBtn.type = 'button';
+    rulerBtn.className = 'btn-retro';
+    rulerBtn.textContent = showRulers ? 'Hide Rulers' : 'Show Rulers';
+    rulerBtn.onclick = () => {
+        showRulers = !showRulers;
+        renderPropertiesUI();
+        saveUiState();
+    };
+    content.appendChild(rulerBtn);
 
-    const label = document.createElement('label');
-    label.textContent = 'Shadow:'; label.style.fontSize = '12px';
+    const shadowLabel = document.createElement('label');
+    shadowLabel.textContent = 'Shadow';
     const shadowSel = document.createElement('select');
-    shadowSel.id = 'shadow-select';
-    shadowBoxes.forEach((s, i) => { const o = document.createElement('option'); o.value = i; o.textContent = s; shadowSel.appendChild(o); });
+    shadowBoxes.forEach((s, i) => {
+        const o = document.createElement('option');
+        o.value = i;
+        o.textContent = s;
+        shadowSel.appendChild(o);
+    });
     shadowSel.value = currentShadowIndex;
-    shadowSel.addEventListener('change', () => { currentShadowIndex = parseInt(shadowSel.value, 10) || 0; });
-    
-    const wrapper = document.createElement('div'); 
-    wrapper.style.display = 'flex'; wrapper.style.alignItems = 'center'; wrapper.style.justifyContent = 'space-between';
-    wrapper.appendChild(label); wrapper.appendChild(shadowSel);
-    
+    shadowSel.onchange = () => { currentShadowIndex = parseInt(shadowSel.value, 10) || 0; saveUiState(); };
+    shadowLabel.appendChild(shadowSel);
+    content.appendChild(shadowLabel);
+
     const fillLabel = document.createElement('label');
-    fillLabel.textContent = 'Fill:'; fillLabel.style.fontSize = '12px';
-    
+    fillLabel.textContent = 'Fill';
     const fillSel = document.createElement('select');
     ['Hollow', 'Solid', 'Space'].forEach(m => {
-        const o = document.createElement('option'); o.value = m; o.textContent = m; fillSel.appendChild(o);
+        const o = document.createElement('option');
+        o.value = m;
+        o.textContent = m;
+        fillSel.appendChild(o);
     });
     fillSel.value = shapeFillMode;
-    fillSel.addEventListener('change', () => shapeFillMode = fillSel.value);
-    
+    fillSel.onchange = () => { shapeFillMode = fillSel.value; saveUiState(); };
+    fillLabel.appendChild(fillSel);
+    content.appendChild(fillLabel);
+
+    const charLabel = document.createElement('label');
+    charLabel.textContent = 'Fill Char';
     const fillCharInput = document.createElement('input');
-    fillCharInput.type = 'text'; fillCharInput.maxLength = 1; fillCharInput.value = shapeFillChar;
-    fillCharInput.style.width = '24px'; fillCharInput.style.textAlign = 'center';
-    fillCharInput.addEventListener('input', () => shapeFillChar = fillCharInput.value || ' ');
+    fillCharInput.type = 'text';
+    fillCharInput.maxLength = 1;
+    fillCharInput.value = shapeFillChar;
+    fillCharInput.oninput = () => { shapeFillChar = fillCharInput.value || ' '; saveUiState(); };
+    charLabel.appendChild(fillCharInput);
+    content.appendChild(charLabel);
+}
 
-    const wrapperFill = document.createElement('div'); 
-    wrapperFill.style.display = 'flex'; wrapperFill.style.alignItems = 'center'; wrapperFill.style.justifyContent = 'space-between';
-    wrapperFill.appendChild(fillLabel); 
-    
-    const fillInputs = document.createElement('div');
-    fillInputs.style.display = 'flex'; fillInputs.style.gap = '4px';
-    fillInputs.appendChild(fillSel); fillInputs.appendChild(fillCharInput);
-    wrapperFill.appendChild(fillInputs);
-    
-    ui.appendChild(wrapper);
-    ui.appendChild(wrapperFill);
+function renderMagicWandProperties(content) {
+    if (toolMode !== 'MAGIC_WAND') return;
 
-    rightBar.insertBefore(ui, rightBar.children[1]); 
-  } catch (e) {}
+    const title = document.createElement('div');
+    title.className = 'panel-subtitle';
+    title.textContent = 'Magic Wand';
+    content.appendChild(title);
+
+    const modeLabel = document.createElement('label');
+    modeLabel.textContent = 'Match';
+    const modeSelect = document.createElement('select');
+    [
+        ['char', 'Same character'],
+        ['color', 'Same cell color']
+    ].forEach(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        modeSelect.appendChild(option);
+    });
+    modeSelect.value = magicWandMatchMode;
+    modeSelect.onchange = () => {
+        magicWandMatchMode = modeSelect.value;
+        saveUiState();
+    };
+    modeLabel.appendChild(modeSelect);
+    content.appendChild(modeLabel);
+}
+
+function getCanvasPresetSize(preset) {
+    const presetRatios = {
+        '4:3': 4 / 3,
+        '16:9': 16 / 9,
+        '1:1': 1,
+        'a4': 1 / Math.sqrt(2)
+    };
+    if (preset === '16:9') return { cols: 160, rows: 60 };
+    if (preset === '4:3') return { cols: 120, rows: 60 };
+    if (preset === '1:1') return { cols: 90, rows: 60 };
+    const ratio = presetRatios[preset] || presetRatios['16:9'];
+    const baseCols = preset === 'a4' ? 100 : 160;
+    return {
+        cols: baseCols,
+        rows: Math.max(8, Math.round((baseCols * cellW) / (ratio * cellH)))
+    };
+}
+
+function updateCanvasGeometry(nextCols, nextRows) {
+    workCols = Math.max(8, Math.round(nextCols));
+    workRows = Math.max(8, Math.round(nextRows));
+    canvasW = workCols * cellW;
+    canvasH = workRows * cellH;
+    viewW = canvasW;
+    viewH = canvasH;
+    cols = workCols;
+    rows = workRows;
+    viewX = constrain(viewX, 0, Math.max(0, canvasW - viewW));
+    viewY = constrain(viewY, 0, Math.max(0, canvasH - viewH));
+
+    if (typeof resizeCanvas === 'function' && mainCanvas) {
+        resizeCanvas(canvasW, canvasH);
+    }
+    pgGridLayer = createGraphics(canvasW, canvasH);
+    pgGridLayer.pixelDensity(1);
+    preRenderGrid(pgGridLayer);
+    applySketchCanvasZoom();
+}
+
+function rebuildLayerGraphics(layer) {
+    if (!layer) return;
+    layer.grid = normalizeGridArray(layer.grid, "");
+    layer.colorGrid = normalizeGridArray(layer.colorGrid, null);
+    layer.textColorGrid = normalizeGridArray(layer.textColorGrid, "#000000");
+    layer.pgColor = createGraphics(canvasW, canvasH);
+    layer.pgColor.pixelDensity(1);
+    layer.pgText = createGraphics(canvasW, canvasH);
+    layer.pgText.pixelDensity(1);
+    if (layer.kind === 'image') {
+        const b = getImageCellBounds(layer);
+        layer.imgCellX = b.x;
+        layer.imgCellY = b.y;
+        layer.imgCellW = b.w;
+        layer.imgCellH = b.h;
+    }
+}
+
+function refreshAllLayerGraphics() {
+    const active = getActiveLayer();
+    asciiLayers.forEach(layer => {
+        rebuildLayerGraphics(layer);
+        const prevGrid = grid;
+        const prevColorGrid = colorGrid;
+        const prevTextColorGrid = textColorGrid;
+        const prevColorLayer = pgColorLayer;
+        const prevTextLayer = pgTextLayer;
+        grid = layer.grid;
+        colorGrid = layer.colorGrid;
+        textColorGrid = layer.textColorGrid;
+        pgColorLayer = layer.pgColor;
+        pgTextLayer = layer.pgText;
+        updateLayerColorVisuals();
+        updateLayerTextVisuals();
+        grid = prevGrid;
+        colorGrid = prevColorGrid;
+        textColorGrid = prevTextColorGrid;
+        pgColorLayer = prevColorLayer;
+        pgTextLayer = prevTextLayer;
+    });
+    activeLayerIndex = Math.max(0, asciiLayers.indexOf(active));
+    if (!asciiLayers[activeLayerIndex]) activeLayerIndex = 0;
+    setActiveLayer(activeLayerIndex);
+}
+
+function setCanvasGridSize(nextCols, nextRows) {
+    syncActiveAsciiLayer();
+    updateCanvasGeometry(nextCols, nextRows);
+    refreshAllLayerGraphics();
+    selectionMask = null;
+    selStart = null;
+    selEnd = null;
+    renderLayersUI();
+    renderPropertiesUI();
+    historyState = [];
+    sketchRedoHistory = [];
+    saveState();
+    saveToLocalStorage(true);
+    saveUiState();
+}
+
+function convertImageLayerToAscii(layer) {
+    if (!layer || layer.kind !== 'image' || !layer.img || layer.locked) return;
+    const chars = " .:-=+*#%@";
+    const bayer4 = [
+        [0, 8, 2, 10],
+        [12, 4, 14, 6],
+        [3, 11, 1, 9],
+        [15, 7, 13, 5]
+    ];
+    const img = layer.img;
+    img.loadPixels();
+
+    addAsciiLayer((layer.name || 'Image') + ' ASCII');
+    const target = getActiveLayer();
+    target.locked = false;
+
+    const bounds = getImageCellBounds(layer);
+
+    for (let y = 0; y < workRows; y++) {
+        for (let x = 0; x < workCols; x++) {
+            if (x < bounds.x || x >= bounds.x + bounds.w || y < bounds.y || y >= bounds.y + bounds.h) continue;
+            const localX = ((x - bounds.x + 0.5) / bounds.w) * img.width;
+            const localY = ((y - bounds.y + 0.5) / bounds.h) * img.height;
+            const sx = Math.floor(localX);
+            const sy = Math.floor(localY);
+            if (sx < 0 || sy < 0 || sx >= img.width || sy >= img.height) continue;
+            const idx = 4 * (sy * img.width + sx);
+            const r = img.pixels[idx] || 0;
+            const g = img.pixels[idx + 1] || 0;
+            const b = img.pixels[idx + 2] || 0;
+            const a = img.pixels[idx + 3] === undefined ? 255 : img.pixels[idx + 3];
+            if (a < 20) continue;
+            let bright = (r + g + b) / 3;
+            if (layer.dither) {
+                const threshold = ((bayer4[y % 4][x % 4] / 15) - 0.5) * 64;
+                bright = constrain(bright + threshold, 0, 255);
+            }
+            const charIndex = Math.floor(map(bright, 255, 0, 0, chars.length - 1));
+            grid[y][x] = chars[constrain(charIndex, 0, chars.length - 1)];
+            textColorGrid[y][x] = '#000000';
+        }
+    }
+
+    updateLayerTextVisuals();
+    updateLayerColorVisuals();
+    renderLayersUI();
+    renderPropertiesUI();
+    saveState();
+    saveToLocalStorage(true);
+    saveUiState();
+}
+
+function getImageHalfWidth(layer) {
+    return layer ? (getImageCellBounds(layer).w * cellW) / 2 : 0;
+}
+
+function getImageHalfHeight(layer) {
+    return layer ? (getImageCellBounds(layer).h * cellH) / 2 : 0;
+}
+
+function applyImageBlendMode(layer) {
+    const mode = layer.blendMode || 'normal';
+    if (mode === 'multiply') blendMode(MULTIPLY);
+    else if (mode === 'screen') blendMode(SCREEN);
+    else if (mode === 'overlay') blendMode(OVERLAY);
+    else if (mode === 'darken') blendMode(DARKEST);
+    else if (mode === 'lighten') blendMode(LIGHTEST);
+    else blendMode(BLEND);
+}
+
+function drawImageTransformBox(layer) {
+    if (!layer || layer.kind !== 'image' || !layer.img || !layer.visible) return;
+    const b = getImageCellBounds(layer);
+    const x = b.x * cellW;
+    const y = b.y * cellH;
+    const w = b.w * cellW;
+    const h = b.h * cellH;
+    push();
+    noFill();
+    stroke(layer.locked ? 160 : 0, layer.locked ? 160 : 150, 255);
+    strokeWeight(2);
+    drawingContext.setLineDash([6, 4]);
+    rect(x, y, w, h);
+    drawingContext.setLineDash([]);
+    fill(255);
+    stroke(0, 150, 255);
+    const s = 10;
+    [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].forEach(([hx, hy]) => rect(hx - s / 2, hy - s / 2, s, s));
+    pop();
+}
+
+function getImageLocalPoint(layer, x, y) {
+    const b = getImageCellBounds(layer);
+    return { x: x - (b.x * cellW), y: y - (b.y * cellH) };
+}
+
+function hitImageTransform(layer, x, y) {
+    if (!layer || layer.kind !== 'image' || !layer.img || layer.locked || !layer.visible) return null;
+    const b = getImageCellBounds(layer);
+    const left = b.x * cellW;
+    const top = b.y * cellH;
+    const w = b.w * cellW;
+    const h = b.h * cellH;
+    const handle = 12;
+    const corners = [
+        { name: 'nw', x: left, y: top },
+        { name: 'ne', x: left + w, y: top },
+        { name: 'se', x: left + w, y: top + h },
+        { name: 'sw', x: left, y: top + h }
+    ];
+    for (const corner of corners) {
+        if (Math.abs(x - corner.x) <= handle && Math.abs(y - corner.y) <= handle) return { type: 'scale', corner: corner.name };
+    }
+    if (x >= left && x <= left + w && y >= top && y <= top + h) return { type: 'move' };
+    return null;
 }
 
 function handleFile(file) {
   try {
     if (!file) return;
-    if (file.type === 'image') {
-      if (file.data) loadImage(file.data, handleImageLoad);
+    const fileName = (file.name || '').toLowerCase();
+    const fileData = file.data || '';
+    if (fileName.endsWith('.svg') || String(fileData).startsWith('data:image/svg')) {
+      importAsciiSvgText(svgDataToText(fileData));
+    } else if (file.type === 'image') {
+      if (file.data) loadImage(file.data, img => addImageLayer(img, file.data, file.name || 'Image Layer'));
     } else if (typeof file === 'string' && file.startsWith('data:image')) {
-      loadImage(file, handleImageLoad);
+      loadImage(file, img => addImageLayer(img, file, 'Image Layer'));
     }
   } catch (e) {}
+}
+
+function svgDataToText(data) {
+  if (!data) return "";
+  if (!String(data).startsWith('data:')) return String(data);
+  const parts = String(data).split(',');
+  if (parts.length < 2) return "";
+  if (parts[0].includes(';base64')) return atob(parts[1]);
+  return decodeURIComponent(parts.slice(1).join(','));
+}
+
+function clearActiveAsciiLayer() {
+  if (!asciiLayers[activeLayerIndex]) addAsciiLayer("Layer 1");
+  grid = asciiLayers[activeLayerIndex].grid;
+  colorGrid = asciiLayers[activeLayerIndex].colorGrid;
+  textColorGrid = asciiLayers[activeLayerIndex].textColorGrid;
+  pgColorLayer = asciiLayers[activeLayerIndex].pgColor;
+  pgTextLayer = asciiLayers[activeLayerIndex].pgText;
+
+  for (let y = 0; y < workRows; y++) {
+    for (let x = 0; x < workCols; x++) {
+      ensureGridCell(x, y);
+      grid[y][x] = "";
+      colorGrid[y][x] = null;
+      textColorGrid[y][x] = "#000000";
+    }
+  }
+}
+
+function normalizeGridArray(source, fallbackValue) {
+  const next = [];
+  for (let y = 0; y < workRows; y++) {
+    next[y] = [];
+    const row = Array.isArray(source && source[y]) ? source[y] : [];
+    for (let x = 0; x < workCols; x++) {
+      next[y][x] = row[x] !== undefined ? row[x] : fallbackValue;
+    }
+  }
+  return next;
+}
+
+function normalizeAsciiLayer(layer) {
+  if (!layer) return;
+  if (!layer.kind) layer.kind = 'ascii';
+  if (typeof layer.locked !== 'boolean') layer.locked = false;
+  layer.grid = normalizeGridArray(layer.grid, "");
+  layer.colorGrid = normalizeGridArray(layer.colorGrid, null);
+  layer.textColorGrid = normalizeGridArray(layer.textColorGrid, "#000000");
+}
+
+function setActiveLayer(index) {
+  if (!asciiLayers[index]) return;
+  activeLayerIndex = index;
+  const l = asciiLayers[activeLayerIndex];
+  grid = l.grid;
+  colorGrid = l.colorGrid;
+  textColorGrid = l.textColorGrid;
+  pgColorLayer = l.pgColor;
+  pgTextLayer = l.pgText;
+}
+
+function moveLayer(fromIndex, toIndex) {
+  if (!asciiLayers[fromIndex] || !asciiLayers[toIndex]) return;
+  const activeLayer = getActiveLayer();
+  const [moved] = asciiLayers.splice(fromIndex, 1);
+  asciiLayers.splice(toIndex, 0, moved);
+  activeLayerIndex = Math.max(0, asciiLayers.indexOf(activeLayer));
+  setActiveLayer(activeLayerIndex);
+  renderLayersUI();
+  renderPropertiesUI();
+  saveToLocalStorage(true);
+  saveUiState();
+}
+
+function cloneLayerForClipboard(layer) {
+  if (!layer) return null;
+  const copy = {
+    kind: layer.kind || 'ascii',
+    name: layer.name,
+    grid: normalizeGridArray(layer.grid, ""),
+    colorGrid: normalizeGridArray(layer.colorGrid, null),
+    textColorGrid: normalizeGridArray(layer.textColorGrid, "#000000"),
+    visible: layer.visible !== false,
+    locked: false,
+    imageData: layer.imageData || null,
+    img: layer.img || null,
+    imgX: layer.imgX,
+    imgY: layer.imgY,
+    imgScale: layer.imgScale,
+    imgCellX: layer.imgCellX,
+    imgCellY: layer.imgCellY,
+    imgCellW: layer.imgCellW,
+    imgCellH: layer.imgCellH,
+    imgRotate: layer.imgRotate,
+    imgOpacity: layer.imgOpacity,
+    blendMode: layer.blendMode || 'normal',
+    dither: !!layer.dither
+  };
+  return copy;
+}
+
+function copyActiveLayer() {
+  layerClipboard = cloneLayerForClipboard(getActiveLayer());
+  clipboard = null;
+}
+
+function insertLayerFromClipboard(source, nameSuffix = ' Copy') {
+  if (!source) return;
+  addAsciiLayer((source.name || 'Layer') + nameSuffix);
+  const layer = getActiveLayer();
+  layer.kind = source.kind || 'ascii';
+  layer.name = (source.name || 'Layer') + nameSuffix;
+  layer.grid = normalizeGridArray(source.grid, "");
+  layer.colorGrid = normalizeGridArray(source.colorGrid, null);
+  layer.textColorGrid = normalizeGridArray(source.textColorGrid, "#000000");
+  layer.visible = source.visible !== false;
+  layer.locked = false;
+  if (layer.kind === 'image') {
+    layer.imageData = source.imageData || null;
+    layer.img = source.img || null;
+    layer.imgX = source.imgX === undefined ? canvasW / 2 : source.imgX;
+    layer.imgY = source.imgY === undefined ? canvasH / 2 : source.imgY;
+    layer.imgScale = source.imgScale || 1;
+    layer.imgCellX = source.imgCellX;
+    layer.imgCellY = source.imgCellY;
+    layer.imgCellW = source.imgCellW;
+    layer.imgCellH = source.imgCellH;
+    layer.imgRotate = source.imgRotate || 0;
+    layer.imgOpacity = source.imgOpacity === undefined ? 180 : source.imgOpacity;
+    layer.blendMode = source.blendMode || 'normal';
+    layer.dither = !!source.dither;
+    if (!layer.img && layer.imageData) loadImage(layer.imageData, img => { layer.img = img; });
+  }
+  setActiveLayer(activeLayerIndex);
+  updateLayerColorVisuals();
+  updateLayerTextVisuals();
+  renderLayersUI();
+  renderPropertiesUI();
+  saveToLocalStorage(true);
+  saveUiState();
+}
+
+function pasteLayerClipboard() {
+  insertLayerFromClipboard(layerClipboard);
+}
+
+function duplicateActiveLayer() {
+  insertLayerFromClipboard(cloneLayerForClipboard(getActiveLayer()));
+}
+
+function deleteActiveLayer() {
+  const layer = getActiveLayer();
+  if (!layer || layer.locked) return;
+  if (asciiLayers.length <= 1) {
+    asciiLayers = [];
+    addAsciiLayer('Layer 1');
+    selectionMask = null;
+    selStart = null;
+    selEnd = null;
+    saveToLocalStorage(true);
+    saveUiState();
+    return;
+  }
+  asciiLayers.splice(activeLayerIndex, 1);
+  activeLayerIndex = constrain(activeLayerIndex, 0, asciiLayers.length - 1);
+  setActiveLayer(activeLayerIndex);
+  selectionMask = null;
+  selStart = null;
+  selEnd = null;
+  renderLayersUI();
+  renderPropertiesUI();
+  saveToLocalStorage(true);
+  saveUiState();
+}
+
+function cutActiveLayer() {
+  const layer = getActiveLayer();
+  if (!layer || layer.locked) return;
+  copyActiveLayer();
+  deleteActiveLayer();
+}
+
+function getActiveLayer() {
+  return asciiLayers[activeLayerIndex] || null;
+}
+
+function isActiveLayerLocked() {
+  const layer = getActiveLayer();
+  return !!(layer && layer.locked);
+}
+
+function isActiveAsciiLayerEditable() {
+  const layer = getActiveLayer();
+  return !!(layer && layer.kind !== 'image' && !layer.locked);
+}
+
+function importAsciiSvgText(svgText) {
+  if (!svgText) return;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgText, "image/svg+xml");
+  if (doc.querySelector('parsererror')) {
+    alert("Could not import this SVG file.");
+    return;
+  }
+
+  if (asciiLayers.length === 0) addAsciiLayer("Imported SVG");
+  activeLayerIndex = 0;
+  asciiLayers.forEach((layer, index) => {
+    layer.visible = index === 0;
+    if (index === 0) layer.name = "Imported SVG";
+  });
+  clearActiveAsciiLayer();
+
+  doc.querySelectorAll('rect').forEach(rect => {
+    const x = parseFloat(rect.getAttribute('x'));
+    const y = parseFloat(rect.getAttribute('y'));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const gx = Math.round(x / cellW);
+    const gy = Math.round(y / cellH);
+    if (!isValidCell(gx, gy)) return;
+    const fill = rect.getAttribute('fill');
+    if (fill && fill !== '#ffffff' && fill !== 'white') colorGrid[gy][gx] = fill;
+  });
+
+  doc.querySelectorAll('text').forEach(node => {
+    const x = parseFloat(node.getAttribute('x'));
+    const y = parseFloat(node.getAttribute('y'));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const gx = Math.round((x - (cellW / 2)) / cellW);
+    const gy = Math.round((y - (cellH / 2)) / cellH);
+    if (!isValidCell(gx, gy)) return;
+    const ch = node.textContent || "";
+    grid[gy][gx] = ch.slice(0, 1);
+    textColorGrid[gy][gx] = node.getAttribute('fill') || "#000000";
+  });
+
+  syncActiveAsciiLayer();
+  updateLayerColorVisuals();
+  updateLayerTextVisuals();
+  renderLayersUI();
+  saveState();
+  saveToLocalStorage(true);
 }
 
 function getCorrectedMouse() {
@@ -517,23 +1324,48 @@ function getCorrectedMouse() {
   return { x: x, y: y };
 }
 
+function snapCellX(value) {
+  return constrain(Math.round(value), 0, workCols);
+}
+
+function snapCellY(value) {
+  return constrain(Math.round(value), 0, workRows);
+}
+
+function getImageCellBounds(layer) {
+  if (!layer) return { x: 0, y: 0, w: 1, h: 1 };
+  if (layer.imgCellW === undefined || layer.imgCellH === undefined) {
+    const pxW = layer.img ? layer.img.width * (layer.imgScale || 1) : cellW;
+    const pxH = layer.img ? layer.img.height * (layer.imgScale || 1) : cellH;
+    layer.imgCellW = constrain(Math.max(1, Math.round(pxW / cellW)), 1, workCols);
+    layer.imgCellH = constrain(Math.max(1, Math.round(pxH / cellH)), 1, workRows);
+    layer.imgCellX = snapCellX(((layer.imgX || canvasW / 2) / cellW) - layer.imgCellW / 2);
+    layer.imgCellY = snapCellY(((layer.imgY || canvasH / 2) / cellH) - layer.imgCellH / 2);
+  }
+  layer.imgCellW = constrain(Math.max(1, Math.round(layer.imgCellW)), 1, workCols);
+  layer.imgCellH = constrain(Math.max(1, Math.round(layer.imgCellH)), 1, workRows);
+  layer.imgCellX = constrain(Math.round(layer.imgCellX || 0), 0, workCols - layer.imgCellW);
+  layer.imgCellY = constrain(Math.round(layer.imgCellY || 0), 0, workRows - layer.imgCellH);
+  return { x: layer.imgCellX, y: layer.imgCellY, w: layer.imgCellW, h: layer.imgCellH };
+}
+
 // --- HISTORY, UNDO/REDO & CLIPBOARD LOGIC ---
 function saveState(silent) {
   try {
     const gCopy = grid.map(row => Array.isArray(row) ? row.slice() : []);
     const cCopy = colorGrid.map(row => Array.isArray(row) ? row.slice() : []);
     const tCopy = textColorGrid.map(row => Array.isArray(row) ? row.slice() : []);
-    history.push({ grid: gCopy, colorGrid: cCopy, textColorGrid: tCopy });
-    if (history.length > MAX_HISTORY) history.shift();
+    historyState.push({ grid: gCopy, colorGrid: cCopy, textColorGrid: tCopy });
+    if (historyState.length > MAX_HISTORY) historyState.shift();
     sketchRedoHistory = []; 
   } catch (e) {}
 }
 
 function undoSketch() {
-    if (history.length > 1) { 
-        let currentState = history.pop();
+    if (historyState.length > 1) { 
+        let currentState = historyState.pop();
         sketchRedoHistory.push(currentState);
-        let prevState = history[history.length - 1];
+        let prevState = historyState[historyState.length - 1];
         
         grid = prevState.grid.map(row => [...row]);
         colorGrid = prevState.colorGrid.map(row => [...row]);
@@ -545,13 +1377,14 @@ function undoSketch() {
         
         updateLayerTextVisuals();
         updateLayerColorVisuals();
+        saveToLocalStorage(true);
     }
 }
 
 function redoSketch() {
     if (sketchRedoHistory.length > 0) {
         let nextState = sketchRedoHistory.pop();
-        history.push(nextState);
+        historyState.push(nextState);
         
         grid = nextState.grid.map(row => [...row]);
         colorGrid = nextState.colorGrid.map(row => [...row]);
@@ -563,22 +1396,47 @@ function redoSketch() {
         
         updateLayerTextVisuals();
         updateLayerColorVisuals();
+        saveToLocalStorage(true);
     }
 }
 
+function getSelectionBounds() {
+    if (selStart && selEnd) {
+        return {
+            minX: Math.min(selStart.x, selEnd.x),
+            maxX: Math.max(selStart.x, selEnd.x),
+            minY: Math.min(selStart.y, selEnd.y),
+            maxY: Math.max(selStart.y, selEnd.y),
+            useMask: false
+        };
+    }
+    if (selectionMask) {
+        let minX = workCols, minY = workRows, maxX = -1, maxY = -1;
+        for (let y = 0; y < workRows; y++) {
+            for (let x = 0; x < workCols; x++) {
+                if (selectionMask[y] && selectionMask[y][x]) {
+                    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        if (maxX >= minX && maxY >= minY) return { minX, maxX, minY, maxY, useMask: true };
+    }
+    return null;
+}
+
 function copySelection() {
-    if (!selStart || !selEnd) return;
-    let minX = Math.min(selStart.x, selEnd.x);
-    let maxX = Math.max(selStart.x, selEnd.x);
-    let minY = Math.min(selStart.y, selEnd.y);
-    let maxY = Math.max(selStart.y, selEnd.y);
+    const bounds = getSelectionBounds();
+    if (!bounds) return;
+    let { minX, maxX, minY, maxY, useMask } = bounds;
+    layerClipboard = null;
     
     clipboard = { w: maxX - minX + 1, h: maxY - minY + 1, data: [] };
     
     for (let y = minY; y <= maxY; y++) {
         let row = [];
         for (let x = minX; x <= maxX; x++) {
-            if (isValidCell(x, y)) {
+            if (isValidCell(x, y) && (!useMask || (selectionMask[y] && selectionMask[y][x]))) {
                 row.push({ char: grid[y][x], color: colorGrid[y][x], textColor: textColorGrid[y][x] });
             } else {
                 row.push({ char: "", color: null, textColor: "#000000" });
@@ -589,17 +1447,19 @@ function copySelection() {
 }
 
 function cutSelection() {
-    if (!selStart || !selEnd) return;
+    if (!isActiveAsciiLayerEditable()) return;
+    const bounds = getSelectionBounds();
+    if (!bounds) return;
     copySelection(); 
-    
-    let minX = Math.min(selStart.x, selEnd.x);
-    let maxX = Math.max(selStart.x, selEnd.x);
-    let minY = Math.min(selStart.y, selEnd.y);
-    let maxY = Math.max(selStart.y, selEnd.y);
-    
-    for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-            if (isValidCell(x, y)) {
+    clearSelectionCells(bounds);
+}
+
+function clearSelectionCells(bounds) {
+    const target = bounds || getSelectionBounds();
+    if (!target || !isActiveAsciiLayerEditable()) return;
+    for (let y = target.minY; y <= target.maxY; y++) {
+        for (let x = target.minX; x <= target.maxX; x++) {
+            if (isValidCell(x, y) && (!target.useMask || (selectionMask[y] && selectionMask[y][x]))) {
                 grid[y][x] = "";
                 colorGrid[y][x] = null;
                 textColorGrid[y][x] = "#000000";
@@ -608,13 +1468,21 @@ function cutSelection() {
     }
     updateLayerTextVisuals();
     updateLayerColorVisuals();
+    selectionMask = null;
     selStart = null;
     selEnd = null;
     saveState();
+    saveToLocalStorage(true);
+}
+
+function deleteSelection() {
+    if (getSelectionBounds()) clearSelectionCells();
+    else deleteActiveLayer();
 }
 
 function pasteClipboard() {
     if (!clipboard) return;
+    if (!isActiveAsciiLayerEditable()) return;
     
     let m = getCorrectedMouse();
     let x = 0; let y = 0;
@@ -630,12 +1498,13 @@ function pasteClipboard() {
     floatingX = x;
     floatingY = y;
     isDraggingSelection = true;
-    toolMode = 'MOUSE'; // Tự động bật MOUSE tool cho phép kéo thả
+    setToolMode('MOUSE'); // Tự động bật MOUSE tool cho phép kéo thả
     selStart = null; selEnd = null; 
 }
 
 function commitFloatingSelection() {
     if (!isDraggingSelection || !clipboard) return;
+    if (!isActiveAsciiLayerEditable()) return;
     for (let cy = 0; cy < clipboard.h; cy++) {
         for (let cx = 0; cx < clipboard.w; cx++) {
             let targetX = floatingX + cx;
@@ -684,13 +1553,15 @@ function addAsciiLayer(name = 'Layer') {
   }
 
   const layer = {
+    kind: 'ascii',
     name: name,
     pgColor: pgC,
     pgText: pgT,
     grid: layerGrid,
     colorGrid: layerColorGrid,
     textColorGrid: layerTextColorGrid,
-    visible: true
+    visible: true,
+    locked: false
   };
 
   asciiLayers.push(layer);
@@ -705,6 +1576,32 @@ function addAsciiLayer(name = 'Layer') {
   updateLayerColorVisuals();
   updateLayerTextVisuals();
   renderLayersUI();
+}
+
+function addImageLayer(img, dataUrl, name = 'Image Layer') {
+  addAsciiLayer(name);
+  const layer = asciiLayers[activeLayerIndex];
+  layer.kind = 'image';
+  layer.name = name;
+  layer.img = img;
+  layer.imageData = dataUrl || null;
+  layer.imgCellW = constrain(Math.max(1, Math.round((canvasW * 0.5) / cellW)), 1, workCols);
+  layer.imgCellH = constrain(Math.max(1, Math.round((layer.imgCellW * (img.height / Math.max(1, img.width)) * cellW) / cellH)), 1, workRows);
+  layer.imgCellX = Math.floor((workCols - layer.imgCellW) / 2);
+  layer.imgCellY = Math.floor((workRows - layer.imgCellH) / 2);
+  layer.imgX = (layer.imgCellX + layer.imgCellW / 2) * cellW;
+  layer.imgY = (layer.imgCellY + layer.imgCellH / 2) * cellH;
+  layer.imgScale = (layer.imgCellW * cellW) / Math.max(1, img.width);
+  layer.imgRotate = 0;
+  layer.imgOpacity = 180;
+  layer.blendMode = 'normal';
+  layer.dither = false;
+  updateLayerColorVisuals();
+  updateLayerTextVisuals();
+  renderLayersUI();
+  renderPropertiesUI();
+  saveToLocalStorage(true);
+  saveUiState();
 }
 
 function draw() {
@@ -722,16 +1619,33 @@ function draw() {
     } else cursor(CROSS);
   } else cursor(ARROW);
 
-  clear(); 
+  background(208);
   
   push();
   translate(-viewX, -viewY);
 
+  fill(255);
+  noStroke();
+  rect(0, 0, viewW, viewH);
+
   image(pgGridLayer, 0, 0);
+  drawGridHoverGuide();
 
   for (let i = 0; i < asciiLayers.length; i++) {
       let l = asciiLayers[i];
       if (l.visible) {
+          if (l.kind === 'image' && l.img) {
+              const b = getImageCellBounds(l);
+              push();
+              applyImageBlendMode(l);
+              tint(255, l.imgOpacity === undefined ? 180 : l.imgOpacity);
+              imageMode(CORNER);
+              image(l.img, b.x * cellW, b.y * cellH, b.w * cellW, b.h * cellH);
+              noTint();
+              blendMode(BLEND);
+              pop();
+              continue;
+          }
           blendMode(MULTIPLY);
           if (l.pgColor) image(l.pgColor, 0, 0);
           blendMode(BLEND);
@@ -778,6 +1692,8 @@ function draw() {
   if ((toolMode.startsWith('SHAPE_') || toolMode === 'TEXT' || toolMode === 'SELECT' || toolMode === 'MOUSE') && selStart && selEnd && !isDraggingSelection) {
       drawToolPreview();
   }
+
+  drawImageTransformBox(getActiveLayer());
 
   drawSelectionMask();
   pop(); 
@@ -862,6 +1778,7 @@ function updateLayerColorVisuals() {
 }
 
 function setAsciiCell(x, y, ch) {
+  if (!isActiveAsciiLayerEditable()) return;
   if (selectionMask && !selectionMask[y][x]) return; 
   ensureGridCell(x, y);
   grid[y][x] = ch;
@@ -869,6 +1786,7 @@ function setAsciiCell(x, y, ch) {
 }
 
 function setGridColor(x, y, col) {
+  if (!isActiveAsciiLayerEditable()) return;
   if (selectionMask && !selectionMask[y][x]) return;
   ensureGridCell(x, y);
   colorGrid[y][x] = col;
@@ -891,8 +1809,23 @@ function drawSelectionMask() {
   }
 }
 
+function drawGridHoverGuide() {
+  if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
+  const gx = Math.floor((mouseX + viewX) / cellW);
+  const gy = Math.floor((mouseY + viewY) / cellH);
+  if (!isValidCell(gx, gy)) return;
+  noStroke();
+  fill(120, 120, 120, 38);
+  rect(0, gy * cellH, viewW, cellH);
+  rect(gx * cellW, 0, cellW, viewH);
+  noFill();
+  stroke(0, 150, 255);
+  strokeWeight(1);
+  rect(gx * cellW, gy * cellH, cellW, cellH);
+}
+
 function drawViewportOverlay() {
-  fill(250); 
+  fill(208);
   noStroke();
   rect(viewW - viewX, -viewY, width, height); 
   rect(-viewX, viewH - viewY, width, height); 
@@ -959,33 +1892,68 @@ function drawToolPreview() {
 
 function magicWandSelect(startX, startY) {
   if (!isValidCell(startX, startY)) return;
-  let targetChar = grid[startY][startX];
+  const targetChar = grid[startY][startX];
+  const targetColor = getMagicWandCellColor(startX, startY);
   
   if (!keyIsDown(SHIFT) || !selectionMask) {
       selectionMask = [];
-      for (let y = 0; y < rows; y++) selectionMask[y] = new Array(cols).fill(false);
+      for (let y = 0; y < workRows; y++) selectionMask[y] = new Array(workCols).fill(false);
   }
   
   for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
-          if (grid[y][x] === targetChar) {
+          const sameChar = grid[y][x] === targetChar;
+          const sameColor = getMagicWandCellColor(x, y) === targetColor;
+              
+              let isMatch = false;
+              if (magicWandMatchMode === 'color') {
+                  isMatch = sameColor;
+              } else {
+                  // Match char mode: Nếu là ô trống (không kí tự), yêu cầu phải cùng màu (để phân biệt với ô space thường)
+                  if (targetChar === "") {
+                      isMatch = sameChar && sameColor;
+                  } else {
+                      isMatch = sameChar;
+                  }
+              }
+              
+              if (isMatch) {
               selectionMask[y][x] = true;
           }
       }
   }
 }
 
+function normalizeMagicWandColor(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (Array.isArray(value)) return value.map(v => Math.round(Number(v) || 0)).join(',');
+  if (value.levels && Array.isArray(value.levels)) return value.levels.map(v => Math.round(Number(v) || 0)).join(',');
+  return String(value).trim().toLowerCase();
+}
+
+function getMagicWandCellColor(x, y) {
+  const value = colorGrid[y] ? colorGrid[y][x] : null;
+  return normalizeMagicWandColor(value);
+}
+
 function floodFill(startX, startY, targetChar, replaceChar) {
   if (targetChar === replaceChar) return;
+  const targetColor = colorGrid[startY][startX];
   let queue = [{x: startX, y: startY}];
   while (queue.length > 0) {
       let p = queue.shift();
-      if (isValidCell(p.x, p.y) && grid[p.y][p.x] === targetChar && (!selectionMask || selectionMask[p.y][p.x])) {
-          setAsciiCell(p.x, p.y, replaceChar);
-          queue.push({x: p.x + 1, y: p.y});
-          queue.push({x: p.x - 1, y: p.y});
-          queue.push({x: p.x, y: p.y + 1});
-          queue.push({x: p.x, y: p.y - 1});
+      if (isValidCell(p.x, p.y)) {
+          let sameChar = grid[p.y][p.x] === targetChar;
+          let sameColor = colorGrid[p.y][p.x] === targetColor;
+          let isMatch = sameChar && (targetChar !== "" || sameColor);
+          
+          if (isMatch && (!selectionMask || selectionMask[p.y][p.x])) {
+              setAsciiCell(p.x, p.y, replaceChar);
+              queue.push({x: p.x + 1, y: p.y});
+              queue.push({x: p.x - 1, y: p.y});
+              queue.push({x: p.x, y: p.y + 1});
+              queue.push({x: p.x, y: p.y - 1});
+          }
       }
   }
 }
@@ -1137,14 +2105,35 @@ function mousePressed() {
   prevGridX = -1; prevGridY = -1;
   let m = getCorrectedMouse();
   if (m.x < 0 || m.x > width || m.y < 0 || m.y > height) return;
+  let realX = m.x + viewX;
+  let realY = m.y + viewY;
+
+  for (let i = asciiLayers.length - 1; i >= 0; i--) {
+      const layer = asciiLayers[i];
+      const hit = hitImageTransform(layer, realX, realY);
+      if (hit) {
+          setActiveLayer(i);
+          renderLayersUI();
+          renderPropertiesUI();
+          imageTransformDrag = {
+              type: hit.type,
+              corner: hit.corner,
+              startX: realX,
+              startY: realY,
+              originCellX: getImageCellBounds(layer).x,
+              originCellY: getImageCellBounds(layer).y,
+              originCellW: getImageCellBounds(layer).w,
+              originCellH: getImageCellBounds(layer).h
+          };
+          return;
+      }
+  }
   
   if (toolMode === 'GRAB') {
     prevGrabMouse = {x: m.x, y: m.y};
     return;
   }
 
-  let realX = m.x + viewX;
-  let realY = m.y + viewY;
   let mx = floor(constrain(realX, 0, width-1) / cellW);
   let my = floor(constrain(realY, 0, height-1) / cellH);
 
@@ -1190,7 +2179,7 @@ function mousePressed() {
   if (keyIsDown(16) || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') { 
       selStart = {x: mx, y: my}; 
       selEnd = {x: mx, y: my}; 
-      if (!toolMode.startsWith('SHAPE_') && toolMode !== 'TEXT') toolMode = "SELECT";
+      if (!toolMode.startsWith('SHAPE_') && toolMode !== 'TEXT') setToolMode("SELECT", { render: false });
       isShiftSelecting = true; 
       return; 
   }
@@ -1199,6 +2188,64 @@ function mousePressed() {
 
   handleInput(mx, my);
 }
+
+// --- GLOBAL KEYBOARD SHORTCUTS ---
+window.addEventListener('keydown', function(e) {
+    if (activeTab !== 'tab-sketch') return;
+    
+    // Bỏ qua nếu đang gõ text vào input/textarea
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || activeEl.isContentEditable)) return;
+
+    // Nhận diện cả phím Control (Windows) và phím Command (Mac)
+    const isCtrl = e.ctrlKey || e.metaKey;
+    const key = String(e.key || '').toLowerCase();
+    const code = String(e.code || '');
+
+    if (isCtrl) {
+        if (code === 'KeyC' || key === 'c') {
+            e.preventDefault(); e.stopPropagation();
+            if (getSelectionBounds()) copySelection();
+            else copyActiveLayer();
+        } else if (code === 'KeyX' || key === 'x') {
+            e.preventDefault(); e.stopPropagation();
+            if (getSelectionBounds()) cutSelection();
+            else cutActiveLayer();
+        } else if (code === 'KeyV' || key === 'v') {
+            e.preventDefault(); e.stopPropagation();
+            if (clipboard) pasteClipboard();
+            else pasteLayerClipboard();
+        } else if (code === 'KeyZ' || key === 'z') {
+            e.preventDefault(); e.stopPropagation();
+            if (isDraggingSelection) {
+                isDraggingSelection = false;
+                return;
+            }
+            if (e.shiftKey) redoSketch();
+            else undoSketch();
+        } else if (code === 'KeyD' || key === 'd') {
+            e.preventDefault(); e.stopPropagation();
+            duplicateActiveLayer();
+        }
+    } else if (code === 'Delete' || code === 'Backspace' || key === 'delete' || key === 'backspace') {
+        e.preventDefault(); e.stopPropagation();
+        if (isDraggingSelection) {
+            isDraggingSelection = false;
+            clipboard = null;
+        } else {
+            deleteSelection();
+        }
+    } else if (code === 'Escape' || key === 'escape') {
+        e.preventDefault(); e.stopPropagation();
+        if (isDraggingSelection) {
+            commitFloatingSelection();
+        } else {
+            selectionMask = null;
+            selStart = null;
+            selEnd = null;
+        }
+    }
+}, true);
 
 function mouseDragged() {
   if (activeTab !== 'tab-sketch') return;
@@ -1209,6 +2256,51 @@ function mouseDragged() {
   let realY = m.y + viewY;
   let mx = floor(constrain(realX, 0, width-1) / cellW);
   let my = floor(constrain(realY, 0, height-1) / cellH);
+
+  if (imageTransformDrag) {
+      const layer = getActiveLayer();
+      if (layer && layer.kind === 'image' && !layer.locked) {
+          const startCellX = Math.floor(imageTransformDrag.startX / cellW);
+          const startCellY = Math.floor(imageTransformDrag.startY / cellH);
+          const nowCellX = Math.floor(realX / cellW);
+          const nowCellY = Math.floor(realY / cellH);
+          const dxCell = nowCellX - startCellX;
+          const dyCell = nowCellY - startCellY;
+          if (imageTransformDrag.type === 'move') {
+              layer.imgCellX = constrain(imageTransformDrag.originCellX + dxCell, 0, workCols - imageTransformDrag.originCellW);
+              layer.imgCellY = constrain(imageTransformDrag.originCellY + dyCell, 0, workRows - imageTransformDrag.originCellH);
+          } else if (imageTransformDrag.type === 'scale') {
+              let x = imageTransformDrag.originCellX;
+              let y = imageTransformDrag.originCellY;
+              let w = imageTransformDrag.originCellW;
+              let h = imageTransformDrag.originCellH;
+              if (imageTransformDrag.corner.includes('e')) w = Math.max(1, imageTransformDrag.originCellW + dxCell);
+              if (imageTransformDrag.corner.includes('s')) h = Math.max(1, imageTransformDrag.originCellH + dyCell);
+              if (imageTransformDrag.corner.includes('w')) {
+                  x = imageTransformDrag.originCellX + dxCell;
+                  w = Math.max(1, imageTransformDrag.originCellW - dxCell);
+              }
+              if (imageTransformDrag.corner.includes('n')) {
+                  y = imageTransformDrag.originCellY + dyCell;
+                  h = Math.max(1, imageTransformDrag.originCellH - dyCell);
+              }
+              x = constrain(x, 0, workCols - 1);
+              y = constrain(y, 0, workRows - 1);
+              w = constrain(w, 1, workCols - x);
+              h = constrain(h, 1, workRows - y);
+              layer.imgCellX = x;
+              layer.imgCellY = y;
+              layer.imgCellW = w;
+              layer.imgCellH = h;
+          }
+          const b = getImageCellBounds(layer);
+          layer.imgX = (b.x + b.w / 2) * cellW;
+          layer.imgY = (b.y + b.h / 2) * cellH;
+          layer.imgScale = (b.w * cellW) / Math.max(1, layer.img.width);
+          renderPropertiesUI();
+      }
+      return;
+  }
 
   if (toolMode === 'MOUSE') {
       if (isDraggingSelection) {
@@ -1247,9 +2339,17 @@ function mouseDragged() {
 
 function mouseReleased() {
   if (activeTab !== 'tab-sketch') return;
+
+  if (imageTransformDrag) {
+      imageTransformDrag = null;
+      saveToLocalStorage(true);
+      saveUiState();
+      return;
+  }
   
   if (toolMode === 'MOUSE') {
       prevGrabMouse = null;
+      saveUiState();
       return; 
   }
 
@@ -1282,6 +2382,7 @@ function mouseReleased() {
   else if (toolMode === "DRAW" || toolMode === "ERASE" || toolMode === "FILL" || toolMode === "INK") saveState(); 
   
   prevGrabMouse = null;
+  saveUiState();
 }
 
 function loadFromLocalStorage() {
@@ -1290,44 +2391,134 @@ function loadFromLocalStorage() {
     if (!raw) return;
     const obj = JSON.parse(raw);
 
+    if (Number.isInteger(obj.canvasCols) && Number.isInteger(obj.canvasRows)) {
+      updateCanvasGeometry(obj.canvasCols, obj.canvasRows);
+    }
+    if (obj.canvasRatioPreset) canvasRatioPreset = obj.canvasRatioPreset;
+
+    if (obj.historyState) historyState = obj.historyState;
+    if (obj.sketchRedoHistory) sketchRedoHistory = obj.sketchRedoHistory;
+
     if (obj.asciiLayers && Array.isArray(obj.asciiLayers) && obj.asciiLayers.length > 0) {
       asciiLayers = [];
       for (let i = 0; i < obj.asciiLayers.length; i++) {
-        addAsciiLayer(obj.asciiLayers[i].name || ('Layer ' + i));
+        const storedName = obj.asciiLayers[i].name === 'Background' && i === 0 ? 'Layer 1' : (obj.asciiLayers[i].name || ('Layer ' + (i + 1)));
+        addAsciiLayer(storedName);
         if (obj.asciiLayers[i].grid) asciiLayers[i].grid = obj.asciiLayers[i].grid;
+        if (obj.asciiLayers[i].colorGrid) asciiLayers[i].colorGrid = obj.asciiLayers[i].colorGrid;
+        if (obj.asciiLayers[i].textColorGrid) asciiLayers[i].textColorGrid = obj.asciiLayers[i].textColorGrid;
+        if (typeof obj.asciiLayers[i].visible === 'boolean') asciiLayers[i].visible = obj.asciiLayers[i].visible;
+        if (typeof obj.asciiLayers[i].locked === 'boolean') asciiLayers[i].locked = obj.asciiLayers[i].locked;
+        if (obj.asciiLayers[i].kind) asciiLayers[i].kind = obj.asciiLayers[i].kind;
+        if (asciiLayers[i].kind === 'image') {
+          asciiLayers[i].imageData = obj.asciiLayers[i].imageData || null;
+          asciiLayers[i].imgX = obj.asciiLayers[i].imgX || canvasW / 2;
+          asciiLayers[i].imgY = obj.asciiLayers[i].imgY || canvasH / 2;
+          asciiLayers[i].imgScale = obj.asciiLayers[i].imgScale || 1;
+          asciiLayers[i].imgCellX = obj.asciiLayers[i].imgCellX;
+          asciiLayers[i].imgCellY = obj.asciiLayers[i].imgCellY;
+          asciiLayers[i].imgCellW = obj.asciiLayers[i].imgCellW;
+          asciiLayers[i].imgCellH = obj.asciiLayers[i].imgCellH;
+          asciiLayers[i].imgRotate = obj.asciiLayers[i].imgRotate || 0;
+          asciiLayers[i].imgOpacity = obj.asciiLayers[i].imgOpacity === undefined ? 180 : obj.asciiLayers[i].imgOpacity;
+          asciiLayers[i].blendMode = obj.asciiLayers[i].blendMode || 'normal';
+          asciiLayers[i].dither = !!obj.asciiLayers[i].dither;
+          if (asciiLayers[i].imageData) {
+            const layerRef = asciiLayers[i];
+            loadImage(asciiLayers[i].imageData, img => { layerRef.img = img; });
+          }
+        }
+        normalizeAsciiLayer(asciiLayers[i]);
       }
     } 
     if (asciiLayers.length === 0) {
-        addAsciiLayer("Background");
+        addAsciiLayer("Layer 1");
     }
 
-    activeLayerIndex = 0;
-    grid = asciiLayers[0].grid;
-    colorGrid = asciiLayers[0].colorGrid;
-    textColorGrid = asciiLayers[0].textColorGrid;
-    pgColorLayer = asciiLayers[0].pgColor;
-    pgTextLayer = asciiLayers[0].pgText;
+    activeLayerIndex = Number.isInteger(obj.activeLayerIndex) && asciiLayers[obj.activeLayerIndex] ? obj.activeLayerIndex : 0;
+    grid = asciiLayers[activeLayerIndex].grid;
+    colorGrid = asciiLayers[activeLayerIndex].colorGrid;
+    textColorGrid = asciiLayers[activeLayerIndex].textColorGrid;
+    pgColorLayer = asciiLayers[activeLayerIndex].pgColor;
+    pgTextLayer = asciiLayers[activeLayerIndex].pgText;
 
     if (obj.grid && Array.isArray(obj.grid)) grid = obj.grid;
     if (obj.colorGrid && Array.isArray(obj.colorGrid)) colorGrid = obj.colorGrid;
     if (obj.textColorGrid && Array.isArray(obj.textColorGrid)) textColorGrid = obj.textColorGrid;
+    syncActiveAsciiLayer();
+    asciiLayers.forEach(normalizeAsciiLayer);
+    grid = asciiLayers[activeLayerIndex].grid;
+    colorGrid = asciiLayers[activeLayerIndex].colorGrid;
+    textColorGrid = asciiLayers[activeLayerIndex].textColorGrid;
+    asciiLayers.forEach(layer => {
+      const prevGrid = grid;
+      const prevColorGrid = colorGrid;
+      const prevTextColorGrid = textColorGrid;
+      const prevColorLayer = pgColorLayer;
+      const prevTextLayer = pgTextLayer;
+      grid = layer.grid;
+      colorGrid = layer.colorGrid;
+      textColorGrid = layer.textColorGrid;
+      pgColorLayer = layer.pgColor;
+      pgTextLayer = layer.pgText;
+      updateLayerColorVisuals();
+      updateLayerTextVisuals();
+      grid = prevGrid;
+      colorGrid = prevColorGrid;
+      textColorGrid = prevTextColorGrid;
+      pgColorLayer = prevColorLayer;
+      pgTextLayer = prevTextLayer;
+    });
     
   } catch (e) {
      if (asciiLayers.length === 0) {
-        addAsciiLayer("Background");
+        addAsciiLayer("Layer 1");
      }
   }
 }
 
 function saveToLocalStorage(silent) {
   try {
-    const obj = { grid: grid, colorGrid: colorGrid, textColorGrid: textColorGrid, asciiLayers: asciiLayers.map(l => ({ name: l.name, grid: l.grid })) };
+    syncActiveAsciiLayer();
+    const obj = {
+      grid: grid,
+      colorGrid: colorGrid,
+      textColorGrid: textColorGrid,
+      canvasCols: workCols,
+      canvasRows: workRows,
+      canvasRatioPreset: canvasRatioPreset,
+      activeLayerIndex: activeLayerIndex,
+      historyState: historyState,
+      sketchRedoHistory: sketchRedoHistory,
+      asciiLayers: asciiLayers.map(l => ({
+        name: l.name,
+        grid: l.grid,
+        colorGrid: l.colorGrid,
+        textColorGrid: l.textColorGrid,
+        visible: l.visible,
+        locked: !!l.locked,
+        kind: l.kind || 'ascii',
+        imageData: l.imageData || null,
+        imgX: l.imgX,
+        imgY: l.imgY,
+        imgScale: l.imgScale,
+        imgCellX: l.imgCellX,
+        imgCellY: l.imgCellY,
+        imgCellW: l.imgCellW,
+        imgCellH: l.imgCellH,
+        imgRotate: l.imgRotate,
+        imgOpacity: l.imgOpacity,
+        blendMode: l.blendMode || 'normal',
+        dither: !!l.dither
+      }))
+    };
     localStorage.setItem('mi_sketch_state', JSON.stringify(obj));
   } catch (e) {}
 }
 
 function handleInput(x, y) {
   if (!isValidCell(x, y)) return;
+  if (!isActiveAsciiLayerEditable()) return;
   if (toolMode === 'DRAW') {
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
     if (isEraser) ch = "";
@@ -1349,6 +2540,151 @@ function ensureGridCell(x, y) {
   if (!textColorGrid[y]) textColorGrid[y] = [];
 }
 
+function getComposedAsciiCell(x, y) {
+  let composed = { char: "", color: null, textColor: "#000000" };
+  for (let i = 0; i < asciiLayers.length; i++) {
+    const layer = asciiLayers[i];
+    if (!layer || !layer.visible) continue;
+    const layerColor = layer.colorGrid && layer.colorGrid[y] ? layer.colorGrid[y][x] : null;
+    const layerChar = layer.grid && layer.grid[y] ? layer.grid[y][x] : "";
+    if (layerColor) composed.color = layerColor;
+    if (layerChar !== "") {
+      composed.char = layerChar;
+      composed.textColor = layer.textColorGrid && layer.textColorGrid[y] ? (layer.textColorGrid[y][x] || "#000000") : "#000000";
+    }
+  }
+  return composed;
+}
+
+function syncActiveAsciiLayer() {
+  if (!asciiLayers[activeLayerIndex]) return;
+  asciiLayers[activeLayerIndex].grid = grid;
+  asciiLayers[activeLayerIndex].colorGrid = colorGrid;
+  asciiLayers[activeLayerIndex].textColorGrid = textColorGrid;
+}
+
+function getAsciiExportText() {
+  syncActiveAsciiLayer();
+  const lines = [];
+  for (let y = 0; y < workRows; y++) {
+    let line = "";
+    for (let x = 0; x < workCols; x++) {
+      line += getComposedAsciiCell(x, y).char || " ";
+    }
+    lines.push(line.replace(/\s+$/g, ""));
+  }
+  return lines.join("\n").replace(/\s+$/g, "");
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type: type || "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getNextAsciiFilename(ext) {
+  let nextIndex = 1;
+  try {
+    nextIndex = (parseInt(localStorage.getItem('mi_ascii_export_index') || '0', 10) || 0) + 1;
+    localStorage.setItem('mi_ascii_export_index', String(nextIndex));
+  } catch (e) {}
+  return `ascii drawing_${String(nextIndex).padStart(2, '0')}.${ext}`;
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function exportAsciiTxt() {
+  downloadTextFile(getNextAsciiFilename("txt"), getAsciiExportText(), "text/plain;charset=utf-8");
+}
+
+function exportAsciiSvg() {
+  syncActiveAsciiLayer();
+  const exportW = workCols * cellW;
+  const exportH = workRows * cellH;
+  const parts = [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${exportW}" height="${exportH}" viewBox="0 0 ${exportW} ${exportH}">`
+  ];
+
+  if (!exportTransparent) parts.push(`<rect width="100%" height="100%" fill="#ffffff"/>`);
+
+  for (let i = 0; i < asciiLayers.length; i++) {
+    const layer = asciiLayers[i];
+    if (!layer || !layer.visible) continue;
+    for (let y = 0; y < workRows; y++) {
+      for (let x = 0; x < workCols; x++) {
+        const c = layer.colorGrid && layer.colorGrid[y] ? layer.colorGrid[y][x] : null;
+        if (c) parts.push(`<rect x="${x * cellW}" y="${y * cellH}" width="${cellW}" height="${cellH}" fill="${escapeXml(c)}"/>`);
+      }
+    }
+    for (let y = 0; y < workRows; y++) {
+      for (let x = 0; x < workCols; x++) {
+        const ch = layer.grid && layer.grid[y] ? layer.grid[y][x] : "";
+        if (ch === "") continue;
+        const textColor = layer.textColorGrid && layer.textColorGrid[y] ? (layer.textColorGrid[y][x] || "#000000") : "#000000";
+        const tx = (x * cellW) + (cellW / 2);
+        const ty = (y * cellH) + (cellH / 2);
+        parts.push(`<text x="${tx}" y="${ty}" font-family="Consolas, monospace" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(textColor)}">${escapeXml(ch)}</text>`);
+      }
+    }
+  }
+
+  parts.push(`</svg>`);
+  downloadTextFile(getNextAsciiFilename("svg"), parts.join(""), "image/svg+xml;charset=utf-8");
+}
+
+function renderAsciiArtworkToGraphics(pg, includeBackground) {
+  pg.clear();
+  if (includeBackground) {
+    pg.background(255);
+  }
+  for (let i = 0; i < asciiLayers.length; i++) {
+    const layer = asciiLayers[i];
+    if (!layer || !layer.visible) continue;
+    if (layer.kind === 'image' && layer.img) {
+      const b = getImageCellBounds(layer);
+      pg.push();
+      const mode = layer.blendMode || 'normal';
+      if (mode === 'multiply') pg.blendMode(MULTIPLY);
+      else if (mode === 'screen') pg.blendMode(SCREEN);
+      else if (mode === 'overlay') pg.blendMode(OVERLAY);
+      else if (mode === 'darken') pg.blendMode(DARKEST);
+      else if (mode === 'lighten') pg.blendMode(LIGHTEST);
+      else pg.blendMode(BLEND);
+      pg.tint(255, layer.imgOpacity === undefined ? 180 : layer.imgOpacity);
+      pg.image(layer.img, b.x * cellW, b.y * cellH, b.w * cellW, b.h * cellH);
+      pg.noTint();
+      pg.blendMode(BLEND);
+      pg.pop();
+      continue;
+    }
+    if (layer.pgColor) pg.image(layer.pgColor, 0, 0);
+    if (layer.pgText) pg.image(layer.pgText, 0, 0);
+  }
+}
+
+function exportAsciiPng(includeBackground) {
+  syncActiveAsciiLayer();
+  const pg = createGraphics(canvasW, canvasH);
+  pg.pixelDensity(1);
+  renderAsciiArtworkToGraphics(pg, includeBackground);
+  save(pg, getNextAsciiFilename("png"));
+  pg.remove();
+}
+
 function setupSketchZoomUI() {
   let btnZoomIn = select('#btnSketchZoomIn');
   let btnZoomOut = select('#btnSketchZoomOut');
@@ -1357,13 +2693,15 @@ function setupSketchZoomUI() {
   if (btnZoomIn) {
     btnZoomIn.mousePressed(() => {
       viewZoom = Math.min(5.0, viewZoom + 0.1);
-      if(zoomVal) zoomVal.html(Math.round(viewZoom * 100) + '%');
+      applySketchCanvasZoom();
+      saveUiState();
     });
   }
   if (btnZoomOut) {
     btnZoomOut.mousePressed(() => {
       viewZoom = Math.max(0.1, viewZoom - 0.1);
-      if(zoomVal) zoomVal.html(Math.round(viewZoom * 100) + '%');
+      applySketchCanvasZoom();
+      saveUiState();
     });
   }
 }
@@ -1388,12 +2726,7 @@ function setupToolBindings() {
       btn.addEventListener('click', () => {
         if (isDraggingSelection) commitFloatingSelection();
 
-        toolMode = t.mode;
-        
-        let shapeConfig = document.getElementById('shape-config-panel');
-        if (shapeConfig) {
-            shapeConfig.style.display = toolMode.startsWith('SHAPE_') ? 'flex' : 'none';
-        }
+        setToolMode(t.mode);
       });
     }
   });
@@ -1401,6 +2734,7 @@ function setupToolBindings() {
   let btnClear = document.getElementById('btnClearSketch');
   if (btnClear) {
     btnClear.addEventListener('click', () => {
+      if (!isActiveAsciiLayerEditable()) return;
       selectionMask = null;
       for(let y=0; y<workRows; y++) {
         for(let x=0; x<workCols; x++) {
@@ -1412,11 +2746,39 @@ function setupToolBindings() {
       updateLayerColorVisuals();
       updateLayerTextVisuals();
       saveState();
+      saveToLocalStorage(true);
+      saveUiState();
+    });
+  }
+
+  let btnSaveSvg = document.getElementById('btnSaveSVG');
+  if (btnSaveSvg) btnSaveSvg.addEventListener('click', exportAsciiSvg);
+
+  let btnSaveTxt = document.getElementById('btnSaveTXT');
+  if (btnSaveTxt) btnSaveTxt.addEventListener('click', exportAsciiTxt);
+
+  let btnSavePngWhite = document.getElementById('btnSavePNGWhite');
+  if (btnSavePngWhite) btnSavePngWhite.addEventListener('click', () => exportAsciiPng(true));
+
+  let btnSavePngTransparent = document.getElementById('btnSavePNGTransparent');
+  if (btnSavePngTransparent) btnSavePngTransparent.addEventListener('click', () => exportAsciiPng(false));
+
+  let btnImportSvg = document.getElementById('btnImportSVG');
+  let importSvgInput = document.getElementById('asciiSvgImportInput');
+  if (btnImportSvg && importSvgInput) {
+    btnImportSvg.addEventListener('click', () => importSvgInput.click());
+    importSvgInput.addEventListener('change', () => {
+      const file = importSvgInput.files && importSvgInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importAsciiSvgText(reader.result || "");
+      reader.readAsText(file);
+      importSvgInput.value = "";
     });
   }
 }
 
 function handleImageLoad(img) {
   if (!img) return;
-  templateImg = img;
+  addImageLayer(img, null, 'Image Layer');
 }

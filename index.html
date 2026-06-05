@@ -654,7 +654,7 @@
           <button class="btn-retro" id="btnPencil" data-tooltip="Draw with selected character."> Pencil</button>
           <button class="btn-retro" id="btnEraser" data-tooltip="Erase characters."> Eraser</button>
           <button class="btn-retro" id="btnFill" data-tooltip="Fill area with character."> Bucket</button>
-          <button class="btn-retro" id="btnMagicWand" data-tooltip="Select connected area of same character."> Wand</button>
+          <button class="btn-retro" id="btnMagicWand" data-tooltip="Select matching characters or cell colors."> Wand</button>
           <button class="btn-retro" id="btnTextTool" data-tooltip="Write text and fill ascii into grid."> Text</button>
           <button class="btn-retro" id="btnShapeRect" data-tooltip="Draw Rectangle."> Rect</button>
           <button class="btn-retro" id="btnShapeTriangle" data-tooltip="Draw Triangle."> Tri</button>
@@ -667,7 +667,25 @@
       </div>
     </div>
 
-    <!-- Panel 2: Patterns -->
+    <!-- Panel 2: Export -->
+    <div id="sketch-export-panel" class="floating-panel" style="top:20px; left:320px;">
+      <div class="panel-header">
+        <span>Export</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div class="tools-grid">
+          <button class="btn-retro" id="btnImportSVG" data-tooltip="Import an ASCII SVG to keep editing."> Import SVG</button>
+          <button class="btn-retro" id="btnSaveSVG" data-tooltip="Export as SVG."> Save SVG</button>
+          <button class="btn-retro" id="btnSaveTXT" data-tooltip="Export as TXT."> Save TXT</button>
+          <button class="btn-retro" id="btnSavePNGWhite" data-tooltip="Export PNG with white background."> PNG BG</button>
+          <button class="btn-retro" id="btnSavePNGTransparent" data-tooltip="Export PNG with transparent background."> PNG Clear</button>
+        </div>
+        <input id="asciiSvgImportInput" type="file" accept=".svg,image/svg+xml" style="display:none;">
+      </div>
+    </div>
+
+    <!-- Panel 3: Patterns -->
     <div id="sketch-patterns-panel" class="floating-panel" style="top:220px;">
       <div class="panel-header">
         <span>Patterns</span>
@@ -678,7 +696,7 @@
       </div>
     </div>
 
-    <!-- Panel 3: Ink -->
+    <!-- Panel 4: Ink -->
     <div id="sketch-ink-panel" class="floating-panel" style="top:440px;">
       <div class="panel-header">
         <span>Ink</span>
@@ -693,7 +711,7 @@
       </div>
     </div>
 
-    <!-- Panel 4: Layers (ASCII) -->
+    <!-- Panel 5: Layers (ASCII) -->
     <div id="sketch-layer-panel" class="floating-panel" style="top:20px; right:80px; left:auto;">
       <div class="panel-header">
         <span>Layers</span>
@@ -708,7 +726,7 @@
       </div>
     </div>
 
-    <div style="position:relative; width:100%; height:100%; overflow:auto; background:#d0d0d0;">
+    <div id="sketch-scroll-area" style="position:relative; width:calc(100% - 340px); height:100%; overflow:auto; background:#d0d0d0;">
       <div id="sketch-canvas-holder" style="padding: 20px;"></div>
       <div class="zoom-float" style="position:absolute; right:20px; bottom:20px; top:auto; transform:none;">
         <button class="btn-zoom" id="btnSketchZoomOut">-</button>
@@ -752,19 +770,6 @@
   <div id="global-lib-panel">
     <div class="section-title">Memories Archive</div>
     <div id="lib-grid" class="lib-grid"></div>
-  </div>
-
-  <!-- MUSIC PLAYER WIDGET -->
-  <div id="music-player-widget" class="music-widget" data-tooltip="Background Music Player.">
-    <div class="music-header">
-      <span><span class="music-icon">♫</span> Music Player</span>
-      <button id="btn-toggle-music" class="btn-mini" data-tooltip="Minimize/Maximize player."><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
-    </div>
-    <div id="music-content" class="music-content">
-      <input type="text" id="music-url-input" class="retro-input" placeholder="Paste YouTube / Spotify Link..." style="font-size:10px; padding:6px;" data-tooltip="Paste YouTube or Spotify link here.">
-      <button id="btn-play-music" class="btn-retro" style="font-size:10px; padding:4px;" data-tooltip="Load and play track.">Load Track</button>
-      <div id="music-embed-container" style="margin-top:4px; min-height:0;"></div>
-    </div>
   </div>
 
 </div> <!-- END APP CONTAINER -->
@@ -812,7 +817,10 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast-notification" class="toast-notification">Saved</div>
 
+<script src="global.js"></script>
+<script src="tab-thoughts.js"></script>
 <script src="sketch.js"></script>
+<script src="tab-index.js"></script>
 <script src="cmyk-ascii-effect.js"></script>
 <script src="ui-binding.js"></script>
 <script>
@@ -1355,9 +1363,6 @@
       // Auto-switch to Tab 1 (Thoughts)
       if(window.switchTab) window.switchTab('tab-thoughts');
       
-      // Auto-play music when entering Tool Tab
-      if(window.playRandomMusic) window.playRandomMusic();
-      
     }
   }
 
@@ -1407,6 +1412,7 @@
   const btnSaveTXT = document.getElementById('btnSaveTXT');
   if(btnSaveTXT) {
     btnSaveTXT.addEventListener('click', () => {
+      if (window.activeTab === 'tab-sketch') return;
       let content = "";
       // 1. Try to get text from DOM (if Show Source is on)
       const pre = document.querySelector('#input-canvas-holder pre');

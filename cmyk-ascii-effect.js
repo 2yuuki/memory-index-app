@@ -180,10 +180,14 @@ const cmykSketch = (p) => {
       p.color(160, 130, 190)   
     ];
     cmykPalette = [
-      p.color(0, 174, 239),    
-      p.color(236, 0, 140),    
-      p.color(245, 230, 0),    
-      p.color(0, 166, 81)      
+      p.color("#000000"), // darkest
+      p.color("#0000FF"),
+      p.color("#FF0000"),
+      p.color("#FF00FF"),
+      p.color("#00FF00"),
+      p.color("#00FFFF"),
+      p.color("#FFFF00"),
+      p.color("#FFFFFF")  // lightest
     ];
 
     bindExistingUI(); 

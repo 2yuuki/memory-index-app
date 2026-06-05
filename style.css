@@ -19,7 +19,6 @@
   font-family: 'Indg Luara';
   src: url('fonts/Indg-Luara.otf') format('opentype');
 }
-*/
 @font-face {
   font-family: 'FT88';
   src: url('fonts/FT88-School.otf') format('opentype');
@@ -99,7 +98,7 @@ body::before {
 /* SCANLINES & VIGNETTE EFFECT (CRT TV STYLE) */
 body::after {
   content: " ";
-  display: block;
+  display: none;
   position: absolute;
   inset: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%), 
@@ -111,6 +110,7 @@ body::after {
 
 /* DYNAMIC NOISE GRAIN */
 .noise-overlay {
+  display: none;
   position: fixed;
   top: -50%;
   left: -50%;
@@ -458,6 +458,12 @@ body::after {
   background-repeat: no-repeat;
   background-blend-mode: multiply;
 }
+#tab-sketch {
+  overflow: hidden;
+}
+#sketch-scroll-area {
+  min-width: 0;
+}
 #tab-thoughts .panel-center {
   display: none;
 }
@@ -520,11 +526,36 @@ body::after {
   color: var(--btn-blue);
   padding: 8px 10px;
   font-family: 'Bianzhidai', monospace;
-  font-size: 14px;
+  font-size: 12px;
   cursor: move;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.floating-panel,
+.floating-panel .panel-content,
+.floating-panel label,
+.floating-panel input,
+.floating-panel select,
+.floating-panel button,
+.floating-panel span,
+.floating-panel div {
+  font-size: 11px;
+}
+
+.floating-panel .btn-retro {
+  font-size: 11px;
+}
+
+.floating-panel .chk {
+  font-size: 11px;
+}
+
+.floating-panel .panel-subtitle {
+  font-weight: bold;
+  margin-top: 4px;
+  margin-bottom: 2px;
 }
 
 .panel-minimize-btn {
@@ -607,9 +638,9 @@ body::after {
 }
 
 /* Animation cho Panel chính (Thoughts) khi vào Tab */
-.workspace.active .panel-left {
-  /* animation: panelSlideIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; */
-}
+/* .workspace.active .panel-left {
+  animation: panelSlideIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+} */
 
 /* ribbons (2 slanted arrays on the side like the image) */
 .ribbon::before{
@@ -1154,58 +1185,6 @@ input[type="range"]::-webkit-slider-thumb{
   animation: libSavePulse 0.6s ease-out;
 }
 
-/* --- MUSIC PLAYER WIDGET --- */
-.music-widget {
-  position: absolute;
-  bottom: 20px;
-  left: 60px; /* Clear sidebar */
-  width: 240px;
-  background: var(--panel-bg);
-  border: var(--border);
-  box-shadow: 
-    inset 1px 1px 0 #ffffff,
-    5px 5px 0 rgba(0,0,0,0.15);
-  z-index: 8000;
-  display: flex;
-  flex-direction: column;
-}
-.music-icon {
-  display: inline-block;
-  animation: music-pulse 2.5s ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes music-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-}
-
-.music-header {
-  background: var(--grad-blue);
-  color: #fff;
-  padding: 6px 10px;
-  font-family: 'Bianzhidai', monospace;
-  font-size: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.music-content {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.btn-mini {
-  background: transparent;
-  border: 1px solid #fff;
-  color: #fff;
-  width: 16px; height: 16px;
-  font-size: 10px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 0;
-  font-family: monospace;
-}
-
 /* Ensure canvases and pre-rendered graphics don't animate into view */
 #sketch-canvas-holder canvas, #layout-canvas-holder canvas, canvas#myCanvas, .paper-sheet > canvas {
   transition: none !important;
@@ -1549,6 +1528,10 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
     min-height: 400px;
   }
 
+  #sketch-scroll-area {
+    width: 100% !important;
+  }
+
   /* 6. Widgets & Overlays */
   #global-lib-btn {
     top: auto;
@@ -1565,9 +1548,6 @@ label, input[type="checkbox"], input[type="radio"], input[type="color"] {
     bottom: 50px;
   }
   
-  .music-widget {
-    display: none !important;
-  }
   
   #floating-tooltip { display: none !important; }
 
