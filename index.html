@@ -69,6 +69,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css" crossorigin="anonymous">
 </head>
@@ -769,6 +770,9 @@
   <div id="global-lib-btn" onclick="toggleGlobalLibrary()" data-tooltip="Open Memory Archive.">LIBRARY</div>
   <div id="global-lib-panel">
     <div class="section-title">Memories Archive</div>
+    <div style="display:flex; justify-content:flex-end; margin-bottom: 10px;">
+      <button class="btn-retro" id="btnExportLibrary" style="font-size:10px; padding:4px 8px; width:auto;" data-tooltip="Export all memories to a .zip file.">Export as ZIP</button>
+    </div>
     <div id="lib-grid" class="lib-grid"></div>
   </div>
 

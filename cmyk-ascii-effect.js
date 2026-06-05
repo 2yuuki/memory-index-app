@@ -1051,6 +1051,18 @@ const cmykSketch = (p) => {
         setTimeout(() => showStatus(""), 3000);
       });
     }
+    
+    const btnSavePng = document.getElementById('btnSavePNG');
+    if(btnSavePng) {
+      btnSavePng.addEventListener('click', () => {
+        if (!blobImg) {
+          if(window.customAlert) window.customAlert("No image to save!");
+          else alert("No image to save!");
+          return;
+        }
+        p.saveCanvas('Memory_ImageProcessor', 'png');
+      });
+    }
   }
 
   function getImageProcSheetSize() {

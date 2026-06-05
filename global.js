@@ -135,3 +135,168 @@ window.switchTab = function(tabId) {
     if(window.pauseImageProcessor) window.pauseImageProcessor(); 
   }
 }
+
+// --- LIBRARY FUNCTIONS ---
+window.addToLibrary = function(imgOrDataUrl, name, extraData = {}) {
+    let src = '';
+    if (typeof imgOrDataUrl === 'string') {
+        src = imgOrDataUrl;
+    } else if (imgOrDataUrl.canvas) {
+        src = imgOrDataUrl.canvas.toDataURL('image/png');
+    } else if (imgOrDataUrl.elt) {
+        src = imgOrDataUrl.elt.toDataURL('image/png');
+    } else if (imgOrDataUrl instanceof HTMLCanvasElement) {
+        src = imgOrDataUrl.toDataURL('image/png');
+    } else {
+        console.error("Unknown image format passed to addToLibrary");
+        return;
+    }
+
+    let item = {
+        id: 'lib_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        name: name || 'Memory',
+        src: src,
+        text: extraData.text || null
+    };
+
+    libraryItems.push(item);
+    if (window.renderLibrary) window.renderLibrary();
+    if (window.saveLibraryToLocalStorage) window.saveLibraryToLocalStorage();
+
+    // Hiệu ứng chớp sáng trên nút Library
+    let libBtn = document.getElementById('global-lib-btn');
+    if (libBtn) {
+        libBtn.classList.remove('lib-saved-anim');
+        void libBtn.offsetWidth; 
+        libBtn.classList.add('lib-saved-anim');
+    }
+    
+    if (window.showToast) window.showToast("Added to Library!");
+};
+
+window.renderLibrary = function() {
+    let grid = document.getElementById('lib-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    libraryItems.forEach(item => {
+        let div = document.createElement('div');
+        div.className = 'lib-item';
+        div.draggable = true;
+        div.dataset.src = item.src;
+        if (item.text) div.dataset.text = item.text;
+        
+        let img = document.createElement('img');
+        img.src = item.src;
+        div.appendChild(img);
+
+        div.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', item.src);
+            if (item.text) {
+                e.dataTransfer.setData('application/json', JSON.stringify({type: 'thought', text: item.text}));
+            }
+        };
+        
+        let delBtn = document.createElement('button');
+        delBtn.innerHTML = 'x';
+        delBtn.style.position = 'absolute';
+        delBtn.style.top = '0';
+        delBtn.style.right = '0';
+        delBtn.style.background = '#e74c3c';
+        delBtn.style.color = 'white';
+        delBtn.style.border = 'none';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.fontSize = '10px';
+        delBtn.style.padding = '2px 5px';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            libraryItems = libraryItems.filter(i => i.id !== item.id);
+            renderLibrary();
+            saveLibraryToLocalStorage();
+        };
+        div.appendChild(delBtn);
+        div.style.position = 'relative';
+
+        grid.appendChild(div);
+    });
+};
+
+window.saveLibraryToLocalStorage = function() {
+    try {
+        const itemsToSave = libraryItems.slice(-20); // Giữ lại 20 item mới nhất tránh tràn bộ nhớ đệm
+        localStorage.setItem('mi_library', JSON.stringify(itemsToSave));
+    } catch (e) {
+        console.warn("Could not save library to localStorage", e);
+    }
+};
+
+window.loadLibraryFromLocalStorage = function() {
+    try {
+        let data = localStorage.getItem('mi_library');
+        if (data) {
+            libraryItems = JSON.parse(data);
+            if (window.renderLibrary) window.renderLibrary();
+        }
+    } catch(e) {
+        console.warn("Could not load library", e);
+    }
+};
+
+window.showToast = function(msg) {
+    let t = document.getElementById('toast-notification');
+    if(t) {
+        t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+};
+
+window.exportLibraryToZip = function() {
+    if (libraryItems.length === 0) {
+        if (window.showToast) window.showToast("Library is empty!");
+        return;
+    }
+    if (typeof JSZip === 'undefined') {
+        alert("JSZip library is not loaded. Cannot export.");
+        return;
+    }
+    
+    let zip = new JSZip();
+    
+    libraryItems.forEach((item, index) => {
+        let parts = item.src.split(',');
+        if (parts.length === 2) {
+            let base64Data = parts[1];
+            let mime = parts[0].match(/:(.*?);/)[1];
+            let ext = mime === 'image/jpeg' ? 'jpg' : 'png';
+            zip.file(`${item.name}_${index}.${ext}`, base64Data, {base64: true});
+        }
+        if (item.text) {
+            zip.file(`${item.name}_${index}_text.txt`, item.text);
+        }
+    });
+    
+    zip.generateAsync({type:"blob"}).then(function(content) {
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        let now = new Date();
+        let dateStr = now.getFullYear() + "-" +
+                      String(now.getMonth() + 1).padStart(2, '0') + "-" +
+                      String(now.getDate()).padStart(2, '0') + "_" +
+                      String(now.getHours()).padStart(2, '0') + "-" +
+                      String(now.getMinutes()).padStart(2, '0') + "-" +
+                      String(now.getSeconds()).padStart(2, '0');
+        a.download = `Memory_Archive_${dateStr}.zip`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        if (window.showToast) window.showToast("Exported to ZIP!");
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.loadLibraryFromLocalStorage) window.loadLibraryFromLocalStorage();
+    
+    let btnExport = document.getElementById('btnExportLibrary');
+    if (btnExport) {
+        btnExport.addEventListener('click', window.exportLibraryToZip);
+    }
+});

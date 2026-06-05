@@ -45,6 +45,18 @@ function setup() {
   mainCanvas.elt.ondragover = (e) => e.preventDefault();
   mainCanvas.elt.ondrop = (e) => {
     e.preventDefault();
+    
+    let jsonData = e.dataTransfer.getData('application/json');
+    if (jsonData) {
+        try {
+            let data = JSON.parse(jsonData);
+            if (data.type === 'thought' && data.text) {
+                dropTextAsAscii(data.text, e.clientX, e.clientY);
+                return;
+            }
+        } catch(err) {}
+    }
+    
     const droppedFile = e.dataTransfer.files && e.dataTransfer.files[0];
     if (droppedFile && droppedFile.type && droppedFile.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -366,7 +378,7 @@ function renderPatternsUI() {
         btn.textContent = char === 'SMART' ? '#' : char;
         btn.style.padding = '6px';
         btn.style.cursor = 'pointer';
-        btn.style.fontFamily = 'monospace';
+        btn.style.fontFamily = 'Consolas, monospace';
         btn.style.border = '1px solid #ccc';
         btn.style.background = '#fafafa';
         btn.onclick = () => { selectedChar = char; };
@@ -1958,7 +1970,7 @@ function floodFill(startX, startY, targetChar, replaceChar) {
   }
 }
 
-function openTextToolBox(minX, minY, maxX, maxY, px, py) {
+function openTextToolBox(minX, minY, maxX, maxY, px, py, skipBorder = false) {
     if (textToolInput) textToolInput.remove();
     textToolInput = createElement('textarea');
     textToolInput.position(px, py);
@@ -1978,14 +1990,15 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py) {
     textToolInput.style('z-index', '1000');
     textToolInput.style('background', 'rgba(255, 255, 255, 0.9)');
     textToolInput.style('resize', 'none');
+    textToolInput.style('text-transform', 'uppercase');
     textToolInput.elt.focus();
     
     let commitText = () => {
         if(!textToolInput) return;
-        let txt = textToolInput.value();
+        let txt = textToolInput.value().toUpperCase();
         
         let drawBorderChar = selectedChar === 'SMART' ? '#' : selectedChar;
-        if (maxX - minX >= 1 && maxY - minY >= 1) {
+        if (!skipBorder && maxX - minX >= 1 && maxY - minY >= 1) {
             applyShape(minX, minY, maxX, maxY, 'SHAPE_RECT', drawBorderChar, false);
             
             let innerMinX = minX + 1;
@@ -2025,6 +2038,51 @@ function openTextToolBox(minX, minY, maxX, maxY, px, py) {
     };
     
     textToolInput.elt.onblur = commitText;
+}
+
+function dropTextAsAscii(text, clientX, clientY) {
+    if (!isActiveAsciiLayerEditable()) {
+        if (window.showToast) window.showToast("Layer is locked or not an ASCII layer!");
+        return;
+    }
+    
+    text = text.toUpperCase();
+
+    let canvasRect = mainCanvas.elt.getBoundingClientRect();
+    let mx = clientX - canvasRect.left;
+    let my = clientY - canvasRect.top;
+
+    let gx = Math.floor((mx + viewX) / cellW);
+    let gy = Math.floor((my + viewY) / cellH);
+
+    if (!isValidCell(gx, gy)) {
+        gx = Math.floor(viewX / cellW) + 2;
+        gy = Math.floor(viewY / cellH) + 2;
+    }
+    
+    let lines = text.split('\n');
+    let maxLen = 1;
+    lines.forEach(l => maxLen = Math.max(maxLen, l.length));
+    
+    let minX = gx;
+    let minY = gy;
+    let maxX = Math.min(workCols - 1, gx + maxLen - 1);
+    let maxY = Math.min(workRows - 1, gy + lines.length - 1);
+
+    setToolMode('TEXT');
+    selStart = null;
+    selEnd = null;
+    
+    let px = canvasRect.left + (minX * cellW) - viewX;
+    let py = canvasRect.top + (minY * cellH) - viewY;
+    
+    openTextToolBox(minX, minY, maxX, maxY, px, py, true);
+    
+    if (textToolInput) {
+        textToolInput.value(text);
+        textToolInput.style('width', Math.max(80, (maxLen + 2) * cellW) + 'px');
+        textToolInput.style('height', Math.max(40, (lines.length + 2) * cellH) + 'px');
+    }
 }
 
 function applyShape(x1, y1, x2, y2, mode, char, withShadow) {
