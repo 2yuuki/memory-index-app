@@ -187,13 +187,23 @@ function bindPanelToggle() {
             if (panel) {
                 let content = panel.querySelector('.panel-content');
                 if (content) {
-                    if (content.style.display === 'none') {
-                        content.style.display = '';
+                    const isCollapsed = content.style.display === 'none' || panel.dataset.collapsed === 'true';
+                    if (isCollapsed) {
+                        content.style.display = content.dataset.expandedDisplay || '';
+                        panel.dataset.collapsed = 'false';
+                        panel.style.height = panel.dataset.expandedHeight || '';
+                        panel.style.minHeight = '';
                         newBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
                     } else {
+                        content.dataset.expandedDisplay = content.style.display || getComputedStyle(content).display || '';
+                        panel.dataset.expandedHeight = panel.style.height || '';
                         content.style.display = 'none';
+                        panel.dataset.collapsed = 'true';
+                        panel.style.height = panel.querySelector('.panel-header').offsetHeight + 'px';
+                        panel.style.minHeight = panel.style.height;
                         newBtn.innerHTML = '<span style="color:#0072BC; font-weight:bold; font-size:14px; line-height:0.5; display:flex; align-items:center; justify-content:center;">+</span>';
                     }
+                    saveUiState();
                 }
             }
         };
@@ -210,7 +220,8 @@ function getUiState() {
             left: panel.style.left,
             right: panel.style.right,
             top: panel.style.top,
-            display: panel.style.display
+            display: panel.style.display,
+            collapsed: panel.dataset.collapsed === 'true'
         };
     });
     return {
@@ -279,6 +290,29 @@ function restoreUiState() {
                 if (panelState.right) panel.style.right = panelState.right;
                 if (panelState.top) panel.style.top = panelState.top;
                 if (panelState.display) panel.style.display = panelState.display;
+                if (typeof panelState.collapsed === 'boolean') {
+                    const content = panel.querySelector('.panel-content');
+                    const btn = panel.querySelector('.panel-minimize-btn');
+                    if (content && btn) {
+                        if (panelState.collapsed) {
+                            content.dataset.expandedDisplay = content.style.display || getComputedStyle(content).display || '';
+                            content.style.display = 'none';
+                            panel.dataset.collapsed = 'true';
+                            const header = panel.querySelector('.panel-header');
+                            if (header) {
+                                panel.style.height = header.offsetHeight + 'px';
+                                panel.style.minHeight = panel.style.height;
+                            }
+                            btn.innerHTML = '<span style="color:#0072BC; font-weight:bold; font-size:14px; line-height:0.5; display:flex; align-items:center; justify-content:center;">+</span>';
+                        } else {
+                            content.style.display = content.dataset.expandedDisplay || '';
+                            panel.dataset.collapsed = 'false';
+                            panel.style.height = panel.dataset.expandedHeight || '';
+                            panel.style.minHeight = '';
+                            btn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
+                        }
+                    }
+                }
             });
         }
         const sketchScroll = document.getElementById('sketch-scroll-area');
@@ -295,7 +329,7 @@ function setToolMode(nextMode, options = {}) {
     toolMode = nextMode;
 
     // Tự động deselect nếu đổi sang tool không liên quan đến select
-    if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE') {
+    if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE' && toolMode !== 'FILL') {
         selectionMask = null;
         selStart = null;
         selEnd = null;
@@ -431,7 +465,6 @@ function renderPatternsUI() {
         btn.style.fontWeight = isSelected ? 'bold' : 'normal';
         btn.onclick = () => {
             selectedChar = char;
-            setToolMode('DRAW');
             prevGridX = -1;
             prevGridY = -1;
             renderPatternsUI();
@@ -457,6 +490,33 @@ function applyAsciiTextStyle(target, size = userFontSize, hAlign = CENTER, vAlig
         textSize(size);
         textAlign(hAlign, vAlign);
         if (typeof drawingContext !== 'undefined') drawingContext.font = `${size}px ${fontFamily}`;
+    }
+}
+
+function drawAsciiGlyph(target, ch, px, py, textColor = "#000000") {
+    if (ch === "█") {
+        if (target) {
+            target.noStroke();
+            target.fill(textColor || "#000000");
+            target.rect(px, py, cellW, cellH);
+        } else {
+            noStroke();
+            fill(textColor || "#000000");
+            rect(px, py, cellW, cellH);
+        }
+        return;
+    }
+
+    if (target) {
+        applyAsciiTextStyle(target, userFontSize, CENTER, CENTER);
+        target.noStroke();
+        target.fill(textColor || "#000000");
+        target.text(ch, px + cellW / 2, py + cellH / 2);
+    } else {
+        applyAsciiTextStyle(null, userFontSize, CENTER, CENTER);
+        noStroke();
+        fill(textColor || "#000000");
+        text(ch, px + cellW / 2, py + cellH / 2);
     }
 }
 
@@ -1326,7 +1386,7 @@ function cloneLayerForClipboard(layer) {
     colorGrid: normalizeGridArray(layer.colorGrid, null),
     textColorGrid: normalizeGridArray(layer.textColorGrid, "#000000"),
     visible: layer.visible !== false,
-    locked: false,
+    locked: !!layer.locked,
     imageData: layer.imageData || null,
     img: layer.img || null,
     imgX: layer.imgX,
@@ -1897,9 +1957,7 @@ function draw() {
                       fill(d.color); noStroke();
                       rect(drawX, drawY, cellW, cellH);
                   }
-                  fill(d.textColor); noStroke();
-                  applyAsciiTextStyle(null, userFontSize, CENTER, CENTER);
-                  text(d.char, drawX + cellW/2, drawY + cellH/2);
+                  drawAsciiGlyph(null, d.char, drawX, drawY, d.textColor);
               }
           }
       }
@@ -1947,15 +2005,7 @@ function drawSingleCellText(x, y) {
 
   let char = grid[y][x];
   if (char !== "") {
-      applyAsciiTextStyle(pgTextLayer, userFontSize, CENTER, CENTER);
-
-      let displayColor = color(textColorGrid[y][x] || "#000000");
-      let posX = cx + cellW/2;
-      let posY = cy + cellH/2;
-
-      pgTextLayer.noStroke();
-      pgTextLayer.fill(displayColor);
-      pgTextLayer.text(char, posX, posY);
+      drawAsciiGlyph(pgTextLayer, char, cx, cy, textColorGrid[y][x] || "#000000");
   }
 }
 
@@ -1969,13 +2019,7 @@ function updateLayerTextVisuals() {
       let char = grid[y][x];
       if (char !== "") {
           let cx = x * cellW; let cy = y * cellH;
-          let displayColor = color(textColorGrid[y][x] || "#000000");
-          let posX = cx + cellW/2;
-          let posY = cy + cellH/2;
-
-          pgTextLayer.noStroke();
-          pgTextLayer.fill(displayColor);
-          pgTextLayer.text(char, posX, posY);
+          drawAsciiGlyph(pgTextLayer, char, cx, cy, textColorGrid[y][x] || "#000000");
       }
     }
   }
@@ -2162,6 +2206,143 @@ function getMagicWandCellColor(x, y) {
 function getMagicWandTextColor(x, y) {
   const value = textColorGrid[y] ? textColorGrid[y][x] : '#000000';
   return normalizeMagicWandColor(value);
+}
+
+function cellColorMatches(a, b) {
+  return normalizeMagicWandColor(a) === normalizeMagicWandColor(b);
+}
+
+function applyFillToSelectionMask(ch, textColor = null, cellColor = undefined) {
+  if (!selectionMask || !isActiveAsciiLayerEditable()) return false;
+  let changed = false;
+  for (let y = 0; y < workRows; y++) {
+      for (let x = 0; x < workCols; x++) {
+          if (selectionMask[y] && selectionMask[y][x]) {
+              ensureGridCell(x, y);
+              if (grid[y][x] !== ch) {
+                  grid[y][x] = ch;
+                  changed = true;
+              }
+              if (textColor && textColorGrid[y][x] !== textColor) {
+                  textColorGrid[y][x] = textColor;
+                  changed = true;
+              }
+              if (cellColor !== undefined && !cellColorMatches(colorGrid[y][x], cellColor)) {
+                  colorGrid[y][x] = cellColor;
+                  changed = true;
+              }
+          }
+      }
+  }
+  if (changed) {
+      updateLayerColorVisuals();
+      updateLayerTextVisuals();
+      syncActiveAsciiLayer();
+  }
+  return changed;
+}
+
+function applyColorToSelectionMask(col) {
+  if (!selectionMask || !isActiveAsciiLayerEditable()) return false;
+  let changed = false;
+  for (let y = 0; y < workRows; y++) {
+      for (let x = 0; x < workCols; x++) {
+          if (selectionMask[y] && selectionMask[y][x] && !cellColorMatches(colorGrid[y][x], col)) {
+              ensureGridCell(x, y);
+              colorGrid[y][x] = col || null;
+              changed = true;
+          }
+      }
+  }
+  if (changed) {
+      updateLayerColorVisuals();
+      updateLayerTextVisuals();
+      syncActiveAsciiLayer();
+  }
+  return changed;
+}
+
+function floodFillColor(startX, startY, replaceColor) {
+  if (!isValidCell(startX, startY) || !isActiveAsciiLayerEditable()) return false;
+  const targetChar = grid[startY][startX];
+  const targetColor = colorGrid[startY][startX];
+  const nextColor = replaceColor || null;
+  if (cellColorMatches(targetColor, nextColor)) return false;
+
+  let changed = false;
+  let queue = [{x: startX, y: startY}];
+  let visited = [];
+  for (let y = 0; y < workRows; y++) visited[y] = new Array(workCols).fill(false);
+
+  while (queue.length > 0) {
+      let p = queue.shift();
+      if (!isValidCell(p.x, p.y) || visited[p.y][p.x]) continue;
+      visited[p.y][p.x] = true;
+      if (selectionMask && (!selectionMask[p.y] || !selectionMask[p.y][p.x])) continue;
+      if (grid[p.y][p.x] !== targetChar) continue;
+      if (!cellColorMatches(colorGrid[p.y][p.x], targetColor)) continue;
+
+      ensureGridCell(p.x, p.y);
+      colorGrid[p.y][p.x] = nextColor;
+      changed = true;
+      queue.push({x: p.x + 1, y: p.y});
+      queue.push({x: p.x - 1, y: p.y});
+      queue.push({x: p.x, y: p.y + 1});
+      queue.push({x: p.x, y: p.y - 1});
+  }
+
+  if (changed) {
+      updateLayerColorVisuals();
+      updateLayerTextVisuals();
+      syncActiveAsciiLayer();
+  }
+  return changed;
+}
+
+function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor = undefined) {
+  if (!isValidCell(startX, startY) || !isActiveAsciiLayerEditable()) return false;
+  const targetChar = grid[startY][startX];
+  const targetColor = colorGrid[startY][startX];
+  const nextChar = replaceChar || "";
+
+  let changed = false;
+  let queue = [{x: startX, y: startY}];
+  let visited = [];
+  for (let y = 0; y < workRows; y++) visited[y] = new Array(workCols).fill(false);
+
+  while (queue.length > 0) {
+      let p = queue.shift();
+      if (!isValidCell(p.x, p.y) || visited[p.y][p.x]) continue;
+      visited[p.y][p.x] = true;
+      if (selectionMask && (!selectionMask[p.y] || !selectionMask[p.y][p.x])) continue;
+      if (grid[p.y][p.x] !== targetChar) continue;
+      if (!cellColorMatches(colorGrid[p.y][p.x], targetColor)) continue;
+
+      ensureGridCell(p.x, p.y);
+      if (grid[p.y][p.x] !== nextChar) {
+          grid[p.y][p.x] = nextChar;
+          changed = true;
+      }
+      if (textColor && textColorGrid[p.y][p.x] !== textColor) {
+          textColorGrid[p.y][p.x] = textColor;
+          changed = true;
+      }
+      if (cellColor !== undefined && !cellColorMatches(colorGrid[p.y][p.x], cellColor)) {
+          colorGrid[p.y][p.x] = cellColor;
+          changed = true;
+      }
+      queue.push({x: p.x + 1, y: p.y});
+      queue.push({x: p.x - 1, y: p.y});
+      queue.push({x: p.x, y: p.y + 1});
+      queue.push({x: p.x, y: p.y - 1});
+  }
+
+  if (changed) {
+      updateLayerColorVisuals();
+      updateLayerTextVisuals();
+      syncActiveAsciiLayer();
+  }
+  return changed;
 }
 
 function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
@@ -2446,7 +2627,7 @@ function mousePressed() {
       return;
   }
 
-  if (toolMode !== "MAGIC_WAND" && toolMode !== "SELECT" && !toolMode.startsWith("SHAPE_") && toolMode !== "TEXT") {
+  if (toolMode !== "MAGIC_WAND" && toolMode !== "SELECT" && toolMode !== "FILL" && !toolMode.startsWith("SHAPE_") && toolMode !== "TEXT") {
       if (selectionMask && (!isValidCell(mx, my) || !selectionMask[my][mx])) selectionMask = null;
   }
 
@@ -2837,9 +3018,12 @@ function handleInput(x, y) {
     selectionMask = null;
     setAsciiCell(x, y, "", "#000000", true);
   } else if (toolMode === 'FILL') {
-    let targetChar = grid[y][x];
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
-    floodFill(x, y, targetChar, ch, drawTextColor);
+    if (selectionMask) {
+        applyFillToSelectionMask(ch, drawTextColor);
+    } else {
+        floodFillCells(x, y, ch, drawTextColor);
+    }
   } else if (toolMode === 'INK') {
         setGridTextColor(x, y, selectedColor);
   }
@@ -2946,6 +3130,10 @@ function exportAsciiSvg() {
         const ch = layer.grid && layer.grid[y] ? layer.grid[y][x] : "";
         if (ch === "") continue;
         const textColor = layer.textColorGrid && layer.textColorGrid[y] ? (layer.textColorGrid[y][x] || "#000000") : "#000000";
+        if (ch === "█") {
+          parts.push(`<rect x="${x * cellW}" y="${y * cellH}" width="${cellW}" height="${cellH}" fill="${escapeXml(textColor)}"/>`);
+          continue;
+        }
         const tx = (x * cellW) + (cellW / 2);
         const ty = (y * cellH) + (cellH / 2);
         parts.push(`<text x="${tx}" y="${ty}" font-family="${escapeXml(getAsciiFontFamily())}" font-size="${userFontSize}" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(textColor)}">${escapeXml(ch)}</text>`);

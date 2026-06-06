@@ -3,8 +3,8 @@ var activeTab = 'tab-thoughts';
 
 // --- CONFIG ---
 var cols, rows;
-var cellW = 9;  
-var cellH = 13.5;
+var cellW = 8;
+var cellH = 12;
 var inkColorHex = "#000000"; 
 var workCols = 160;
 var workRows = 60;
