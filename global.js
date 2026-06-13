@@ -56,6 +56,8 @@ var magicWandMatchMode = 'char';
 var isShiftSelecting = false; 
 var showTemplateImg = true;
 var isDraggingPanel = false;
+var isRestoringUiState = false;
+var isSketchUiReady = false;
 
 // --- MOUSE & SELECTION DRAGGING ---
 var prevGridX = -1, prevGridY = -1;
@@ -137,6 +139,7 @@ window.switchTab = function(tabId) {
     if (typeof noLoop === 'function') noLoop(); 
     if(window.pauseImageProcessor) window.pauseImageProcessor(); 
   }
+  if (typeof updateSketchPanelsVisibility === 'function') updateSketchPanelsVisibility();
 }
 
 // --- LIBRARY FUNCTIONS ---

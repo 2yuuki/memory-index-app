@@ -53,16 +53,32 @@
   <title>The Memory Index</title>
   <link rel="icon" href="assets/UI items/logo.svg" type="image/x-icon" />
   
-  <!-- === GLOBAL MESSAGE LISTENER TO SUPPRESS EXTENSION ERRORS === -->
+  <!-- === SUPPRESS KNOWN BROWSER EXTENSION MESSAGE NOISE === -->
   <script>
-    // Register chrome message listener IMMEDIATELY to suppress extension console errors
-    // This catches messages from browser extensions (Grammarly, ad blockers, etc.)
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        try { sendResponse({ success: true }); } catch(e) {}
-        return false; // Don't indicate async response
-      });
+    function isKnownExtensionMessageNoise(value) {
+      const message = String(
+        (value && value.message) ||
+        (value && value.reason && value.reason.message) ||
+        value ||
+        ''
+      ).toLowerCase();
+      return message.includes('listener indicated an asynchronous response') ||
+        message.includes('message channel closed before a response was received');
     }
+
+    window.addEventListener('unhandledrejection', (event) => {
+      if (isKnownExtensionMessageNoise(event.reason) || isKnownExtensionMessageNoise(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+
+    window.addEventListener('error', (event) => {
+      if (isKnownExtensionMessageNoise(event.error) || isKnownExtensionMessageNoise(event.message)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
   </script>
   
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.js"></script>
@@ -803,11 +819,11 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast-notification" class="toast-notification">Saved</div>
 
-<script src="global.js"></script>
-<script src="tab-thoughts.js"></script>
-<script src="sketch.js"></script>
-<script src="cmyk-ascii-effect.js"></script>
-<script src="ui-binding.js"></script>
+<script src="global.js?v=20260613-fix5"></script>
+<script src="tab-thoughts.js?v=20260613-fix5"></script>
+<script src="sketch.js?v=20260613-fix5"></script>
+<script src="cmyk-ascii-effect.js?v=20260613-fix5"></script>
+<script src="ui-binding.js?v=20260613-fix5"></script>
 <script>
   // --- CSS for Language Toggle ---
   const style = document.createElement('style');
@@ -1329,10 +1345,11 @@
       });
       
       
-      // Replay Typewriter Effect
-      playTypewriter();
+	      // Replay Typewriter Effect
+	      playTypewriter();
+	      if (typeof updateSketchPanelsVisibility === 'function') updateSketchPanelsVisibility();
 
-    } else {
+	    } else {
       introView.style.display = 'none';
       appBody.style.display = 'flex';
       if(appSidebar) {
@@ -1345,10 +1362,11 @@
         t.classList.remove('disabled-tab'); // Enable all top tabs
       });
       
-      // Auto-switch to Tab 1 (Thoughts)
-      if(window.switchTab) window.switchTab('tab-thoughts');
-      
-    }
+	      // Auto-switch to Tab 1 (Thoughts)
+	      if(window.switchTab) window.switchTab('tab-thoughts');
+	      if (typeof updateSketchPanelsVisibility === 'function') updateSketchPanelsVisibility();
+	      
+	    }
   }
 
   window.duplicateArtboard = function(btn) {

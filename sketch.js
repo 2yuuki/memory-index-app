@@ -22,6 +22,14 @@
 
 function preload() {}
 
+function loadFromLocalStorage() {
+  return loadFromLocalStorageImpl();
+}
+
+function saveToLocalStorage(silent) {
+  return saveToLocalStorageImpl(silent);
+}
+
 // --- SETUP ---
 function setup() {
   frameRate(30);
@@ -81,9 +89,11 @@ function setup() {
   preRenderGrid(pgGridLayer);
 
   loadFromLocalStorage();
-  saveState();
+  saveState(true);
 
   // --- UI Configuration ---
+  isRestoringUiState = true;
+  isSketchUiReady = false;
   injectMouseTool();
   dockPanelsRight();
   renderPatternsUI();
@@ -93,12 +103,19 @@ function setup() {
   bindPanelToggle();
   setupSketchZoomUI();
   setupToolBindings();
+  setupSketchPanelVisibilityWatcher();
   const sketchScrollArea = document.getElementById('sketch-scroll-area');
   if (sketchScrollArea) sketchScrollArea.addEventListener('scroll', saveUiState);
   restoreUiState();
+  window.switchTab('tab-sketch');
+  recoverSketchPanels();
+  updateSketchPanelsVisibility();
   renderPropertiesUI();
   updateLayerTextVisuals();
   updateToolButtonUI();
+  isRestoringUiState = false;
+  isSketchUiReady = true;
+  saveUiState();
 
   let starBtn = document.getElementById('btnShapeStar');
   if (starBtn) starBtn.style.display = 'none';
@@ -114,9 +131,14 @@ function setup() {
       if (document.visibilityState === 'hidden') performAutoSave();
   });
 
-  window.switchTab(getLastActiveTab());
   let sb = select('.app-sidebar');
   if (sb) sb.addClass('hidden');
+  setTimeout(() => {
+      recoverSketchPanels();
+      if (!hasVisibleSketchPanel()) resetSketchPanelsToDefault();
+      updateSketchPanelsVisibility();
+      saveUiState();
+  }, 100);
 }
 
 // Bơm Tool MOUSE mạnh mẽ ngay trước nút Pencil
@@ -140,11 +162,9 @@ function injectMouseTool() {
 
 function dockPanelsRight() {
     let canvasHolder = document.getElementById('sketch-canvas-holder');
-    let panelHost = document.getElementById('tab-sketch');
+    let panelHost = document.body;
     if (!canvasHolder) return;
     canvasHolder.style.position = 'relative';
-    if (!panelHost) panelHost = canvasHolder;
-    panelHost.style.position = 'relative';
 
     const defaults = {
         'sketch-main-tools': { right: 20, top: 20 },
@@ -159,7 +179,7 @@ function dockPanelsRight() {
         let p = document.getElementById(id);
         if (p) {
             panelHost.appendChild(p);
-            p.style.position = 'absolute';
+            p.style.position = 'fixed';
             p.style.left = 'auto';
             p.style.right = defaults[id].right + 'px';
             p.style.top = defaults[id].top + 'px';
@@ -169,12 +189,11 @@ function dockPanelsRight() {
             p.style.background = 'rgba(255, 255, 255, 0.95)';
             p.style.borderRadius = '5px';
             p.style.pointerEvents = 'auto';
-            p.style.zIndex = '1500';
+            p.style.zIndex = '30000';
             makePanelDraggable(p, panelHost);
         }
     });
 
-    restoreUiState();
 }
 
 function bindPanelToggle() {
@@ -189,18 +208,22 @@ function bindPanelToggle() {
                 if (content) {
                     const isCollapsed = content.style.display === 'none' || panel.dataset.collapsed === 'true';
                     if (isCollapsed) {
+                        panel.dataset.restoringPanel = 'true';
                         content.style.display = content.dataset.expandedDisplay || '';
                         panel.dataset.collapsed = 'false';
                         panel.style.height = panel.dataset.expandedHeight || '';
                         panel.style.minHeight = '';
+                        setTimeout(() => { delete panel.dataset.restoringPanel; }, 0);
                         newBtn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
                     } else {
+                        panel.dataset.restoringPanel = 'true';
                         content.dataset.expandedDisplay = content.style.display || getComputedStyle(content).display || '';
                         panel.dataset.expandedHeight = panel.style.height || '';
                         content.style.display = 'none';
                         panel.dataset.collapsed = 'true';
                         panel.style.height = panel.querySelector('.panel-header').offsetHeight + 'px';
                         panel.style.minHeight = panel.style.height;
+                        setTimeout(() => { delete panel.dataset.restoringPanel; }, 0);
                         newBtn.innerHTML = '<span style="color:#0072BC; font-weight:bold; font-size:14px; line-height:0.5; display:flex; align-items:center; justify-content:center;">+</span>';
                     }
                     saveUiState();
@@ -220,6 +243,9 @@ function getUiState() {
             left: panel.style.left,
             right: panel.style.right,
             top: panel.style.top,
+            width: panel.style.width,
+            height: panel.dataset.collapsed === 'true' ? (panel.dataset.expandedHeight || '') : panel.style.height,
+            zIndex: panel.style.zIndex,
             display: panel.style.display,
             collapsed: panel.dataset.collapsed === 'true'
         };
@@ -245,9 +271,51 @@ function getUiState() {
 }
 
 function saveUiState() {
+    if (isRestoringUiState || !isSketchUiReady) return;
     try {
         localStorage.setItem('mi_ui_state', JSON.stringify(getUiState()));
     } catch (e) {}
+}
+
+function getSketchPanelIds() {
+    return ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+}
+
+function isSketchWorkspaceVisible() {
+    const sketch = document.getElementById('tab-sketch');
+    const appBody = document.getElementById('main-app-body');
+    const appBodyVisible = !appBody || getComputedStyle(appBody).display !== 'none';
+    return !!(appBodyVisible && sketch && sketch.classList.contains('active'));
+}
+
+function updateSketchPanelsVisibility() {
+    const shouldShow = isSketchWorkspaceVisible();
+    getSketchPanelIds().forEach(id => {
+        const panel = document.getElementById(id);
+        if (!panel) return;
+        if (shouldShow) {
+            panel.style.display = '';
+            panel.style.visibility = 'visible';
+            panel.style.pointerEvents = 'auto';
+        } else {
+            panel.style.display = 'none';
+            panel.style.pointerEvents = 'none';
+        }
+    });
+}
+
+function setupSketchPanelVisibilityWatcher() {
+    if (window.__mi_sketch_panel_visibility_watcher) return;
+    window.__mi_sketch_panel_visibility_watcher = true;
+    document.addEventListener('click', () => {
+        setTimeout(updateSketchPanelsVisibility, 0);
+    }, true);
+    if (typeof MutationObserver !== 'undefined') {
+        document.querySelectorAll('.workspace').forEach(workspace => {
+            const observer = new MutationObserver(updateSketchPanelsVisibility);
+            observer.observe(workspace, { attributes: true, attributeFilter: ['class'] });
+        });
+    }
 }
 
 function applySketchCanvasZoom() {
@@ -286,16 +354,23 @@ function restoreUiState() {
                 const panel = document.getElementById(id);
                 const panelState = state.panels[id];
                 if (!panel || !panelState) return;
+                panel.dataset.restoringPanel = 'true';
+                panel.style.position = 'fixed';
                 if (panelState.left) panel.style.left = panelState.left;
                 if (panelState.right) panel.style.right = panelState.right;
                 if (panelState.top) panel.style.top = panelState.top;
-                if (panelState.display) panel.style.display = panelState.display;
+                if (panelState.width) panel.style.width = panelState.width;
+                if (panelState.height) panel.style.height = panelState.height;
+                if (panelState.zIndex) panel.style.zIndex = panelState.zIndex;
+                if ((parseInt(panel.style.zIndex, 10) || 0) < 30000) panel.style.zIndex = '30000';
+                panel.style.display = panelState.display && panelState.display !== 'none' ? panelState.display : '';
                 if (typeof panelState.collapsed === 'boolean') {
                     const content = panel.querySelector('.panel-content');
                     const btn = panel.querySelector('.panel-minimize-btn');
                     if (content && btn) {
                         if (panelState.collapsed) {
                             content.dataset.expandedDisplay = content.style.display || getComputedStyle(content).display || '';
+                            panel.dataset.expandedHeight = panelState.height || panel.style.height || '';
                             content.style.display = 'none';
                             panel.dataset.collapsed = 'true';
                             const header = panel.querySelector('.panel-header');
@@ -307,12 +382,23 @@ function restoreUiState() {
                         } else {
                             content.style.display = content.dataset.expandedDisplay || '';
                             panel.dataset.collapsed = 'false';
-                            panel.style.height = panel.dataset.expandedHeight || '';
+                            panel.style.height = panelState.height || panel.dataset.expandedHeight || '';
                             panel.style.minHeight = '';
                             btn.innerHTML = '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;">';
                         }
                     }
                 }
+                const panelW = panel.offsetWidth || 280;
+                const panelH = panel.offsetHeight || 40;
+                let left = Number.isFinite(parseFloat(panel.style.left)) ? parseFloat(panel.style.left) : null;
+                let top = Number.isFinite(parseFloat(panel.style.top)) ? parseFloat(panel.style.top) : null;
+                if (left === null && panel.style.right) left = (window.innerWidth || 1200) - panelW - (parseFloat(panel.style.right) || 0);
+                if (left === null) left = 20;
+                if (top === null) top = 20;
+                panel.style.left = constrain(left, 0, Math.max(0, (window.innerWidth || 1200) - Math.min(panelW, window.innerWidth || 1200))) + 'px';
+                panel.style.top = constrain(top, 0, Math.max(0, (window.innerHeight || 800) - Math.min(panelH, window.innerHeight || 800))) + 'px';
+                panel.style.right = 'auto';
+                setTimeout(() => { delete panel.dataset.restoringPanel; }, 0);
             });
         }
         const sketchScroll = document.getElementById('sketch-scroll-area');
@@ -366,11 +452,11 @@ function updateToolButtonUI() {
 function getLastActiveTab() {
     try {
         const raw = localStorage.getItem('mi_ui_state');
-        if (!raw) return 'tab-thoughts';
+        if (!raw) return 'tab-sketch';
         const state = JSON.parse(raw);
-        return state.activeTab === 'tab-index' ? 'tab-sketch' : (state.activeTab || 'tab-thoughts');
+        return 'tab-sketch';
     } catch (e) {
-        return 'tab-thoughts';
+        return 'tab-sketch';
     }
 }
 
@@ -389,8 +475,10 @@ function makePanelDraggable(panel, boundsEl) {
     const movePanel = (clientX, clientY) => {
         const dx = clientX - startX;
         const dy = clientY - startY;
-        const maxLeft = Math.max(0, boundsEl.clientWidth - panel.offsetWidth);
-        const maxTop = Math.max(0, boundsEl.clientHeight - panel.offsetHeight);
+        const boundsW = panel.style.position === 'fixed' ? window.innerWidth : boundsEl.clientWidth;
+        const boundsH = panel.style.position === 'fixed' ? window.innerHeight : boundsEl.clientHeight;
+        const maxLeft = Math.max(0, boundsW - panel.offsetWidth);
+        const maxTop = Math.max(0, boundsH - panel.offsetHeight);
         panel.style.left = constrain(originLeft + dx, 0, maxLeft) + 'px';
         panel.style.top = constrain(originTop + dy, 0, maxTop) + 'px';
         panel.style.right = 'auto';
@@ -442,6 +530,23 @@ function makePanelDraggable(panel, boundsEl) {
         document.addEventListener('touchmove', onTouchMove, { passive: false });
         document.addEventListener('touchend', stopDrag);
     }, { passive: false });
+
+    if (typeof ResizeObserver !== 'undefined' && panel.dataset.miResizeObserved !== 'true') {
+        panel.dataset.miResizeObserved = 'true';
+        let resizeSaveTimer = null;
+        const observer = new ResizeObserver(() => {
+            if (isRestoringUiState) return;
+            if (panel.dataset.restoringPanel === 'true') return;
+            if (panel.dataset.collapsed === 'true') return;
+            if (resizeSaveTimer) clearTimeout(resizeSaveTimer);
+            resizeSaveTimer = setTimeout(() => {
+                panel.style.width = panel.offsetWidth + 'px';
+                panel.style.height = panel.offsetHeight + 'px';
+                saveUiState();
+            }, 200);
+        });
+        observer.observe(panel);
+    }
 }
 
 function renderPatternsUI() {
@@ -692,17 +797,23 @@ function renderLayersUI() {
 
 function createUI() {
   try {
-    if (window.__mi_ui_initialized) return;
-    window.__mi_ui_initialized = true;
-
-    const panelHost = document.getElementById('tab-sketch') || document.getElementById('sketch-canvas-holder');
+    const panelHost = document.body;
     if (!panelHost) return;
     createPropertiesPanel(panelHost);
+    window.__mi_ui_initialized = true;
   } catch (e) {}
 }
 
 function createPropertiesPanel(panelHost) {
-    if (document.getElementById('sketch-properties-panel')) return;
+    const existing = document.getElementById('sketch-properties-panel');
+    if (existing) {
+        existing.style.display = '';
+        existing.style.visibility = 'visible';
+        existing.style.opacity = '1';
+        if (panelHost && existing.parentNode !== panelHost) panelHost.appendChild(existing);
+        makePanelDraggable(existing, panelHost || existing.parentNode);
+        return existing;
+    }
     const panel = document.createElement('div');
     panel.id = 'sketch-properties-panel';
     panel.className = 'floating-panel';
@@ -733,7 +844,103 @@ function createPropertiesPanel(panelHost) {
     panelHost.appendChild(panel);
     makePanelDraggable(panel, panelHost);
     renderPropertiesUI();
+    return panel;
 }
+
+function recoverSketchPanels() {
+    const panelHost = document.body;
+    if (!panelHost) return;
+    createPropertiesPanel(panelHost);
+
+    const ids = ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+    ids.forEach((id, index) => {
+        const panel = document.getElementById(id);
+        if (!panel) return;
+        panelHost.appendChild(panel);
+        panel.style.display = '';
+        panel.style.visibility = 'visible';
+        panel.style.opacity = '1';
+        panel.style.pointerEvents = 'auto';
+        panel.style.position = 'fixed';
+        if (!panel.style.width) panel.style.width = '280px';
+        panel.style.zIndex = panel.style.zIndex || String(30000 + index);
+
+        const hostW = window.innerWidth || panelHost.clientWidth || 1200;
+        const hostH = window.innerHeight || panelHost.clientHeight || 800;
+        const panelW = panel.offsetWidth || 280;
+        const panelH = panel.offsetHeight || 40;
+        let left = Number.isFinite(parseFloat(panel.style.left)) ? parseFloat(panel.style.left) : null;
+        let top = Number.isFinite(parseFloat(panel.style.top)) ? parseFloat(panel.style.top) : null;
+
+        if (left === null && panel.style.right) {
+            left = hostW - panelW - (parseFloat(panel.style.right) || 0);
+        }
+        if (left === null) left = Math.max(0, hostW - panelW - (id === 'sketch-properties-panel' ? 320 : 20));
+        if (top === null) top = id === 'sketch-properties-panel' ? 20 : 20 + index * 55;
+
+        left = constrain(left, 0, Math.max(0, hostW - Math.min(panelW, hostW)));
+        top = constrain(top, 0, Math.max(0, hostH - Math.min(panelH, hostH)));
+        panel.style.left = left + 'px';
+        panel.style.top = top + 'px';
+        panel.style.right = 'auto';
+    });
+}
+
+function hasVisibleSketchPanel() {
+    const ids = ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+    return ids.some(id => {
+        const panel = document.getElementById(id);
+        if (!panel) return false;
+        const rect = panel.getBoundingClientRect();
+        const style = getComputedStyle(panel);
+        return style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            parseFloat(style.opacity || '1') > 0 &&
+            rect.width > 20 &&
+            rect.height > 20 &&
+            rect.right > 0 &&
+            rect.bottom > 0 &&
+            rect.left < window.innerWidth &&
+            rect.top < window.innerHeight;
+    });
+}
+
+function resetSketchPanelsToDefault() {
+    const panelHost = document.body;
+    createPropertiesPanel(panelHost);
+    const defaults = {
+        'sketch-main-tools': { left: 24, top: 72, width: 280 },
+        'sketch-export-panel': { left: 24, top: 300, width: 280 },
+        'sketch-patterns-panel': { left: window.innerWidth - 304, top: 72, width: 280 },
+        'sketch-ink-panel': { left: window.innerWidth - 304, top: 330, width: 280 },
+        'sketch-layer-panel': { left: window.innerWidth - 304, top: 520, width: 280 },
+        'sketch-properties-panel': { left: Math.max(24, window.innerWidth - 608), top: 72, width: 280 }
+    };
+    Object.keys(defaults).forEach((id, index) => {
+        const panel = document.getElementById(id);
+        if (!panel) return;
+        const d = defaults[id];
+        panelHost.appendChild(panel);
+        panel.style.position = 'fixed';
+        panel.style.display = 'flex';
+        panel.style.visibility = 'visible';
+        panel.style.opacity = '1';
+        panel.style.pointerEvents = 'auto';
+        panel.style.left = constrain(d.left, 0, Math.max(0, window.innerWidth - d.width)) + 'px';
+        panel.style.top = constrain(d.top, 0, Math.max(0, window.innerHeight - 40)) + 'px';
+        panel.style.right = 'auto';
+        panel.style.width = d.width + 'px';
+        panel.style.height = '';
+        panel.style.minHeight = '';
+        panel.style.zIndex = String(30000 + index);
+        panel.dataset.collapsed = 'false';
+        const content = panel.querySelector('.panel-content');
+        if (content) content.style.display = content.dataset.expandedDisplay || '';
+        makePanelDraggable(panel, panelHost);
+    });
+}
+
+window.resetSketchPanelsToDefault = resetSketchPanelsToDefault;
 
 function renderPropertiesUI() {
     const content = document.getElementById('sketch-properties-content');
@@ -1637,6 +1844,10 @@ function saveState(silent) {
     });
     if (historyState.length > MAX_HISTORY) historyState.shift();
     sketchRedoHistory = [];
+    if (!silent) {
+        saveToLocalStorage(true);
+        saveUiState();
+    }
   } catch (e) {}
 }
 
@@ -2868,7 +3079,7 @@ function mouseReleased() {
   saveUiState();
 }
 
-function loadFromLocalStorage() {
+function loadFromLocalStorageImpl() {
   try {
     const raw = localStorage.getItem('mi_sketch_state');
     if (!raw) return;
@@ -2963,7 +3174,7 @@ function loadFromLocalStorage() {
   }
 }
 
-function saveToLocalStorage(silent) {
+function saveToLocalStorageImpl(silent) {
   try {
     syncActiveAsciiLayer();
     const obj = {
