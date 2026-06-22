@@ -461,6 +461,22 @@ body::after {
 #tab-sketch {
   overflow: hidden;
 }
+#tab-index {
+  overflow: hidden;
+}
+#tab-index .artboard-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+#tab-index .paper-sheet {
+  overflow: visible;
+}
+.hidden-layer {
+  display: none !important;
+}
 #sketch-scroll-area {
   min-width: 0;
 }
@@ -520,6 +536,12 @@ body::after {
   flex-direction: column;
   overflow: hidden;
   resize: both;
+}
+
+#sketch-export-panel {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .panel-header {
@@ -689,14 +711,17 @@ body::after {
 }
 
 /* Tab 4 tools panel: add breathing room between titles and controls */
-#layout-tools-panel .section-title{
+#layout-tools-panel .section-title,
+#layout-layer-panel .section-title{
   margin-top:14px;
   margin-bottom:8px;
 }
-#layout-tools-panel .section-title:first-child{
+#layout-tools-panel .section-title:first-child,
+#layout-layer-panel .section-title:first-child{
   margin-top:6px;
 }
-#layout-tools-panel .section-title + *{
+#layout-tools-panel .section-title + *,
+#layout-layer-panel .section-title + *{
   margin-top:6px;
 }
 

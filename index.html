@@ -50,6 +50,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>The Memory Index</title>
   <link rel="icon" href="assets/UI items/logo.svg" type="image/x-icon" />
   
@@ -86,7 +89,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260622-tab4layers1" />
   <link rel="stylesheet" href="https://use.typekit.net/ptv6ncb.css" crossorigin="anonymous">
 </head>
 <body>
@@ -105,6 +108,7 @@
     <div class="sidebar-tab active" data-tab="tab-thoughts" onclick="switchTab('tab-thoughts')" data-tooltip="Tab 1: Write and collect your thoughts.">1. Thoughts</div>
     <div class="sidebar-tab" data-tab="tab-image-proc" onclick="switchTab('tab-image-proc')" data-tooltip="Tab 2: Process images into ASCII art.">2. Image Processor</div>
     <div class="sidebar-tab" data-tab="tab-sketch" onclick="switchTab('tab-sketch')" data-tooltip="Tab 3: Sketch freely with ASCII characters.">3. ASCII Sketch</div>
+    <div class="sidebar-tab" data-tab="tab-index" onclick="switchTab('tab-index')" data-tooltip="Tab 4: Arrange your memory diagram.">4. Memory Diagram</div>
   </div>
 
   <div class="layout-column">
@@ -746,12 +750,33 @@
       </div>
     </div>
 
-    <div id="sketch-scroll-area" style="position:relative; width:calc(100% - 340px); height:100%; overflow:auto; background:#d0d0d0;">
+    <div id="sketch-scroll-area" style="position:relative; width:100%; height:100%; overflow:auto; background:#d0d0d0;">
       <div id="sketch-canvas-holder" style="padding: 20px;"></div>
       <div class="zoom-float" style="position:absolute; right:20px; bottom:20px; top:auto; transform:none;">
         <button class="btn-zoom" id="btnSketchZoomOut">-</button>
         <span id="sketch-zoom-val" class="zoom-text">100%</span>
         <button class="btn-zoom" id="btnSketchZoomIn">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: INDEX -->
+  <div class="workspace" id="tab-index">
+    <div id="layout-tools-panel" class="floating-panel">
+      <div class="panel-header">
+        <span>Tools</span>
+        <button class="panel-minimize-btn"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>
+      </div>
+      <div class="panel-content" style="padding:10px; overflow-y:auto;">
+        <div id="layer-controls"></div>
+      </div>
+    </div>
+
+    <div class="panel-center" style="flex-direction:column; justify-content:flex-start; overflow:auto; padding-top:20px; align-items:flex-start;">
+      <div class="artboard-wrapper">
+        <div class="paper-sheet paper-a4 fixed-a4">
+          <div id="layout-canvas-holder" style="width:100%; height:100%; background-color: #444;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -819,11 +844,12 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast-notification" class="toast-notification">Saved</div>
 
-<script src="global.js?v=20260613-fix5"></script>
-<script src="tab-thoughts.js?v=20260613-fix5"></script>
-<script src="sketch.js?v=20260613-fix5"></script>
-<script src="cmyk-ascii-effect.js?v=20260613-fix5"></script>
-<script src="ui-binding.js?v=20260613-fix5"></script>
+<script src="global.js?v=20260622-tab4layers1"></script>
+<script src="tab-thoughts.js?v=20260622-tab4layers1"></script>
+<script src="tab-index.js?v=20260622-tab4layers1"></script>
+<script src="sketch.js?v=20260622-tab4layers1"></script>
+<script src="cmyk-ascii-effect.js?v=20260622-tab4layers1"></script>
+<script src="ui-binding.js?v=20260622-tab4layers1"></script>
 <script>
   // --- CSS for Language Toggle ---
   const style = document.createElement('style');
@@ -1370,17 +1396,20 @@
   }
 
   window.duplicateArtboard = function(btn) {
-    const wrapper = btn.closest('.artboard-wrapper');
+    const wrapper = btn.closest('.artboard-wrapper') || document.querySelector('#tab-index .artboard-wrapper');
+    if (!wrapper || !wrapper.parentNode) return;
     const clone = wrapper.cloneNode(true);
     
     // Update Name
     const input = clone.querySelector('.artboard-name');
-    const currentName = input.value;
-    const match = currentName.match(/(\d+)$/);
-    if(match) {
-      input.value = currentName.replace(/\d+$/, parseInt(match[1]) + 1);
-    } else {
-      input.value = currentName + " Copy";
+    if (input) {
+      const currentName = input.value;
+      const match = currentName.match(/(\d+)$/);
+      if(match) {
+        input.value = currentName.replace(/\d+$/, parseInt(match[1]) + 1);
+      } else {
+        input.value = currentName + " Copy";
+      }
     }
 
     // Update ID to avoid duplicates

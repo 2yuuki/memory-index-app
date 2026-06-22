@@ -30,6 +30,8 @@ function saveToLocalStorage(silent) {
   return saveToLocalStorageImpl(silent);
 }
 
+const SKETCH_PANEL_LAYOUT_VERSION = '20260621-panel-stable-2';
+
 // --- SETUP ---
 function setup() {
   frameRate(30);
@@ -109,12 +111,17 @@ function setup() {
   restoreUiState();
   window.switchTab('tab-sketch');
   recoverSketchPanels();
+  if (window.__mi_needs_panel_layout_reset) {
+      resetSketchPanelsToDefault();
+      delete window.__mi_needs_panel_layout_reset;
+  }
   updateSketchPanelsVisibility();
   renderPropertiesUI();
   updateLayerTextVisuals();
   updateToolButtonUI();
   isRestoringUiState = false;
   isSketchUiReady = true;
+  hideRetiredExportPanel();
   saveUiState();
 
   let starBtn = document.getElementById('btnShapeStar');
@@ -135,7 +142,8 @@ function setup() {
   if (sb) sb.addClass('hidden');
   setTimeout(() => {
       recoverSketchPanels();
-      if (!hasVisibleSketchPanel()) resetSketchPanelsToDefault();
+      updateSketchPanelsVisibility();
+      if (isSketchWorkspaceVisible() && !hasVisibleSketchPanel()) resetSketchPanelsToDefault();
       updateSketchPanelsVisibility();
       saveUiState();
   }, 100);
@@ -168,10 +176,9 @@ function dockPanelsRight() {
 
     const defaults = {
         'sketch-main-tools': { right: 20, top: 20 },
-        'sketch-export-panel': { right: 20, top: 275 },
-        'sketch-patterns-panel': { right: 20, top: 390 },
-        'sketch-ink-panel': { right: 20, top: 645 },
-        'sketch-layer-panel': { right: 20, top: 760 },
+        'sketch-patterns-panel': { right: 20, top: 275 },
+        'sketch-ink-panel': { right: 20, top: 535 },
+        'sketch-layer-panel': { right: 20, top: 720 },
         'sketch-properties-panel': { right: 320, top: 20 }
     };
 
@@ -236,7 +243,7 @@ function bindPanelToggle() {
 function getUiState() {
     const panels = {};
     const sketchScroll = document.getElementById('sketch-scroll-area');
-    ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'].forEach(id => {
+    getSketchPanelIds().forEach(id => {
         const panel = document.getElementById(id);
         if (!panel) return;
         panels[id] = {
@@ -246,11 +253,11 @@ function getUiState() {
             width: panel.style.width,
             height: panel.dataset.collapsed === 'true' ? (panel.dataset.expandedHeight || '') : panel.style.height,
             zIndex: panel.style.zIndex,
-            display: panel.style.display,
             collapsed: panel.dataset.collapsed === 'true'
         };
     });
     return {
+        panelLayoutVersion: SKETCH_PANEL_LAYOUT_VERSION,
         activeTab: activeTab,
         viewX: viewX,
         viewY: viewY,
@@ -278,7 +285,16 @@ function saveUiState() {
 }
 
 function getSketchPanelIds() {
-    return ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+    return ['sketch-main-tools', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+}
+
+function hideRetiredExportPanel() {
+    const panel = document.getElementById('sketch-export-panel');
+    if (!panel) return;
+    panel.style.display = 'none';
+    panel.style.visibility = 'hidden';
+    panel.style.pointerEvents = 'none';
+    panel.setAttribute('aria-hidden', 'true');
 }
 
 function isSketchWorkspaceVisible() {
@@ -294,14 +310,17 @@ function updateSketchPanelsVisibility() {
         const panel = document.getElementById(id);
         if (!panel) return;
         if (shouldShow) {
-            panel.style.display = '';
+            delete panel.dataset.hiddenByTab;
+            panel.style.display = 'flex';
             panel.style.visibility = 'visible';
             panel.style.pointerEvents = 'auto';
         } else {
+            panel.dataset.hiddenByTab = 'true';
             panel.style.display = 'none';
             panel.style.pointerEvents = 'none';
         }
     });
+    hideRetiredExportPanel();
 }
 
 function setupSketchPanelVisibilityWatcher() {
@@ -349,7 +368,7 @@ function restoreUiState() {
             const l = asciiLayers[activeLayerIndex];
             grid = l.grid; colorGrid = l.colorGrid; textColorGrid = l.textColorGrid; pgColorLayer = l.pgColor; pgTextLayer = l.pgText;
         }
-        if (state.panels) {
+        if (state.panels && state.panelLayoutVersion === SKETCH_PANEL_LAYOUT_VERSION) {
             Object.keys(state.panels).forEach(id => {
                 const panel = document.getElementById(id);
                 const panelState = state.panels[id];
@@ -363,7 +382,7 @@ function restoreUiState() {
                 if (panelState.height) panel.style.height = panelState.height;
                 if (panelState.zIndex) panel.style.zIndex = panelState.zIndex;
                 if ((parseInt(panel.style.zIndex, 10) || 0) < 30000) panel.style.zIndex = '30000';
-                panel.style.display = panelState.display && panelState.display !== 'none' ? panelState.display : '';
+                panel.style.display = 'flex';
                 if (typeof panelState.collapsed === 'boolean') {
                     const content = panel.querySelector('.panel-content');
                     const btn = panel.querySelector('.panel-minimize-btn');
@@ -400,6 +419,8 @@ function restoreUiState() {
                 panel.style.right = 'auto';
                 setTimeout(() => { delete panel.dataset.restoringPanel; }, 0);
             });
+        } else if (state.panels) {
+            window.__mi_needs_panel_layout_reset = true;
         }
         const sketchScroll = document.getElementById('sketch-scroll-area');
         if (sketchScroll) {
@@ -598,7 +619,15 @@ function applyAsciiTextStyle(target, size = userFontSize, hAlign = CENTER, vAlig
     }
 }
 
+function normalizeAsciiCharValue(ch) {
+    if (ch === undefined || ch === null) return "";
+    return String(ch);
+}
+
 function drawAsciiGlyph(target, ch, px, py, textColor = "#000000") {
+    ch = normalizeAsciiCharValue(ch);
+    if (ch === "") return;
+
     if (ch === "█") {
         if (target) {
             target.noStroke();
@@ -852,12 +881,13 @@ function recoverSketchPanels() {
     if (!panelHost) return;
     createPropertiesPanel(panelHost);
 
-    const ids = ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+    hideRetiredExportPanel();
+    const ids = getSketchPanelIds();
     ids.forEach((id, index) => {
         const panel = document.getElementById(id);
         if (!panel) return;
         panelHost.appendChild(panel);
-        panel.style.display = '';
+        panel.style.display = 'flex';
         panel.style.visibility = 'visible';
         panel.style.opacity = '1';
         panel.style.pointerEvents = 'auto';
@@ -887,8 +917,7 @@ function recoverSketchPanels() {
 }
 
 function hasVisibleSketchPanel() {
-    const ids = ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
-    return ids.some(id => {
+    return getSketchPanelIds().some(id => {
         const panel = document.getElementById(id);
         if (!panel) return false;
         const rect = panel.getBoundingClientRect();
@@ -908,9 +937,9 @@ function hasVisibleSketchPanel() {
 function resetSketchPanelsToDefault() {
     const panelHost = document.body;
     createPropertiesPanel(panelHost);
+    hideRetiredExportPanel();
     const defaults = {
         'sketch-main-tools': { left: 24, top: 72, width: 280 },
-        'sketch-export-panel': { left: 24, top: 300, width: 280 },
         'sketch-patterns-panel': { left: window.innerWidth - 304, top: 72, width: 280 },
         'sketch-ink-panel': { left: window.innerWidth - 304, top: 330, width: 280 },
         'sketch-layer-panel': { left: window.innerWidth - 304, top: 520, width: 280 },
@@ -1905,7 +1934,7 @@ function copySelection() {
         let row = [];
         for (let x = minX; x <= maxX; x++) {
             if (isValidCell(x, y) && (!useMask || (selectionMask[y] && selectionMask[y][x]))) {
-                row.push({ char: grid[y][x], color: colorGrid[y][x], textColor: textColorGrid[y][x] });
+                row.push({ char: normalizeAsciiCharValue(grid[y][x]), color: colorGrid[y][x], textColor: textColorGrid[y][x] });
             } else {
                 row.push({ char: "", color: null, textColor: "#000000" });
             }
@@ -1979,9 +2008,10 @@ function commitFloatingSelection() {
             let targetY = floatingY + cy;
             if (isValidCell(targetX, targetY)) {
                 let d = clipboard.data[cy][cx];
-                if (d.char !== "") grid[targetY][targetX] = d.char;
+                const pastedChar = normalizeAsciiCharValue(d.char);
+                if (pastedChar !== "") grid[targetY][targetX] = pastedChar;
                 if (d.color !== null) colorGrid[targetY][targetX] = d.color;
-                if (d.textColor !== "#000000" && d.char !== "") textColorGrid[targetY][targetX] = d.textColor;
+                if (d.textColor !== "#000000" && pastedChar !== "") textColorGrid[targetY][targetX] = d.textColor;
             }
         }
     }
@@ -2161,14 +2191,15 @@ function draw() {
       for (let cy = 0; cy < clipboard.h; cy++) {
           for (let cx = 0; cx < clipboard.w; cx++) {
               let d = clipboard.data[cy][cx];
-              if (d.char !== "") {
+              const floatingChar = normalizeAsciiCharValue(d.char);
+              if (floatingChar !== "") {
                   let drawX = (floatingX + cx) * cellW;
                   let drawY = (floatingY + cy) * cellH;
                   if (d.color) {
                       fill(d.color); noStroke();
                       rect(drawX, drawY, cellW, cellH);
                   }
-                  drawAsciiGlyph(null, d.char, drawX, drawY, d.textColor);
+                  drawAsciiGlyph(null, floatingChar, drawX, drawY, d.textColor);
               }
           }
       }
@@ -2214,7 +2245,7 @@ function drawSingleCellText(x, y) {
   pgTextLayer.rect(cx, cy, cellW, cellH);
   pgTextLayer.noErase();
 
-  let char = grid[y][x];
+  let char = normalizeAsciiCharValue(grid[y][x]);
   if (char !== "") {
       drawAsciiGlyph(pgTextLayer, char, cx, cy, textColorGrid[y][x] || "#000000");
   }
@@ -2227,7 +2258,7 @@ function updateLayerTextVisuals() {
 
   for (let y = 0; y < workRows; y++) {
     for (let x = 0; x < workCols; x++) {
-      let char = grid[y][x];
+      let char = normalizeAsciiCharValue(grid[y][x]);
       if (char !== "") {
           let cx = x * cellW; let cy = y * cellH;
           drawAsciiGlyph(pgTextLayer, char, cx, cy, textColorGrid[y][x] || "#000000");
@@ -2251,7 +2282,7 @@ function setAsciiCell(x, y, ch, textColor = null, ignoreSelection = false) {
   if (!isActiveAsciiLayerEditable()) return;
   if (!ignoreSelection && selectionMask && !selectionMask[y][x]) return;
   ensureGridCell(x, y);
-  grid[y][x] = ch;
+  grid[y][x] = normalizeAsciiCharValue(ch);
   if (textColor) {
       textColorGrid[y][x] = textColor;
   }
@@ -2299,11 +2330,6 @@ function drawGridHoverGuide() {
 }
 
 function drawViewportOverlay() {
-  fill(208);
-  noStroke();
-  rect(viewW - viewX, -viewY, width, height);
-  rect(-viewX, viewH - viewY, width, height);
-
   stroke(255, 0, 0, 150);
   strokeWeight(2);
   noFill();
@@ -2366,7 +2392,7 @@ function drawToolPreview() {
 
 function magicWandSelect(startX, startY) {
   if (!isValidCell(startX, startY)) return;
-  const targetChar = grid[startY][startX];
+  const targetChar = normalizeAsciiCharValue(grid[startY][startX]);
   const targetBgColor = getMagicWandCellColor(startX, startY);
   const targetTextColor = getMagicWandTextColor(startX, startY);
 
@@ -2377,7 +2403,7 @@ function magicWandSelect(startX, startY) {
 
   for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
-          const sameChar = grid[y][x] === targetChar;
+          const sameChar = normalizeAsciiCharValue(grid[y][x]) === targetChar;
           const sameBgColor = getMagicWandCellColor(x, y) === targetBgColor;
           const sameTextColor = getMagicWandTextColor(x, y) === targetTextColor;
 
@@ -2425,12 +2451,13 @@ function cellColorMatches(a, b) {
 
 function applyFillToSelectionMask(ch, textColor = null, cellColor = undefined) {
   if (!selectionMask || !isActiveAsciiLayerEditable()) return false;
+  ch = normalizeAsciiCharValue(ch);
   let changed = false;
   for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
           if (selectionMask[y] && selectionMask[y][x]) {
               ensureGridCell(x, y);
-              if (grid[y][x] !== ch) {
+              if (normalizeAsciiCharValue(grid[y][x]) !== ch) {
                   grid[y][x] = ch;
                   changed = true;
               }
@@ -2475,7 +2502,7 @@ function applyColorToSelectionMask(col) {
 
 function floodFillColor(startX, startY, replaceColor) {
   if (!isValidCell(startX, startY) || !isActiveAsciiLayerEditable()) return false;
-  const targetChar = grid[startY][startX];
+  const targetChar = normalizeAsciiCharValue(grid[startY][startX]);
   const targetColor = colorGrid[startY][startX];
   const nextColor = replaceColor || null;
   if (cellColorMatches(targetColor, nextColor)) return false;
@@ -2490,7 +2517,7 @@ function floodFillColor(startX, startY, replaceColor) {
       if (!isValidCell(p.x, p.y) || visited[p.y][p.x]) continue;
       visited[p.y][p.x] = true;
       if (selectionMask && (!selectionMask[p.y] || !selectionMask[p.y][p.x])) continue;
-      if (grid[p.y][p.x] !== targetChar) continue;
+      if (normalizeAsciiCharValue(grid[p.y][p.x]) !== targetChar) continue;
       if (!cellColorMatches(colorGrid[p.y][p.x], targetColor)) continue;
 
       ensureGridCell(p.x, p.y);
@@ -2512,9 +2539,9 @@ function floodFillColor(startX, startY, replaceColor) {
 
 function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor = undefined) {
   if (!isValidCell(startX, startY) || !isActiveAsciiLayerEditable()) return false;
-  const targetChar = grid[startY][startX];
+  const targetChar = normalizeAsciiCharValue(grid[startY][startX]);
   const targetColor = colorGrid[startY][startX];
-  const nextChar = replaceChar || "";
+  const nextChar = normalizeAsciiCharValue(replaceChar);
 
   let changed = false;
   let queue = [{x: startX, y: startY}];
@@ -2526,11 +2553,11 @@ function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor
       if (!isValidCell(p.x, p.y) || visited[p.y][p.x]) continue;
       visited[p.y][p.x] = true;
       if (selectionMask && (!selectionMask[p.y] || !selectionMask[p.y][p.x])) continue;
-      if (grid[p.y][p.x] !== targetChar) continue;
+      if (normalizeAsciiCharValue(grid[p.y][p.x]) !== targetChar) continue;
       if (!cellColorMatches(colorGrid[p.y][p.x], targetColor)) continue;
 
       ensureGridCell(p.x, p.y);
-      if (grid[p.y][p.x] !== nextChar) {
+      if (normalizeAsciiCharValue(grid[p.y][p.x]) !== nextChar) {
           grid[p.y][p.x] = nextChar;
           changed = true;
       }
@@ -2557,13 +2584,15 @@ function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor
 }
 
 function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
+  targetChar = normalizeAsciiCharValue(targetChar);
+  replaceChar = normalizeAsciiCharValue(replaceChar);
   if (targetChar === replaceChar) return;
   const targetColor = colorGrid[startY][startX];
   let queue = [{x: startX, y: startY}];
   while (queue.length > 0) {
       let p = queue.shift();
       if (isValidCell(p.x, p.y)) {
-          let sameChar = grid[p.y][p.x] === targetChar;
+          let sameChar = normalizeAsciiCharValue(grid[p.y][p.x]) === targetChar;
           let sameColor = colorGrid[p.y][p.x] === targetColor;
           let isMatch = sameChar && (targetChar !== "" || sameColor);
 
@@ -3252,7 +3281,7 @@ function getComposedAsciiCell(x, y) {
     const layer = asciiLayers[i];
     if (!layer || !layer.visible) continue;
     const layerColor = layer.colorGrid && layer.colorGrid[y] ? layer.colorGrid[y][x] : null;
-    const layerChar = layer.grid && layer.grid[y] ? layer.grid[y][x] : "";
+    const layerChar = normalizeAsciiCharValue(layer.grid && layer.grid[y] ? layer.grid[y][x] : "");
     if (layerColor) composed.color = layerColor;
     if (layerChar !== "") {
       composed.char = layerChar;
@@ -3338,7 +3367,7 @@ function exportAsciiSvg() {
     }
     for (let y = 0; y < workRows; y++) {
       for (let x = 0; x < workCols; x++) {
-        const ch = layer.grid && layer.grid[y] ? layer.grid[y][x] : "";
+        const ch = normalizeAsciiCharValue(layer.grid && layer.grid[y] ? layer.grid[y][x] : "");
         if (ch === "") continue;
         const textColor = layer.textColorGrid && layer.textColorGrid[y] ? (layer.textColorGrid[y][x] || "#000000") : "#000000";
         if (ch === "█") {

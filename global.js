@@ -100,7 +100,7 @@ var palette = [
 
 // --- CORE: TAB SWITCHING ---
 window.switchTab = function(tabId) {
-  if (tabId === 'tab-index' || !document.getElementById(tabId)) {
+  if (!document.getElementById(tabId)) {
       tabId = 'tab-sketch';
   }
   if (activeTab === 'tab-image-proc' && tabId !== 'tab-image-proc') {
@@ -114,7 +114,10 @@ window.switchTab = function(tabId) {
     b.style.color = '#000';
     b.style.webkitTextFillColor = '#000';
   });
-  document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.workspace').forEach(w => {
+    w.classList.remove('active');
+    w.style.display = '';
+  });
   let btn = document.querySelector(`[data-tab="${tabId}"]`);
   if(btn) {
     btn.classList.add('active');
@@ -123,6 +126,26 @@ window.switchTab = function(tabId) {
   }
   let ws = document.getElementById(tabId);
   if(ws) ws.classList.add('active');
+  if (tabId === 'tab-index') {
+    if (typeof window.setupLayoutTab === 'function') window.setupLayoutTab();
+    requestAnimationFrame(() => {
+      if (typeof window.setupLayoutTab === 'function') window.setupLayoutTab();
+    });
+    setTimeout(() => {
+      if (typeof window.setupLayoutTab === 'function') window.setupLayoutTab();
+    }, 100);
+  } else if (typeof window.hideLayoutToolsPanel === 'function') {
+    window.hideLayoutToolsPanel();
+  }
+  if (tabId === 'tab-sketch' && typeof recoverSketchPanels === 'function') {
+    recoverSketchPanels();
+    if (typeof hasVisibleSketchPanel === 'function' &&
+        typeof resetSketchPanelsToDefault === 'function' &&
+        !hasVisibleSketchPanel()) {
+      resetSketchPanelsToDefault();
+    }
+  }
+  if (typeof updateSketchPanelsVisibility === 'function') updateSketchPanelsVisibility();
   let cnv = document.getElementById('myCanvas');
   if(!cnv) return;
   if (tabId === 'tab-sketch') {
@@ -139,7 +162,6 @@ window.switchTab = function(tabId) {
     if (typeof noLoop === 'function') noLoop(); 
     if(window.pauseImageProcessor) window.pauseImageProcessor(); 
   }
-  if (typeof updateSketchPanelsVisibility === 'function') updateSketchPanelsVisibility();
 }
 
 // --- LIBRARY FUNCTIONS ---
