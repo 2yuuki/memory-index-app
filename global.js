@@ -73,10 +73,15 @@ var userFontSize = 12;
 
 // --- HISTORY & CLIPBOARD (SKETCH) ---
 var historyState = [];
-var MAX_HISTORY = 20; 
+var MAX_HISTORY = 100;
 var selStart = null, selEnd = null;
 var selectionMask = null; 
 var sketchRedoHistory = [];
+var sketchActionDirty = false;
+var sketchPointerStepActive = false;
+var sketchPointerStartState = null;
+var sketchLastUndoAt = 0;
+var sketchLastRedoAt = 0;
 var clipboard = null;
 var layerClipboard = null;
 
@@ -108,6 +113,7 @@ window.switchTab = function(tabId) {
   }
   activeTab = tabId;
   window.activeTab = activeTab;
+  document.body.classList.toggle('is-sketch-tab', tabId === 'tab-sketch');
   if (typeof saveUiState === 'function') saveUiState();
   document.querySelectorAll('.sidebar-tab').forEach(b => {
     b.classList.remove('active');

@@ -1437,6 +1437,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 window.addEventListener('keydown', function(e) {
+  if (window.activeTab !== 'tab-index') return;
   if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && e.shiftKey) {
     e.preventDefault();

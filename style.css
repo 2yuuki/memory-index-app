@@ -538,12 +538,6 @@ body::after {
   resize: both;
 }
 
-#sketch-export-panel {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
 .panel-header {
   background: #c4c4c4;
   color: var(--btn-blue);
@@ -1219,11 +1213,32 @@ input[type="range"]::-webkit-slider-thumb{
 }
 
 /* Ensure canvases and pre-rendered graphics don't animate into view */
+#sketch-canvas-holder,
+#sketch-scroll-area,
+#tab-sketch .panel-center {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.is-sketch-tab .noise-overlay {
+  display: none !important;
+}
+
 #sketch-canvas-holder canvas, #layout-canvas-holder canvas, canvas#myCanvas, .paper-sheet > canvas {
   transition: none !important;
   animation: none !important;
   opacity: 1 !important;
   will-change: auto !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+body.is-sketch-tab canvas#myCanvas {
+  mix-blend-mode: normal !important;
 }
 
 /* Make artboard grid and lines visually ultra-thin */

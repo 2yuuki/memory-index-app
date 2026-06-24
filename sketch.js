@@ -39,10 +39,12 @@ function setup() {
   templateImg = createImage(100, 100);
 
   mainCanvas = createCanvas(canvasW, canvasH);
+  noSmooth();
   mainCanvas.id('myCanvas');
   mainCanvas.parent('sketch-canvas-holder');
   mainCanvas.style('touch-action', 'none');
   applySketchCanvasZoom();
+  hardenAsciiCanvasRendering();
 
   try {
     const mc = mainCanvas.elt;
@@ -88,6 +90,7 @@ function setup() {
 
   pgGridLayer = createGraphics(width, height);
   pgGridLayer.pixelDensity(1);
+  pgGridLayer.noSmooth();
   preRenderGrid(pgGridLayer);
 
   loadFromLocalStorage();
@@ -105,6 +108,8 @@ function setup() {
   bindPanelToggle();
   setupSketchZoomUI();
   setupToolBindings();
+  removeLegacySketchExportStatusStrip();
+  installSketchPointerStepListeners();
   setupSketchPanelVisibilityWatcher();
   const sketchScrollArea = document.getElementById('sketch-scroll-area');
   if (sketchScrollArea) sketchScrollArea.addEventListener('scroll', saveUiState);
@@ -121,7 +126,8 @@ function setup() {
   updateToolButtonUI();
   isRestoringUiState = false;
   isSketchUiReady = true;
-  hideRetiredExportPanel();
+  ensureSketchExportPanelAvailable();
+  removeLegacySketchExportStatusStrip();
   saveUiState();
 
   let starBtn = document.getElementById('btnShapeStar');
@@ -285,16 +291,62 @@ function saveUiState() {
 }
 
 function getSketchPanelIds() {
-    return ['sketch-main-tools', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
+    return ['sketch-main-tools', 'sketch-export-panel', 'sketch-patterns-panel', 'sketch-ink-panel', 'sketch-layer-panel', 'sketch-properties-panel'];
 }
 
-function hideRetiredExportPanel() {
-    const panel = document.getElementById('sketch-export-panel');
-    if (!panel) return;
-    panel.style.display = 'none';
-    panel.style.visibility = 'hidden';
-    panel.style.pointerEvents = 'none';
-    panel.setAttribute('aria-hidden', 'true');
+function ensureSketchExportPanelAvailable() {
+    let panel = document.getElementById('sketch-export-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'sketch-export-panel';
+        panel.className = 'floating-panel';
+        panel.innerHTML = [
+            '<div class="panel-header">',
+            '<span>Export</span>',
+            '<button class="panel-minimize-btn" type="button"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiB2aWV3Qm94PSIwIDAgMTAgMiI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNmZmYiLz48L3N2Zz4=" class="pixel-icon" style="width:10px;height:2px;background:#fff;"></button>',
+            '</div>',
+            '<div class="panel-content" style="padding:10px; overflow-y:auto;">',
+            '<div class="tools-grid">',
+            '<button class="btn-retro" id="btnImportSVG" data-tooltip="Import an ASCII SVG to keep editing."> Import SVG</button>',
+            '<button class="btn-retro" id="btnSaveSVG" data-tooltip="Export as SVG."> Save SVG</button>',
+            '<button class="btn-retro" id="btnSaveTXT" data-tooltip="Export as TXT."> Save TXT</button>',
+            '<button class="btn-retro" id="btnSavePNGWhite" data-tooltip="Export PNG with white background."> PNG BG</button>',
+            '<button class="btn-retro" id="btnSavePNGTransparent" data-tooltip="Export PNG with transparent background."> PNG Clear</button>',
+            '</div>',
+            '<input id="asciiSvgImportInput" type="file" accept=".svg,image/svg+xml" style="display:none;">',
+            '</div>'
+        ].join('');
+        document.body.appendChild(panel);
+        if (typeof bindPanelToggle === 'function') bindPanelToggle();
+        if (typeof setupToolBindings === 'function') setTimeout(setupToolBindings, 0);
+    }
+    panel.removeAttribute('aria-hidden');
+    if (isSketchWorkspaceVisible()) {
+        panel.style.display = 'flex';
+        panel.style.visibility = 'visible';
+        panel.style.opacity = '1';
+        panel.style.pointerEvents = 'auto';
+        panel.style.position = 'fixed';
+        panel.style.left = '24px';
+        panel.style.top = '420px';
+        panel.style.right = 'auto';
+        panel.style.width = '280px';
+        panel.style.zIndex = '30001';
+    }
+    return panel;
+}
+
+function removeLegacySketchExportStatusStrip() {
+    const legacyText = 'EXPORT IMPORT SVG SAVE SVG SAVE TXT PNG BG PNG CLEAR';
+    document.querySelectorAll('body > div, body > span, body > button').forEach(el => {
+        if (!el || el.id === 'sketch-export-panel' || (el.closest && el.closest('#sketch-export-panel'))) return;
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
+        if (text !== legacyText) return;
+        const style = window.getComputedStyle(el);
+        const isFloating = style.position === 'fixed' || style.position === 'absolute';
+        const nearBottom = parseFloat(style.bottom || '9999') <= 80 || el.getBoundingClientRect().bottom >= window.innerHeight - 120;
+        if (isFloating || nearBottom) el.remove();
+    });
 }
 
 function isSketchWorkspaceVisible() {
@@ -305,6 +357,7 @@ function isSketchWorkspaceVisible() {
 }
 
 function updateSketchPanelsVisibility() {
+    removeLegacySketchExportStatusStrip();
     const shouldShow = isSketchWorkspaceVisible();
     getSketchPanelIds().forEach(id => {
         const panel = document.getElementById(id);
@@ -320,7 +373,7 @@ function updateSketchPanelsVisibility() {
             panel.style.pointerEvents = 'none';
         }
     });
-    hideRetiredExportPanel();
+    ensureSketchExportPanelAvailable();
 }
 
 function setupSketchPanelVisibilityWatcher() {
@@ -343,8 +396,38 @@ function applySketchCanvasZoom() {
     mainCanvas.elt.style.height = Math.round(canvasH * viewZoom) + 'px';
     mainCanvas.elt.style.maxWidth = 'none';
     mainCanvas.elt.style.maxHeight = 'none';
+    hardenAsciiCanvasRendering();
     const zoomVal = document.getElementById('sketch-zoom-val');
     if (zoomVal) zoomVal.textContent = Math.round(viewZoom * 100) + '%';
+}
+
+function hardenAsciiCanvasRendering() {
+    try {
+        if (typeof noSmooth === 'function') noSmooth();
+        if (typeof drawingContext !== 'undefined' && drawingContext) {
+            drawingContext.imageSmoothingEnabled = false;
+        }
+    } catch(e) {}
+
+    const canvases = [
+        mainCanvas && mainCanvas.elt,
+        pgGridLayer && (pgGridLayer.canvas || pgGridLayer.elt)
+    ];
+    asciiLayers.forEach(layer => {
+        if (!layer) return;
+        if (layer.pgColor) canvases.push(layer.pgColor.canvas || layer.pgColor.elt);
+        if (layer.pgText) canvases.push(layer.pgText.canvas || layer.pgText.elt);
+        if (layer.pgColor && typeof layer.pgColor.noSmooth === 'function') layer.pgColor.noSmooth();
+        if (layer.pgText && typeof layer.pgText.noSmooth === 'function') layer.pgText.noSmooth();
+    });
+    if (pgGridLayer && typeof pgGridLayer.noSmooth === 'function') pgGridLayer.noSmooth();
+
+    canvases.forEach(cnv => {
+        if (!cnv || !cnv.style) return;
+        cnv.style.filter = 'none';
+        cnv.style.backdropFilter = 'none';
+        cnv.style.imageRendering = 'pixelated';
+    });
 }
 
 function restoreUiState() {
@@ -356,7 +439,7 @@ function restoreUiState() {
         if (Number.isFinite(state.viewY)) viewY = constrain(state.viewY, 0, height - viewH);
         if (Number.isFinite(state.viewZoom)) viewZoom = constrain(state.viewZoom, 0.1, 5.0);
         if (state.canvasRatioPreset) canvasRatioPreset = state.canvasRatioPreset;
-        if (state.toolMode) toolMode = state.toolMode;
+        if (state.toolMode) toolMode = (state.toolMode === 'MOUSE' || state.toolMode === 'SELECT') ? 'DRAW' : state.toolMode;
         if (state.selectedChar) selectedChar = state.selectedChar;
         if (state.selectedColor !== undefined) selectedColor = state.selectedColor;
         if (state.magicWandMatchMode === 'char' || state.magicWandMatchMode === 'color' || state.magicWandMatchMode === 'char_color') {
@@ -433,10 +516,23 @@ function restoreUiState() {
 
 function setToolMode(nextMode, options = {}) {
     const previousTool = toolMode;
+    if (isDraggingSelection && nextMode !== 'MOUSE') {
+        commitFloatingSelection();
+    }
     toolMode = nextMode;
 
+    if (isAsciiPaintTool(toolMode)) {
+        ensureEditableAsciiLayerForTool();
+        selStart = null;
+        selEnd = null;
+        isShiftSelecting = false;
+        prevGrabMouse = null;
+        imageTransformDrag = null;
+        if (toolMode !== 'FILL' && toolMode !== 'INK') selectionMask = null;
+    }
+
     // Tự động deselect nếu đổi sang tool không liên quan đến select
-    if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE' && toolMode !== 'FILL') {
+    if (toolMode !== 'MAGIC_WAND' && toolMode !== 'SELECT' && toolMode !== 'MOUSE' && toolMode !== 'FILL' && toolMode !== 'INK') {
         selectionMask = null;
         selStart = null;
         selEnd = null;
@@ -446,6 +542,27 @@ function setToolMode(nextMode, options = {}) {
 
     if (options.render !== false) renderPropertiesUI();
     if (options.save !== false) saveUiState();
+}
+
+function isAsciiPaintTool(mode) {
+    return mode === 'DRAW' || mode === 'ERASE' || mode === 'FILL' || mode === 'INK';
+}
+
+function ensureEditableAsciiLayerForTool() {
+    if (isActiveAsciiLayerEditable()) return true;
+    for (let i = asciiLayers.length - 1; i >= 0; i--) {
+        const layer = asciiLayers[i];
+        if (layer && layer.kind !== 'image' && !layer.locked) {
+            setActiveLayer(i);
+            renderLayersUI();
+            renderPropertiesUI();
+            return true;
+        }
+    }
+    addAsciiLayer('Layer ' + (asciiLayers.length + 1));
+    renderLayersUI();
+    renderPropertiesUI();
+    return isActiveAsciiLayerEditable();
 }
 
 function updateToolButtonUI() {
@@ -881,38 +998,37 @@ function recoverSketchPanels() {
     if (!panelHost) return;
     createPropertiesPanel(panelHost);
 
-    hideRetiredExportPanel();
-    const ids = getSketchPanelIds();
-    ids.forEach((id, index) => {
+    ensureSketchExportPanelAvailable();
+    const defaults = getDefaultSketchPanelLayout();
+    getSketchPanelIds().forEach((id, index) => {
         const panel = document.getElementById(id);
         if (!panel) return;
+        const d = defaults[id] || { left: 24 + index * 24, top: 72 + index * 48, width: 280 };
         panelHost.appendChild(panel);
         panel.style.display = 'flex';
         panel.style.visibility = 'visible';
         panel.style.opacity = '1';
         panel.style.pointerEvents = 'auto';
         panel.style.position = 'fixed';
-        if (!panel.style.width) panel.style.width = '280px';
-        panel.style.zIndex = panel.style.zIndex || String(30000 + index);
+        panel.style.width = d.width + 'px';
+        panel.style.zIndex = String(30000 + index);
 
         const hostW = window.innerWidth || panelHost.clientWidth || 1200;
         const hostH = window.innerHeight || panelHost.clientHeight || 800;
-        const panelW = panel.offsetWidth || 280;
+        const panelW = d.width || panel.offsetWidth || 280;
         const panelH = panel.offsetHeight || 40;
-        let left = Number.isFinite(parseFloat(panel.style.left)) ? parseFloat(panel.style.left) : null;
-        let top = Number.isFinite(parseFloat(panel.style.top)) ? parseFloat(panel.style.top) : null;
-
-        if (left === null && panel.style.right) {
-            left = hostW - panelW - (parseFloat(panel.style.right) || 0);
-        }
-        if (left === null) left = Math.max(0, hostW - panelW - (id === 'sketch-properties-panel' ? 320 : 20));
-        if (top === null) top = id === 'sketch-properties-panel' ? 20 : 20 + index * 55;
-
-        left = constrain(left, 0, Math.max(0, hostW - Math.min(panelW, hostW)));
-        top = constrain(top, 0, Math.max(0, hostH - Math.min(panelH, hostH)));
+        const left = constrain(d.left, 0, Math.max(0, hostW - Math.min(panelW, hostW)));
+        const top = constrain(d.top, 0, Math.max(0, hostH - Math.min(panelH, hostH)));
         panel.style.left = left + 'px';
         panel.style.top = top + 'px';
         panel.style.right = 'auto';
+
+        if (panel.dataset.collapsed !== 'true') {
+            const content = panel.querySelector('.panel-content');
+            if (content) content.style.display = content.dataset.expandedDisplay || '';
+            panel.style.height = '';
+            panel.style.minHeight = '';
+        }
     });
 }
 
@@ -937,14 +1053,8 @@ function hasVisibleSketchPanel() {
 function resetSketchPanelsToDefault() {
     const panelHost = document.body;
     createPropertiesPanel(panelHost);
-    hideRetiredExportPanel();
-    const defaults = {
-        'sketch-main-tools': { left: 24, top: 72, width: 280 },
-        'sketch-patterns-panel': { left: window.innerWidth - 304, top: 72, width: 280 },
-        'sketch-ink-panel': { left: window.innerWidth - 304, top: 330, width: 280 },
-        'sketch-layer-panel': { left: window.innerWidth - 304, top: 520, width: 280 },
-        'sketch-properties-panel': { left: Math.max(24, window.innerWidth - 608), top: 72, width: 280 }
-    };
+    ensureSketchExportPanelAvailable();
+    const defaults = getDefaultSketchPanelLayout();
     Object.keys(defaults).forEach((id, index) => {
         const panel = document.getElementById(id);
         if (!panel) return;
@@ -970,6 +1080,17 @@ function resetSketchPanelsToDefault() {
 }
 
 window.resetSketchPanelsToDefault = resetSketchPanelsToDefault;
+
+function getDefaultSketchPanelLayout() {
+    return {
+        'sketch-main-tools': { left: 24, top: 72, width: 280 },
+        'sketch-export-panel': { left: 24, top: 420, width: 280 },
+        'sketch-patterns-panel': { left: Math.max(320, window.innerWidth - 304), top: 72, width: 280 },
+        'sketch-ink-panel': { left: Math.max(320, window.innerWidth - 304), top: 330, width: 280 },
+        'sketch-layer-panel': { left: Math.max(320, window.innerWidth - 304), top: 520, width: 280 },
+        'sketch-properties-panel': { left: Math.max(24, window.innerWidth - 608), top: 72, width: 280 }
+    };
+}
 
 function renderPropertiesUI() {
     const content = document.getElementById('sketch-properties-content');
@@ -1304,6 +1425,7 @@ function updateCanvasGeometry(nextCols, nextRows) {
     }
     pgGridLayer = createGraphics(canvasW, canvasH);
     pgGridLayer.pixelDensity(1);
+    pgGridLayer.noSmooth();
     preRenderGrid(pgGridLayer);
     applySketchCanvasZoom();
 }
@@ -1315,8 +1437,10 @@ function rebuildLayerGraphics(layer) {
     layer.textColorGrid = normalizeGridArray(layer.textColorGrid, "#000000");
     layer.pgColor = createGraphics(canvasW, canvasH);
     layer.pgColor.pixelDensity(1);
+    layer.pgColor.noSmooth();
     layer.pgText = createGraphics(canvasW, canvasH);
     layer.pgText.pixelDensity(1);
+    layer.pgText.noSmooth();
     if (layer.kind === 'image') {
         const b = getImageCellBounds(layer);
         layer.imgCellX = b.x;
@@ -1350,7 +1474,7 @@ function refreshAllLayerGraphics() {
     });
     activeLayerIndex = Math.max(0, asciiLayers.indexOf(active));
     if (!asciiLayers[activeLayerIndex]) activeLayerIndex = 0;
-    setActiveLayer(activeLayerIndex);
+    setActiveLayer(activeLayerIndex, { sync: false });
 }
 
 function setCanvasGridSize(nextCols, nextRows) {
@@ -1558,10 +1682,10 @@ function normalizeAsciiLayer(layer) {
   layer.textColorGrid = normalizeGridArray(layer.textColorGrid, "#000000");
 }
 
-function setActiveLayer(index) {
+function setActiveLayer(index, options = {}) {
   if (!asciiLayers[index]) return;
   const changedLayer = index !== activeLayerIndex;
-  syncActiveAsciiLayer();
+  if (options.sync !== false) syncActiveAsciiLayer();
   activeLayerIndex = index;
   const l = asciiLayers[activeLayerIndex];
   if (l.kind !== 'image') {
@@ -1835,7 +1959,58 @@ function getImageCellBounds(layer) {
 // --- HISTORY, UNDO/REDO & CLIPBOARD LOGIC ---
 function cloneAllLayers() {
     syncActiveAsciiLayer();
-    return asciiLayers.map(layer => cloneLayerForClipboard(layer));
+    return asciiLayers.map(layer => cloneLayerForHistory(layer));
+}
+
+function cloneLayerForHistory(layer) {
+    if (!layer) return null;
+    return {
+        kind: layer.kind || 'ascii',
+        name: layer.name,
+        grid: normalizeGridArray(layer.grid, ""),
+        colorGrid: normalizeGridArray(layer.colorGrid, null),
+        textColorGrid: normalizeGridArray(layer.textColorGrid, "#000000"),
+        visible: layer.visible !== false,
+        locked: !!layer.locked,
+        imageData: layer.imageData || null,
+        imgX: layer.imgX,
+        imgY: layer.imgY,
+        imgScale: layer.imgScale,
+        imgCellX: layer.imgCellX,
+        imgCellY: layer.imgCellY,
+        imgCellW: layer.imgCellW,
+        imgCellH: layer.imgCellH,
+        imgRotate: layer.imgRotate,
+        imgOpacity: layer.imgOpacity,
+        blendMode: layer.blendMode || 'normal',
+        dither: !!layer.dither
+    };
+}
+
+function getCurrentSketchHistoryState() {
+    syncActiveAsciiLayer();
+    return {
+        layers: cloneAllLayers(),
+        activeIndex: activeLayerIndex
+    };
+}
+
+function sketchHistoryStatesEqual(a, b) {
+    if (!a || !b) return false;
+    try {
+        return JSON.stringify(a) === JSON.stringify(b);
+    } catch(e) {
+        return false;
+    }
+}
+
+function cloneSketchHistoryState(state) {
+    if (!state) return null;
+    try {
+        return JSON.parse(JSON.stringify(state));
+    } catch(e) {
+        return state;
+    }
 }
 
 function restoreLayersFromState(state) {
@@ -1844,8 +2019,10 @@ function restoreLayersFromState(state) {
         const copy = cloneLayerForClipboard(layer);
         copy.pgColor = createGraphics(canvasW, canvasH);
         copy.pgColor.pixelDensity(1);
+        copy.pgColor.noSmooth();
         copy.pgText = createGraphics(canvasW, canvasH);
         copy.pgText.pixelDensity(1);
+        copy.pgText.noSmooth();
         if (copy.kind === 'image' && !copy.img && copy.imageData) {
             loadImage(copy.imageData, img => { copy.img = img; });
         }
@@ -1853,7 +2030,7 @@ function restoreLayersFromState(state) {
     });
     activeLayerIndex = constrain(state.activeIndex || 0, 0, asciiLayers.length - 1);
     refreshAllLayerGraphics();
-    setActiveLayer(activeLayerIndex);
+    setActiveLayer(activeLayerIndex, { sync: false });
     selectionMask = null;
     selStart = null;
     selEnd = null;
@@ -1866,13 +2043,16 @@ function restoreLayersFromState(state) {
 
 function saveState(silent) {
   try {
-    syncActiveAsciiLayer();
-    historyState.push({
-        layers: cloneAllLayers(),
-        activeIndex: activeLayerIndex
-    });
+    const nextState = getCurrentSketchHistoryState();
+    const lastState = historyState[historyState.length - 1];
+    if (sketchHistoryStatesEqual(lastState, nextState)) {
+        updateUndoRedoButtonState();
+        return;
+    }
+    historyState.push(cloneSketchHistoryState(nextState));
     if (historyState.length > MAX_HISTORY) historyState.shift();
     sketchRedoHistory = [];
+    updateUndoRedoButtonState();
     if (!silent) {
         saveToLocalStorage(true);
         saveUiState();
@@ -1881,19 +2061,82 @@ function saveState(silent) {
 }
 
 function undoSketch() {
-    if (historyState.length > 1) {
-        let currentState = historyState.pop();
-        sketchRedoHistory.push(currentState);
-        let prevState = historyState[historyState.length - 1];
-        restoreLayersFromState(prevState);
+    const now = Date.now();
+    if (now - sketchLastUndoAt < 120) return false;
+    sketchLastUndoAt = now;
+    if (isDraggingSelection) {
+        isDraggingSelection = false;
+        clipboard = null;
+        sketchPointerStepActive = false;
+        sketchActionDirty = false;
+        sketchPointerStartState = null;
     }
+    const liveState = getCurrentSketchHistoryState();
+    const lastState = historyState[historyState.length - 1];
+    if (lastState && !sketchHistoryStatesEqual(liveState, lastState)) {
+        sketchRedoHistory.push(cloneSketchHistoryState(liveState));
+        restoreLayersFromState(lastState);
+        sketchActionDirty = false;
+        sketchPointerStepActive = false;
+        sketchPointerStartState = null;
+        updateUndoRedoButtonState();
+        if (window.showToast) window.showToast("Undo");
+        return true;
+    }
+    while (historyState.length > 1) {
+        let currentState = historyState.pop();
+        sketchRedoHistory.push(cloneSketchHistoryState(currentState));
+        let prevState = historyState[historyState.length - 1];
+        if (sketchHistoryStatesEqual(prevState, liveState)) continue;
+        restoreLayersFromState(prevState);
+        sketchActionDirty = false;
+        sketchPointerStepActive = false;
+        sketchPointerStartState = null;
+        updateUndoRedoButtonState();
+        if (window.showToast) window.showToast("Undo");
+        return true;
+    }
+    updateUndoRedoButtonState();
+    if (window.showToast) window.showToast("Nothing to undo");
+    return false;
 }
 
 function redoSketch() {
+    const now = Date.now();
+    if (now - sketchLastRedoAt < 120) return false;
+    sketchLastRedoAt = now;
     if (sketchRedoHistory.length > 0) {
         let nextState = sketchRedoHistory.pop();
-        historyState.push(nextState);
+        historyState.push(cloneSketchHistoryState(nextState));
         restoreLayersFromState(nextState);
+        sketchActionDirty = false;
+        sketchPointerStepActive = false;
+        sketchPointerStartState = null;
+        updateUndoRedoButtonState();
+        if (window.showToast) window.showToast("Redo");
+        return true;
+    }
+    updateUndoRedoButtonState();
+    if (window.showToast) window.showToast("Nothing to redo");
+    return false;
+}
+
+function updateUndoRedoButtonState() {
+    const undoBtn = document.getElementById('btnUndo');
+    const redoBtn = document.getElementById('btnRedo');
+    if (undoBtn) {
+        const canUndo = historyState.length > 1;
+        undoBtn.disabled = false;
+        undoBtn.setAttribute('aria-disabled', canUndo ? 'false' : 'true');
+        undoBtn.style.opacity = canUndo ? '1' : '0.55';
+        undoBtn.style.cursor = 'pointer';
+    }
+    if (redoBtn) {
+        const canRedo = sketchRedoHistory.length > 0;
+        redoBtn.disabled = false;
+        redoBtn.setAttribute('aria-disabled', canRedo ? 'false' : 'true');
+        redoBtn.style.opacity = canRedo ? '1' : '0.55';
+        redoBtn.style.cursor = 'pointer';
     }
 }
 
@@ -2026,8 +2269,10 @@ function addAsciiLayer(name = 'Layer') {
 
   let pgC = createGraphics(width, height);
   pgC.pixelDensity(1);
+  pgC.noSmooth();
   let pgT = createGraphics(width, height);
   pgT.pixelDensity(1);
+  pgT.noSmooth();
 
   try {
     const c3 = pgC.canvas || pgC.elt;
@@ -2077,6 +2322,7 @@ function addAsciiLayer(name = 'Layer') {
   updateLayerColorVisuals();
   updateLayerTextVisuals();
   renderLayersUI();
+  hardenAsciiCanvasRendering();
 }
 
 function addImageLayer(img, dataUrl, name = 'Image Layer') {
@@ -2107,6 +2353,7 @@ function addImageLayer(img, dataUrl, name = 'Image Layer') {
 
 function draw() {
   if (activeTab !== 'tab-sketch') return;
+  if (drawingContext) drawingContext.imageSmoothingEnabled = false;
   syncActiveAsciiLayer();
 
   let m = getCorrectedMouse();
@@ -2279,15 +2526,22 @@ function updateLayerColorVisuals() {
 }
 
 function setAsciiCell(x, y, ch, textColor = null, ignoreSelection = false) {
-  if (!isActiveAsciiLayerEditable()) return;
-  if (!ignoreSelection && selectionMask && !selectionMask[y][x]) return;
+  if (!isActiveAsciiLayerEditable()) return false;
+  if (!ignoreSelection && selectionMask && !selectionMask[y][x]) return false;
   ensureGridCell(x, y);
-  grid[y][x] = normalizeAsciiCharValue(ch);
-  if (textColor) {
+  const nextChar = normalizeAsciiCharValue(ch);
+  const prevChar = normalizeAsciiCharValue(grid[y][x]);
+  const prevTextColor = textColorGrid[y][x] || "#000000";
+  let changed = prevChar !== nextChar;
+  grid[y][x] = nextChar;
+  if (textColor && prevTextColor !== textColor) {
       textColorGrid[y][x] = textColor;
+      changed = true;
   }
+  if (!changed) return false;
   drawSingleCellText(x, y);
   syncActiveAsciiLayer();
+  return true;
 }
 
 function setGridColor(x, y, col) {
@@ -2539,8 +2793,7 @@ function floodFillColor(startX, startY, replaceColor) {
 
 function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor = undefined) {
   if (!isValidCell(startX, startY) || !isActiveAsciiLayerEditable()) return false;
-  const targetChar = normalizeAsciiCharValue(grid[startY][startX]);
-  const targetColor = colorGrid[startY][startX];
+  const targetSignature = getVisibleAsciiCellSignature(startX, startY);
   const nextChar = normalizeAsciiCharValue(replaceChar);
 
   let changed = false;
@@ -2553,8 +2806,7 @@ function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor
       if (!isValidCell(p.x, p.y) || visited[p.y][p.x]) continue;
       visited[p.y][p.x] = true;
       if (selectionMask && (!selectionMask[p.y] || !selectionMask[p.y][p.x])) continue;
-      if (normalizeAsciiCharValue(grid[p.y][p.x]) !== targetChar) continue;
-      if (!cellColorMatches(colorGrid[p.y][p.x], targetColor)) continue;
+      if (getVisibleAsciiCellSignature(p.x, p.y) !== targetSignature) continue;
 
       ensureGridCell(p.x, p.y);
       if (normalizeAsciiCharValue(grid[p.y][p.x]) !== nextChar) {
@@ -2581,6 +2833,19 @@ function floodFillCells(startX, startY, replaceChar, textColor = null, cellColor
       syncActiveAsciiLayer();
   }
   return changed;
+}
+
+function getVisibleAsciiCellSignature(x, y) {
+  let parts = [];
+  for (let i = 0; i < asciiLayers.length; i++) {
+      const layer = asciiLayers[i];
+      if (!layer || layer.visible === false || layer.kind === 'image') continue;
+      const ch = normalizeAsciiCharValue(layer.grid && layer.grid[y] ? layer.grid[y][x] : "");
+      const bg = normalizeMagicWandColor(layer.colorGrid && layer.colorGrid[y] ? layer.colorGrid[y][x] : null);
+      const fg = normalizeMagicWandColor(layer.textColorGrid && layer.textColorGrid[y] ? layer.textColorGrid[y][x] : "#000000");
+      if (ch !== "" || bg !== null) parts.push([i, ch, bg, fg].join('|'));
+  }
+  return parts.length ? parts.join('||') : '__empty__';
 }
 
 function floodFill(startX, startY, targetChar, replaceChar, textColor = null) {
@@ -2797,10 +3062,51 @@ function isValidCell(x, y) {
   return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < workCols && y < workRows;
 }
 
+function beginSketchPointerStep() {
+  const liveState = getCurrentSketchHistoryState();
+  const lastState = historyState[historyState.length - 1];
+  if (lastState && !sketchHistoryStatesEqual(liveState, lastState)) {
+      saveState();
+  }
+  sketchPointerStepActive = true;
+  sketchActionDirty = false;
+  sketchPointerStartState = getCurrentSketchHistoryState();
+}
+
+function commitSketchPointerStep() {
+  const currentState = sketchPointerStepActive ? getCurrentSketchHistoryState() : null;
+  const changedSincePress = currentState && !sketchHistoryStatesEqual(sketchPointerStartState, currentState);
+  if (sketchPointerStepActive && changedSincePress) {
+      saveState();
+  }
+  sketchPointerStepActive = false;
+  sketchActionDirty = false;
+  sketchPointerStartState = null;
+}
+
+function installSketchPointerStepListeners() {
+  if (window.__mi_sketch_pointer_step_listeners) return;
+  window.__mi_sketch_pointer_step_listeners = true;
+  const finish = () => {
+      if (activeTab !== 'tab-sketch' || !sketchPointerStepActive) return;
+      if (imageTransformDrag || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') return;
+      commitSketchPointerStep();
+      prevGrabMouse = null;
+      prevGridX = -1;
+      prevGridY = -1;
+      saveUiState();
+  };
+  document.addEventListener('pointerup', finish, true);
+  document.addEventListener('mouseup', finish, true);
+  document.addEventListener('touchend', finish, true);
+  window.addEventListener('blur', finish, true);
+}
+
 function mousePressed() {
   if (activeTab !== 'tab-sketch') return;
   if (isDraggingPanel) return;
   if (!isPointerOnSketchCanvas()) return;
+  beginSketchPointerStep();
   prevGridX = -1; prevGridY = -1;
   let m = getCorrectedMouse();
   if (m.x < 0 || m.x > width || m.y < 0 || m.y > height) return;
@@ -2877,7 +3183,7 @@ function mousePressed() {
   }
 
   // Dùng e.shiftKey thông qua đối tượng phím ảo của p5js
-  if (keyIsDown(16) || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') {
+  if ((!isAsciiPaintTool(toolMode) && keyIsDown(16)) || toolMode.startsWith('SHAPE_') || toolMode === 'TEXT') {
       selStart = {x: mx, y: my};
       selEnd = {x: mx, y: my};
       if (!toolMode.startsWith('SHAPE_') && toolMode !== 'TEXT') setToolMode("SELECT", { render: false });
@@ -2920,7 +3226,7 @@ window.addEventListener('keydown', function(e) {
             else pasteLayerClipboard();
             if (window.showToast) window.showToast("Pasted");
         } else if (code === 'KeyZ' || key === 'z') {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
             if (isDraggingSelection) {
                 isDraggingSelection = false;
                 return;
@@ -3063,6 +3369,9 @@ function mouseReleased() {
   if (imageTransformDrag) {
       imageTransformDrag = null;
       saveState();
+      sketchPointerStepActive = false;
+      sketchActionDirty = false;
+      sketchPointerStartState = null;
       saveToLocalStorage(true);
       saveUiState();
       return;
@@ -3070,6 +3379,7 @@ function mouseReleased() {
 
   if (toolMode === 'MOUSE') {
       prevGrabMouse = null;
+      commitSketchPointerStep();
       saveUiState();
       return;
   }
@@ -3079,6 +3389,9 @@ function mouseReleased() {
       applyShape(selStart.x, selStart.y, selEnd.x, selEnd.y, toolMode, ch, true);
       selStart = null; selEnd = null;
       saveState();
+      sketchPointerStepActive = false;
+      sketchActionDirty = false;
+      sketchPointerStartState = null;
   } else if (toolMode === 'TEXT' && selStart && selEnd) {
       let minX = Math.min(selStart.x, selEnd.x);
       let maxX = Math.max(selStart.x, selEnd.x);
@@ -3091,6 +3404,9 @@ function mouseReleased() {
 
       openTextToolBox(minX, minY, maxX, maxY, px, py);
       selStart = null; selEnd = null;
+      sketchPointerStepActive = false;
+      sketchActionDirty = false;
+      sketchPointerStartState = null;
   } else if (toolMode === "SELECT" && selStart && selEnd) {
       if (selStart.x === selEnd.x && selStart.y === selEnd.y && !isShiftSelecting) {
           selectionMask = null;
@@ -3099,8 +3415,14 @@ function mouseReleased() {
       }
   }
 
-  if (isShiftSelecting) isShiftSelecting = false;
-  else if (toolMode === "DRAW" || toolMode === "ERASE" || toolMode === "FILL" || toolMode === "INK") saveState();
+  if (isShiftSelecting) {
+      isShiftSelecting = false;
+      sketchPointerStepActive = false;
+      sketchActionDirty = false;
+      sketchPointerStartState = null;
+  } else {
+      commitSketchPointerStep();
+  }
 
   prevGrabMouse = null;
   prevGridX = -1;
@@ -3238,8 +3560,9 @@ function saveToLocalStorageImpl(silent) {
 }
 
 function handleInput(x, y) {
-  if (!isValidCell(x, y)) return;
-  if (!isActiveAsciiLayerEditable()) return;
+  if (!isValidCell(x, y)) return false;
+  if (isAsciiPaintTool(toolMode)) ensureEditableAsciiLayerForTool();
+  if (!isActiveAsciiLayerEditable()) return false;
   const activeLayer = getActiveLayer();
   if (activeLayer && activeLayer.kind !== 'image') {
     activeLayer.visible = true;
@@ -3248,25 +3571,28 @@ function handleInput(x, y) {
   }
 
   let drawTextColor = selectedColor || "#000000";
+  let changed = false;
 
   if (toolMode === 'DRAW') {
     selectionMask = null;
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
     if (isEraser) ch = "";
-    setAsciiCell(x, y, ch, drawTextColor, true);
+    changed = setAsciiCell(x, y, ch, drawTextColor, true);
   } else if (toolMode === 'ERASE') {
     selectionMask = null;
-    setAsciiCell(x, y, "", "#000000", true);
+    changed = setAsciiCell(x, y, "", "#000000", true);
   } else if (toolMode === 'FILL') {
     let ch = selectedChar === 'SMART' ? '#' : selectedChar;
     if (selectionMask) {
-        applyFillToSelectionMask(ch, drawTextColor);
+        changed = applyFillToSelectionMask(ch, drawTextColor);
     } else {
-        floodFillCells(x, y, ch, drawTextColor);
+        changed = floodFillCells(x, y, ch, drawTextColor);
     }
   } else if (toolMode === 'INK') {
-        setGridTextColor(x, y, selectedColor);
+        changed = setGridTextColor(x, y, selectedColor);
   }
+  if (changed) sketchActionDirty = true;
+  return changed;
 }
 
 function ensureGridCell(x, y) {
@@ -3452,6 +3778,7 @@ function exportAsciiPng(includeBackground) {
   syncActiveAsciiLayer();
   const pg = createGraphics(canvasW, canvasH);
   pg.pixelDensity(1);
+  pg.noSmooth();
   renderAsciiArtworkToGraphics(pg, includeBackground);
   save(pg, getNextAsciiFilename("png"));
   pg.remove();
@@ -3479,11 +3806,15 @@ function setupSketchZoomUI() {
 }
 
 function setGridTextColor(x, y, col) {
-  if (!isActiveAsciiLayerEditable()) return;
-  if (selectionMask && !selectionMask[y][x]) return;
+  if (!isActiveAsciiLayerEditable()) return false;
+  if (selectionMask && !selectionMask[y][x]) return false;
   ensureGridCell(x, y);
-  textColorGrid[y][x] = col || "#000000";
+  const nextColor = col || "#000000";
+  if ((textColorGrid[y][x] || "#000000") === nextColor) return false;
+  textColorGrid[y][x] = nextColor;
   drawSingleCellText(x, y);
+  syncActiveAsciiLayer();
+  return true;
 }
 
 function setupToolBindings() {
@@ -3512,10 +3843,31 @@ function setupToolBindings() {
   });
 
   let btnUndo = document.getElementById('btnUndo');
-  if (btnUndo) btnUndo.addEventListener('click', undoSketch);
+  if (btnUndo) {
+    const cleanUndo = btnUndo.cloneNode(true);
+    btnUndo.parentNode.replaceChild(cleanUndo, btnUndo);
+    cleanUndo.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      undoSketch();
+      return false;
+    };
+  }
 
   let btnRedo = document.getElementById('btnRedo');
-  if (btnRedo) btnRedo.addEventListener('click', redoSketch);
+  if (btnRedo) {
+    const cleanRedo = btnRedo.cloneNode(true);
+    btnRedo.parentNode.replaceChild(cleanRedo, btnRedo);
+    cleanRedo.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      redoSketch();
+      return false;
+    };
+  }
+  updateUndoRedoButtonState();
 
   let btnClear = document.getElementById('btnClearSketch');
   if (btnClear) {
