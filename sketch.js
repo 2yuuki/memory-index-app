@@ -327,12 +327,13 @@ function ensureSketchExportPanelAvailable() {
         panel.style.opacity = '1';
         panel.style.pointerEvents = 'auto';
         panel.style.position = 'fixed';
-        panel.style.left = '24px';
-        panel.style.top = '420px';
+        if (!panel.style.left || panel.style.left === 'auto') panel.style.left = '24px';
+        if (!panel.style.top) panel.style.top = '420px';
         panel.style.right = 'auto';
-        panel.style.width = '280px';
+        if (!panel.style.width) panel.style.width = '280px';
         panel.style.zIndex = '30001';
     }
+    makePanelDraggable(panel, document.body);
     return panel;
 }
 
@@ -1015,13 +1016,16 @@ function recoverSketchPanels() {
 
         const hostW = window.innerWidth || panelHost.clientWidth || 1200;
         const hostH = window.innerHeight || panelHost.clientHeight || 800;
-        const panelW = d.width || panel.offsetWidth || 280;
+        const panelW = parseFloat(panel.style.width) || d.width || panel.offsetWidth || 280;
         const panelH = panel.offsetHeight || 40;
-        const left = constrain(d.left, 0, Math.max(0, hostW - Math.min(panelW, hostW)));
-        const top = constrain(d.top, 0, Math.max(0, hostH - Math.min(panelH, hostH)));
+        const existingLeft = parseFloat(panel.style.left);
+        const existingTop = parseFloat(panel.style.top);
+        const left = constrain(Number.isFinite(existingLeft) ? existingLeft : d.left, 0, Math.max(0, hostW - Math.min(panelW, hostW)));
+        const top = constrain(Number.isFinite(existingTop) ? existingTop : d.top, 0, Math.max(0, hostH - Math.min(panelH, hostH)));
         panel.style.left = left + 'px';
         panel.style.top = top + 'px';
         panel.style.right = 'auto';
+        makePanelDraggable(panel, panelHost);
 
         if (panel.dataset.collapsed !== 'true') {
             const content = panel.querySelector('.panel-content');
@@ -3517,6 +3521,24 @@ function loadFromLocalStorageImpl() {
       pgColorLayer = prevColorLayer;
       pgTextLayer = prevTextLayer;
     });
+    if (Array.isArray(obj.historyState) && obj.historyState.length > 0) {
+      historyState = obj.historyState
+        .filter(state => state && Array.isArray(state.layers))
+        .slice(-MAX_HISTORY)
+        .map(cloneSketchHistoryState);
+    }
+    if (Array.isArray(obj.sketchRedoHistory)) {
+      sketchRedoHistory = obj.sketchRedoHistory
+        .filter(state => state && Array.isArray(state.layers))
+        .slice(-MAX_HISTORY)
+        .map(cloneSketchHistoryState);
+    }
+    const currentState = getCurrentSketchHistoryState();
+    if (historyState.length === 0 || !sketchHistoryStatesEqual(historyState[historyState.length - 1], currentState)) {
+      historyState.push(cloneSketchHistoryState(currentState));
+      if (historyState.length > MAX_HISTORY) historyState.shift();
+    }
+    updateUndoRedoButtonState();
 
   } catch (e) {
      if (asciiLayers.length === 0) {
@@ -3555,7 +3577,17 @@ function saveToLocalStorageImpl(silent) {
         dither: !!l.dither
       }))
     };
-    localStorage.setItem('mi_sketch_state', JSON.stringify(obj));
+    const historyCaps = [12, 8, 4, 1, 0];
+    for (const cap of historyCaps) {
+      try {
+        const payload = Object.assign({}, obj, {
+          historyState: cap > 0 ? historyState.slice(-cap).map(cloneSketchHistoryState) : [],
+          sketchRedoHistory: cap > 0 ? sketchRedoHistory.slice(-cap).map(cloneSketchHistoryState) : []
+        });
+        localStorage.setItem('mi_sketch_state', JSON.stringify(payload));
+        return;
+      } catch (storageError) {}
+    }
   } catch (e) {}
 }
 
